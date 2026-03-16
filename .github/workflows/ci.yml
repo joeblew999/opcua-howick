@@ -1,0 +1,142 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+  release:
+    types: [created]
+
+env:
+  RUST_BACKTRACE: 1
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ── Check + Test ────────────────────────────────────────────────────────
+  ci:
+    name: Check and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install mise
+        uses: jdx/mise-action@v2
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Check and lint
+        run: mise run check
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+  # ── Build binaries ──────────────────────────────────────────────────────
+  build:
+    name: Build — ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    needs: ci
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x86_64 (server, NUC, Beelink)
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            binary: opcua-howick
+
+          # macOS Apple Silicon (dev machine, Mac Mini factory option)
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            binary: opcua-howick
+
+          # macOS Intel
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            binary: opcua-howick
+
+          # Raspberry Pi 5 — arm64 Linux
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            binary: opcua-howick
+            cross: true
+
+          # Raspberry Pi 3/4 — arm32 Linux
+          - target: armv7-unknown-linux-gnueabihf
+            os: ubuntu-latest
+            binary: opcua-howick
+            cross: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install mise
+        uses: jdx/mise-action@v2
+
+      - name: Add Rust target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Install cross (for Pi targets)
+        if: matrix.cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-${{ matrix.target }}-cargo-
+
+      - name: Build (native)
+        if: "!matrix.cross"
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Build (cross — Pi)
+        if: matrix.cross
+        run: cross build --release --target ${{ matrix.target }}
+
+      - name: Rename binary
+        run: |
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/${{ matrix.binary }} \
+             dist/${{ matrix.binary }}-${{ matrix.target }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.binary }}-${{ matrix.target }}
+          path: dist/
+
+  # ── GitHub Release — attach binaries ───────────────────────────────────
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'release'
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+          merge-multiple: true
+
+      - name: Upload binaries to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

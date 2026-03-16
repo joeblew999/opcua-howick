@@ -7,7 +7,7 @@ RUST_LOG = "opcua_howick=info"
 
 [tasks.build]
 run = "cargo build"
-description = "Build for native (dev machine)"
+description = "Build (native dev)"
 
 [tasks.run]
 run = "cargo run"
@@ -21,17 +21,35 @@ description = "Check and lint"
 run = "cargo fmt"
 description = "Format code"
 
-[tasks.build-pi]
+[tasks.fmt-check]
+run = "cargo fmt --check"
+description = "Check formatting (CI)"
+
+[tasks.ci]
+depends = ["check", "fmt-check"]
+description = "Full CI — check and fmt (no tests yet, binary only)"
+
+[tasks.build-pi5]
 run = "cross build --release --target aarch64-unknown-linux-gnu"
 description = "Cross-compile for Raspberry Pi 5 (arm64)"
 
-[tasks.build-pi32]
+[tasks.build-pi4]
 run = "cross build --release --target armv7-unknown-linux-gnueabihf"
 description = "Cross-compile for Raspberry Pi 3/4 (arm32)"
+
+[tasks.build-linux]
+run = "cargo build --release --target x86_64-unknown-linux-gnu"
+description = "Build for Linux x86_64 (NUC, Beelink)"
+
+[tasks.build-all]
+depends = ["build-pi5", "build-pi4", "build-linux"]
+description = "Build all factory targets"
 
 [tasks.deploy-pi]
 run = """
 cross build --release --target aarch64-unknown-linux-gnu
-scp target/aarch64-unknown-linux-gnu/release/opcua-howick pi@factory-pi.local:~/opcua-howick
+scp target/aarch64-unknown-linux-gnu/release/opcua-howick \
+    pi@factory-pi.local:~/opcua-howick
+ssh pi@factory-pi.local 'sudo systemctl restart opcua-howick'
 """
 description = "Build and deploy to factory Raspberry Pi"

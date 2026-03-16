@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::SystemTime;
 
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};

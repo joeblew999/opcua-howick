@@ -1,0 +1,29 @@
+[Unit]
+Description=OPC UA Edge Agent for Howick FRAMA Machine
+Documentation=https://github.com/joeblew999/opcua-howick
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi
+ExecStart=/home/pi/opcua-howick
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=opcua-howick
+
+# Environment
+Environment=RUST_LOG=opcua_howick=info
+Environment=RUST_BACKTRACE=1
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/pi/jobs
+
+[Install]
+WantedBy=multi-user.target

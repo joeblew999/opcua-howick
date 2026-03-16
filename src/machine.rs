@@ -1,12 +1,12 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-/// Current state of the Howick machine.
 #[derive(Debug, Clone, PartialEq)]
 pub enum MachineStatus {
     Offline,
     Idle,
     Running,
+    #[allow(dead_code)]
     Error(String),
 }
 
@@ -21,7 +21,7 @@ impl MachineStatus {
     }
 }
 
-/// A job waiting to be or currently being produced.
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Job {
     pub id: String,
@@ -30,7 +30,6 @@ pub struct Job {
     pub submitted_at: std::time::SystemTime,
 }
 
-/// Shared machine state — readable from OPC UA server, writable from job watcher.
 #[derive(Debug)]
 pub struct MachineState {
     pub status: MachineStatus,

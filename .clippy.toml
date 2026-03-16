@@ -1,0 +1,4 @@
+# Clippy configuration for opcua-howick
+# Allows dead_code during skeleton phase — remove when implementation is complete
+
+[allow-dead-code-until = "2026-09-01"]
