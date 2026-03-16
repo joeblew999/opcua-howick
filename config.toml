@@ -1,0 +1,15 @@
+[opcua]
+host = "0.0.0.0"
+port = 4840
+application_name = "Howick Edge Agent - Si Racha Factory"
+
+[machine]
+machine_name = "Howick FRAMA"
+# Folder plat-trunk / operators drop CSV files into
+job_input_dir = "./jobs/input"
+# Folder the Howick machine watches for its input files
+# TODO: confirm actual path with Prin
+machine_input_dir = "./jobs/machine"
+# Folder where machine signals job completion
+# TODO: confirm actual path with Prin
+machine_output_dir = "./jobs/output"

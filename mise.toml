@@ -1,0 +1,37 @@
+[tools]
+rust = "1.94.0"
+
+[env]
+RUST_BACKTRACE = "1"
+RUST_LOG = "opcua_howick=info"
+
+[tasks.build]
+run = "cargo build"
+description = "Build for native (dev machine)"
+
+[tasks.run]
+run = "cargo run"
+description = "Run the edge agent locally"
+
+[tasks.check]
+run = "cargo check && cargo clippy -- -D warnings"
+description = "Check and lint"
+
+[tasks.fmt]
+run = "cargo fmt"
+description = "Format code"
+
+[tasks.build-pi]
+run = "cross build --release --target aarch64-unknown-linux-gnu"
+description = "Cross-compile for Raspberry Pi 5 (arm64)"
+
+[tasks.build-pi32]
+run = "cross build --release --target armv7-unknown-linux-gnueabihf"
+description = "Cross-compile for Raspberry Pi 3/4 (arm32)"
+
+[tasks.deploy-pi]
+run = """
+cross build --release --target aarch64-unknown-linux-gnu
+scp target/aarch64-unknown-linux-gnu/release/opcua-howick pi@factory-pi.local:~/opcua-howick
+"""
+description = "Build and deploy to factory Raspberry Pi"
