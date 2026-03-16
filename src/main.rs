@@ -3,6 +3,11 @@
 //! OPC UA edge agent for Howick FRAMA roll-forming machines.
 //! Runs on a small compute module on the factory LAN.
 //!
+//! Supports three deployment topologies:
+//!   A - Cloud:  plat_trunk.url = CF Worker URL
+//!   B - LAN:    plat_trunk.url = http://localhost:3000 (Tauri)
+//!   C - Hybrid: LAN primary, syncs to cloud via Automerge CRDT
+//!
 //! Usage:
 //!   opcua-howick [--config config.toml]
 
@@ -29,8 +34,9 @@ async fn main() -> anyhow::Result<()> {
     let config = config::Config::load_or_default(&config_path);
 
     tracing::info!(
-        host = %config.opcua.host,
-        port = config.opcua.port,
+        topology = config.topology(),
+        plat_trunk_url = %config.plat_trunk.url,
+        opcua_port = config.opcua.port,
         machine = %config.machine.machine_name,
         "Configuration loaded"
     );
@@ -45,6 +51,13 @@ async fn main() -> anyhow::Result<()> {
     let watcher_config = config.machine.clone();
     let server_state = state.clone();
     let server_config = config.clone();
+
+    tracing::info!(
+        "Running — OPC UA: opc.tcp://{}:{}/, plat-trunk: {}",
+        config.opcua.host,
+        config.opcua.port,
+        config.plat_trunk.url,
+    );
 
     tokio::select! {
         result = watcher::run_job_watcher(watcher_config, watcher_state) => {
