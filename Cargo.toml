@@ -1,0 +1,38 @@
+[package]
+name = "opcua-howick"
+version = "0.1.0"
+edition = "2021"
+description = "OPC UA edge agent for Howick FRAMA machines — bridges plat-trunk CAD with factory floor hardware"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/joeblew999/opcua-howick"
+readme = "README.md"
+
+[[bin]]
+name = "opcua-howick"
+path = "src/main.rs"
+
+[dependencies]
+# OPC UA client + server — pure Rust, tokio, MPL-2.0
+# https://github.com/FreeOpcUa/async-opcua
+async-opcua = { version = "0.18", features = ["client", "server"] }
+
+# Howick CSV generation
+howick-rs = { git = "https://github.com/joeblew999/howick-rs" }
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# Config
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+
+# File watching (USB/network job drop)
+notify = "6"
