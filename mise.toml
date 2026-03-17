@@ -3,53 +3,101 @@ rust = "1.93.1"
 
 [env]
 RUST_BACKTRACE = "1"
-RUST_LOG = "opcua_howick=info"
+RUST_LOG       = "opcua_howick=info"
+
+# ── Dev ───────────────────────────────────────────────────────────────────────
 
 [tasks.build]
-run = "cargo build"
 description = "Build (native dev)"
+run         = "cargo build"
 
 [tasks.run]
-run = "cargo run"
-description = "Run the edge agent locally"
+description = "Run the edge agent locally (reads ./config.toml)"
+run         = "cargo run"
 
 [tasks.check]
-run = "cargo check && cargo clippy -- -D warnings"
-description = "Check and lint"
+description = "Check + clippy"
+run         = "cargo check && cargo clippy -- -D warnings"
 
 [tasks.fmt]
-run = "cargo fmt"
 description = "Format code"
+run         = "cargo fmt"
 
 [tasks.fmt-check]
-run = "cargo fmt --check"
 description = "Check formatting (CI)"
+run         = "cargo fmt --check"
+
+# ── CI ────────────────────────────────────────────────────────────────────────
 
 [tasks.ci]
-depends = ["check", "fmt-check"]
-description = "Full CI — check and fmt (no tests yet, binary only)"
+description = "Full CI — check + fmt-check (no tests: binary-only crate)"
+depends     = ["check", "fmt-check"]
 
-[tasks.build-pi5]
-run = "cross build --release --target aarch64-unknown-linux-gnu"
-description = "Cross-compile for Raspberry Pi 5 (arm64)"
+# ── Cross-compile targets ─────────────────────────────────────────────────────
+# Prerequisites: cargo install cross  (uses Docker for cross-compilation)
 
-[tasks.build-pi4]
-run = "cross build --release --target armv7-unknown-linux-gnueabihf"
-description = "Cross-compile for Raspberry Pi 3/4 (arm32)"
+[tasks."build:pi5"]
+description = "Cross-compile for Raspberry Pi 5 (aarch64, arm64)"
+run         = "cross build --release --target aarch64-unknown-linux-gnu"
 
-[tasks.build-linux]
-run = "cargo build --release --target x86_64-unknown-linux-gnu"
-description = "Build for Linux x86_64 (NUC, Beelink)"
+[tasks."build:pi4"]
+description = "Cross-compile for Raspberry Pi 3/4 (armv7, arm32)"
+run         = "cross build --release --target armv7-unknown-linux-gnueabihf"
 
-[tasks.build-all]
-depends = ["build-pi5", "build-pi4", "build-linux"]
-description = "Build all factory targets"
+[tasks."build:linux"]
+description = "Build for Linux x86_64 (NUC, Beelink, server)"
+run         = "cargo build --release --target x86_64-unknown-linux-gnu"
 
-[tasks.deploy-pi]
-run = """
+[tasks."build:mac-arm"]
+description = "Build for macOS Apple Silicon (Mac Mini factory option)"
+run         = "cargo build --release --target aarch64-apple-darwin"
+
+[tasks."build:all"]
+description = "Build all factory targets (requires cross)"
+depends     = ["build:pi5", "build:pi4", "build:linux"]
+
+# ── Factory deployment ────────────────────────────────────────────────────────
+
+[tasks."deploy:pi"]
+description = "Build for Pi 5 + deploy via SSH + restart systemd service"
+run         = """
 cross build --release --target aarch64-unknown-linux-gnu
-scp target/aarch64-unknown-linux-gnu/release/opcua-howick \
-    pi@factory-pi.local:~/opcua-howick
-ssh pi@factory-pi.local 'sudo systemctl restart opcua-howick'
+scp target/aarch64-unknown-linux-gnu/release/opcua-howick ${PI_HOST:-pi@factory-pi.local}:~/opcua-howick.new
+ssh ${PI_HOST:-pi@factory-pi.local} '
+  mv ~/opcua-howick.new ~/opcua-howick
+  chmod +x ~/opcua-howick
+  sudo systemctl restart opcua-howick
+  sleep 2
+  sudo systemctl status opcua-howick --no-pager
+'
 """
-description = "Build and deploy to factory Raspberry Pi"
+
+[tasks."deploy:config"]
+description = "Deploy config.toml to factory Pi (does not restart service)"
+run         = "scp config.toml ${PI_HOST:-pi@factory-pi.local}:~/config.toml"
+
+[tasks."logs:pi"]
+description = "Stream live logs from factory Pi"
+run         = "ssh ${PI_HOST:-pi@factory-pi.local} 'journalctl -u opcua-howick -f'"
+
+[tasks."status:pi"]
+description = "Check machine status via HTTP API on factory Pi"
+run         = "curl -s http://${PI_ADDR:-factory-pi.local}:4841/status | python3 -m json.tool"
+
+# ── Local test helpers ────────────────────────────────────────────────────────
+
+[tasks."test:submit"]
+description = "Submit a test CSV job to local opcua-howick (must be running)"
+run         = """
+curl -s -X POST http://localhost:4841/jobs \
+  -H 'Content-Type: application/json' \
+  -d '{"frameset_name":"TEST-W1","csv":"UNIT,MILLIMETRE\nPROFILE,S8908,Standard Profile\nFRAMESET,TEST-W1\nCOMPONENT,TEST-W1-1,LABEL_NRM,1,2400.0,DIMPLE,20.65,DIMPLE,70.65"}' | python3 -m json.tool
+"""
+
+[tasks."test:status"]
+description = "Check local opcua-howick HTTP status"
+run         = "curl -s http://localhost:4841/status | python3 -m json.tool"
+
+[tasks."test:health"]
+description = "Check local opcua-howick health"
+run         = "curl -s http://localhost:4841/health"

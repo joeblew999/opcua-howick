@@ -13,11 +13,10 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # ── Check + Test ────────────────────────────────────────────────────────
+  # ── CI gate (driven by mise) ──────────────────────────────────────────────
   ci:
-    name: Check and Test
+    name: CI
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -34,47 +33,41 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Check and lint
-        run: mise run check
+      - name: CI (check + fmt-check)
+        run: mise run ci
 
-      - name: Check formatting
-        run: cargo fmt --check
-
-  # ── Build binaries ──────────────────────────────────────────────────────
+  # ── Binary builds — all factory targets ──────────────────────────────────
   build:
-    name: Build — ${{ matrix.target }}
+    name: Build — ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     needs: ci
-
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Linux x86_64 (server, NUC, Beelink)
-          - target: x86_64-unknown-linux-gnu
+          - name: Linux x86_64 (NUC / server)
+            target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
-            binary: opcua-howick
+            cross: false
 
-          # macOS Apple Silicon (dev machine, Mac Mini factory option)
-          - target: aarch64-apple-darwin
+          - name: macOS Apple Silicon (Mac Mini)
+            target: aarch64-apple-darwin
             os: macos-latest
-            binary: opcua-howick
+            cross: false
 
-          # macOS Intel
-          - target: x86_64-apple-darwin
+          - name: macOS Intel
+            target: x86_64-apple-darwin
             os: macos-latest
-            binary: opcua-howick
+            cross: false
 
-          # Raspberry Pi 5 — arm64 Linux
-          - target: aarch64-unknown-linux-gnu
+          - name: Raspberry Pi 5 (arm64)
+            target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
-            binary: opcua-howick
             cross: true
 
-          # Raspberry Pi 3/4 — arm32 Linux
-          - target: armv7-unknown-linux-gnueabihf
+          - name: Raspberry Pi 3/4 (arm32)
+            target: armv7-unknown-linux-gnueabihf
             os: ubuntu-latest
-            binary: opcua-howick
             cross: true
 
     steps:
@@ -86,7 +79,7 @@ jobs:
       - name: Add Rust target
         run: rustup target add ${{ matrix.target }}
 
-      - name: Install cross (for Pi targets)
+      - name: Install cross (Pi targets)
         if: matrix.cross
         run: cargo install cross --git https://github.com/cross-rs/cross
 
@@ -108,33 +101,32 @@ jobs:
         if: matrix.cross
         run: cross build --release --target ${{ matrix.target }}
 
-      - name: Rename binary
+      - name: Stage binary
         run: |
           mkdir -p dist
-          cp target/${{ matrix.target }}/release/${{ matrix.binary }} \
-             dist/${{ matrix.binary }}-${{ matrix.target }}
+          cp target/${{ matrix.target }}/release/opcua-howick \
+             dist/opcua-howick-${{ matrix.target }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.binary }}-${{ matrix.target }}
+          name: opcua-howick-${{ matrix.target }}
           path: dist/
 
-  # ── GitHub Release — attach binaries ───────────────────────────────────
+  # ── Attach binaries to GitHub Release ────────────────────────────────────
   release:
     name: Release
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name == 'release'
-
     steps:
-      - name: Download all artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           path: dist/
           merge-multiple: true
 
-      - name: Upload binaries to release
+      - name: Attach to release
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*

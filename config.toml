@@ -1,30 +1,24 @@
 # opcua-howick configuration
-# Supports three deployment topologies:
-#
-# Topology A (Cloud):  set plat_trunk.url to your CF Worker URL
-# Topology B (LAN):    set plat_trunk.url to http://localhost:3000 (Tauri)
-# Topology C (Hybrid): set plat_trunk.url to http://localhost:3000, Tauri syncs to cloud
+# Topology A (Cloud):  plat_trunk.url = CF Worker URL
+# Topology B (LAN):    plat_trunk.url = http://localhost:3000 (Tauri)
+# Topology C (Hybrid): plat_trunk.url = http://localhost:3000, Tauri syncs to cloud
 
 [opcua]
-host = "0.0.0.0"
-port = 4840
+host             = "0.0.0.0"
+port             = 4840
 application_name = "Howick Edge Agent - Si Racha Factory"
 
+[http]
+host = "0.0.0.0"
+port = 4841   # CF Worker or Tauri backend calls GET /status on this port
+
 [machine]
-machine_name = "Howick FRAMA"
-# Drop CSV jobs here — plat-trunk or manual operator copy
-job_input_dir = "./jobs/input"
-# Where the Howick machine picks up its files
-# TODO: confirm exact network path with Prin
-machine_input_dir = "./jobs/machine"
-# Where the machine signals completion
-# TODO: confirm exact path with Prin
-machine_output_dir = "./jobs/output"
+machine_name       = "Howick FRAMA"
+job_input_dir      = "./jobs/input"
+machine_input_dir  = "./jobs/machine"    # TODO: confirm with Prin
+machine_output_dir = "./jobs/output"     # TODO: confirm with Prin
 
 [plat_trunk]
-# Topology B (LAN via Tauri) — change to CF Worker URL for Topology A
-url = "http://localhost:3000"
-# Leave empty for LAN, set for cloud auth
-api_key = ""
-# Push machine status to plat-trunk every N seconds
+url                       = "http://localhost:3000"
+api_key                   = ""
 status_push_interval_secs = 5

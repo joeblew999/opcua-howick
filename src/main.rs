@@ -1,17 +1,17 @@
 //! # opcua-howick
 //!
 //! OPC UA edge agent for Howick FRAMA roll-forming machines.
-//! Runs on a small compute module on the factory LAN.
+//! Runs on a small compute module (Raspberry Pi / NUC / Mac Mini) on factory LAN.
 //!
-//! Supports three deployment topologies:
-//!   A - Cloud:  plat_trunk.url = CF Worker URL
-//!   B - LAN:    plat_trunk.url = http://localhost:3000 (Tauri)
-//!   C - Hybrid: LAN primary, syncs to cloud via Automerge CRDT
+//! Three concurrent services:
+//!   - OPC UA server (port 4840) — machine state for any OPC UA client
+//!   - HTTP status server (port 4841) — JSON API for plat-trunk / Tauri
+//!   - Job file watcher — CSV drop to machine input directory
 //!
-//! Usage:
-//!   opcua-howick [--config config.toml]
+//! Topology-agnostic: plat_trunk.url in config.toml points to CF or localhost.
 
 mod config;
+mod http_server;
 mod machine;
 mod server;
 mod watcher;
@@ -34,41 +34,37 @@ async fn main() -> anyhow::Result<()> {
     let config = config::Config::load_or_default(&config_path);
 
     tracing::info!(
-        topology = config.topology(),
-        plat_trunk_url = %config.plat_trunk.url,
-        opcua_port = config.opcua.port,
-        machine = %config.machine.machine_name,
+        topology        = config.topology(),
+        plat_trunk_url  = %config.plat_trunk.url,
+        opcua_port      = config.opcua.port,
+        http_port       = config.http.port,
+        machine         = %config.machine.machine_name,
         "Configuration loaded"
     );
 
+    // Shared machine state — updated by watcher, read by OPC UA + HTTP servers
     let state = machine::new_shared_state();
     {
         let mut s = state.write().await;
         s.status = machine::MachineStatus::Idle;
     }
 
-    let watcher_state = state.clone();
-    let watcher_config = config.machine.clone();
-    let server_state = state.clone();
-    let server_config = config.clone();
-
     tracing::info!(
-        "Running — OPC UA: opc.tcp://{}:{}/, plat-trunk: {}",
-        config.opcua.host,
-        config.opcua.port,
-        config.plat_trunk.url,
+        "Running — OPC UA: opc.tcp://{}:{}/  HTTP: http://{}:{}/status",
+        config.opcua.host, config.opcua.port,
+        config.http.host,  config.http.port,
     );
 
+    // Run all three services concurrently — if any exits (error or ctrl-c), stop all
     tokio::select! {
-        result = watcher::run_job_watcher(watcher_config, watcher_state) => {
-            if let Err(e) = result {
-                tracing::error!("Job watcher error: {e}");
-            }
+        result = watcher::run_job_watcher(config.machine.clone(), state.clone()) => {
+            if let Err(e) = result { tracing::error!("Job watcher: {e}"); }
         }
-        result = server::run_server(&server_config, server_state) => {
-            if let Err(e) = result {
-                tracing::error!("OPC UA server error: {e}");
-            }
+        result = server::run_server(&config, state.clone()) => {
+            if let Err(e) = result { tracing::error!("OPC UA server: {e}"); }
+        }
+        result = http_server::run_http_server(&config, state.clone()) => {
+            if let Err(e) = result { tracing::error!("HTTP server: {e}"); }
         }
     }
 
