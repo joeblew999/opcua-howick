@@ -25,6 +25,10 @@ RUST_LOG       = "opcua_howick=info"
 #     terminal 2:  mise run dev:agent    # starts howick-agent, polls :3000
 #                  Check ./jobs/machine/ for written CSVs
 
+[tasks."dev:all"]
+description = "Start full dev stack in one terminal — mock plat-trunk + opcua-howick (Ctrl-C stops both)"
+run         = "bash dev/start.sh"
+
 [tasks."dev:setup"]
 description = "Create local jobs directories (run once)"
 run         = """

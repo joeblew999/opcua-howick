@@ -28,8 +28,7 @@ pub async fn run_server(config: &Config, state: SharedState) -> anyhow::Result<(
         config.opcua.port
     );
 
-    let (server, handle) = ServerBuilder::new()
-        .application_name(&config.opcua.application_name)
+    let (server, handle) = ServerBuilder::new_anonymous(&config.opcua.application_name)
         .application_uri(NS_URI)
         .product_uri("https://github.com/joeblew999/opcua-howick")
         .host(config.opcua.host.clone())
