@@ -11,6 +11,64 @@ RUST_BACKTRACE = "1"
 RUST_LOG       = "opcua_howick=info"
 
 # ── Dev ───────────────────────────────────────────────────────────────────────
+# Full local dev loop — no hardware required.
+#
+# Two independent pipelines, each needs its own terminal:
+#
+#   Pipeline A — opcua-howick (Pi 5 role): OPC UA server + file watcher
+#     terminal 1:  mise run dev          # starts opcua-howick
+#     terminal 2:  mise run dev:job      # drops a test CSV into jobs/input/
+#                  mise run dev:status   # check machine state via HTTP
+#
+#   Pipeline B — howick-agent (Pi Zero role): polls plat-trunk, writes CSV
+#     terminal 1:  mise run dev:mock     # starts fake plat-trunk on :3000
+#     terminal 2:  mise run dev:agent    # starts howick-agent, polls :3000
+#                  Check ./jobs/machine/ for written CSVs
+
+[tasks."dev:setup"]
+description = "Create local jobs directories (run once)"
+run         = """
+mkdir -p jobs/input jobs/machine jobs/output
+echo "Local job dirs ready:"
+ls -la jobs/
+"""
+
+[tasks.dev]
+description = "Run opcua-howick locally — OPC UA :4840, HTTP API :4841, watches jobs/input/"
+depends     = ["dev:setup"]
+run         = "RUST_LOG=opcua_howick=debug cargo run --bin opcua-howick"
+
+[tasks."dev:agent"]
+description = "Run howick-agent locally — polls localhost:3000, writes to jobs/machine/"
+depends     = ["dev:setup"]
+run         = "RUST_LOG=howick_agent=debug cargo run --bin howick-agent"
+
+[tasks."dev:mock"]
+description = "Start mock plat-trunk backend on :3000 (needed by dev:agent)"
+run         = "python3 dev/mock-plat-trunk.py"
+
+[tasks."dev:job"]
+description = "Drop a test CSV into jobs/input/ to exercise the file watcher (use with dev)"
+depends     = ["dev:setup"]
+run         = """
+cat > jobs/input/TEST-W1.csv << 'EOF'
+UNIT,MILLIMETRE
+PROFILE,S8908,Standard Profile
+FRAMESET,TEST-W1
+COMPONENT,TEST-W1-1,LABEL_NRM,1,2400.0,DIMPLE,20.65,DIMPLE,70.65
+COMPONENT,TEST-W1-2,LABEL_NRM,1,1800.0,DIMPLE,20.65,DIMPLE,70.65
+EOF
+echo "Dropped: jobs/input/TEST-W1.csv"
+ls -lh jobs/input/ jobs/machine/ 2>/dev/null
+"""
+
+[tasks."dev:status"]
+description = "Check opcua-howick machine state via HTTP API"
+run         = "curl -s http://localhost:4841/status | python3 -m json.tool"
+
+[tasks."dev:jobs"]
+description = "List jobs via HTTP API"
+run         = "curl -s http://localhost:4841/jobs | python3 -m json.tool"
 
 [tasks.build]
 description = "Build (native dev — incremental)"
@@ -19,7 +77,7 @@ outputs  = ["target/debug/opcua-howick", "target/debug/howick-agent"]
 run      = "cargo build"
 
 [tasks.run]
-description = "Run locally (reads ./config.toml)"
+description = "Run opcua-howick locally (reads ./config.toml) — alias for dev"
 run         = "cargo run"
 
 [tasks.test]
