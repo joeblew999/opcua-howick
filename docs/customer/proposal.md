@@ -1,4 +1,4 @@
-# Factory Automation Proposal
+# Document 1 of 7 — Proposal
 ## Howick FRAMA — Automated Job Delivery
 
 **Prepared for:** Prin — Si Racha Factory, Thailand
@@ -83,7 +83,7 @@ Design PC
 The USB stick is retired permanently. The machine sees the Pi Zero as a normal
 USB stick — it never knows the difference.
 
-**Hardware cost: ~3,700 THB** — see Hardware Quote document.
+**Hardware cost: ~3,700 THB** — see Document 3 (Hardware Quote).
 
 ---
 
@@ -98,26 +98,39 @@ plugging in two small computers and changing one configuration value.
 
 ---
 
-## Phase 2 — Coil inventory sensor (optional, either option)
+## Phases
 
-A weight sensor under the coil spool displays remaining material in metres
-on the Job Dashboard. An alert fires before the coil runs out mid-job —
-preventing scrap members and a full restart.
+### Phase 1 — Job delivery and dashboard (now)
 
-**Hardware cost: ~680 THB additional** — see Hardware Quote document.
+Drag-and-drop job upload. Live pipeline status on dashboard. Jobs reach the
+machine over WiFi. This is Phase 1 — it is working today.
 
----
+**Cost:** free (Option A) or ~3,700 THB hardware (Option B).
 
-## Phase 3 — Additional machines
+### Phase 2 — Coil inventory sensor (optional, Option B)
 
-The same system can be extended to other roll-forming machines in the factory.
-Scope and hardware discussed per machine when the time comes.
+A weight sensor under the coil spool shows remaining material in metres on
+the dashboard. An alert fires before the coil runs out mid-job — preventing
+scrap and a full restart. Requires Option B (sensor wires to Pi Zero GPIO).
+
+**Cost:** ~680 THB — see Document 3 (Hardware Quote). Add any time after Phase 1.
+
+### Phase 3 — plat-trunk CAD integration (future)
+
+Jobs flow directly from ubuntu Software's STEP CAD platform to the machine.
+Prin's SketchUp workflow continues unchanged alongside it. No action required
+from Prin — this is ubuntu Software development work.
+
+### Phase 4 — Additional machines (future)
+
+The same system extended to other roll-forming machines in the factory.
+Scope and cost discussed per machine.
 
 ---
 
 ## Why this is free
 
-Ubuntu Software is building a platform for connected factory machines. Having
+ubuntu Software is building a platform for connected factory machines. Having
 a real installation running against real equipment and real processes is
 enormously valuable for development. In exchange, you get a working system
 and ongoing support at no cost.
@@ -139,8 +152,12 @@ and ongoing support at no cost.
 Contact Gerard Webb to schedule a setup session. Takes one hour on a remote call.
 
 **Option B (with hardware):**
-1. Review the Hardware Quote document and place the order at raspberrypithailand.com
+1. Review Document 3 (Hardware Quote) and place the order at raspberrypithailand.com
 2. Contact Gerard Webb to schedule the setup session after hardware arrives
+
+---
+
+→ **Next: Document 2 — System Overview** (topology diagrams, where everything runs)
 
 ---
 

@@ -1,4 +1,4 @@
-# System Overview
+# Document 2 of 7 — System Overview
 ## Howick FRAMA — Automated Job Delivery
 
 **Prepared for:** Prin — Si Racha Factory, Thailand
@@ -11,7 +11,8 @@
 
 Simplest start. No hardware purchase. `opcua-howick.exe` runs on the Design PC
 alongside SketchUp and FrameBuilderMRD. Operator still carries USB stick to the
-machine, but gets the dashboard and drag-and-drop upload instead of manually copying files.
+machine, but gets the dashboard and drag-and-drop upload instead of manually
+copying files.
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -33,7 +34,7 @@ machine, but gets the dashboard and drag-and-drop upload instead of manually cop
 └─────────────────────────────────────────────────────┘
 ```
 
-`config.toml` key settings — see `config.option-a.toml`:
+Key config (see `config.option-a.toml`):
 ```toml
 delivery_mode     = "direct"
 usb_gadget_mode   = false
@@ -63,7 +64,7 @@ USB port and replaces the USB stick. Operator uses a browser on any device.
 │                   OPC UA server  (:4840)            │
 │                   job queue                         │
 └──────────────────────┬──────────────────────────────┘
-                       │ WiFi — polls /api/jobs/howick/pending
+                       │ WiFi — polls job queue
 ┌──────────────────────▼──────────────────────────────┐
 │  Pi Zero                                            │
 │                                                     │
@@ -79,26 +80,27 @@ USB port and replaces the USB stick. Operator uses a browser on any device.
 └─────────────────────────────────────────────────────┘
 ```
 
-`config.toml` key settings — see `config.option-b-pi5.toml` and `config.pi-zero.toml`:
+Key config (see `config.option-b-pi5.toml` and `config.pi-zero.toml`):
 ```toml
 # Pi 5
-delivery_mode     = "queue"
-usb_gadget_mode   = false
+delivery_mode   = "queue"
+usb_gadget_mode = false
 
 # Pi Zero
 usb_gadget_mode   = true
 machine_input_dir = "/mnt/usb_share"   # TBC with Prin's operator
 
 [plat_trunk]
-url = "http://pi5.local:4841"          # polls Pi 5, not plat-trunk
+url = "http://pi5.local:4841"
 ```
 
 ---
 
-## plat-trunk path (future — Phase 3)
+## Phase 3 — plat-trunk path (future)
 
-When plat-trunk's CAD platform is ready. The Pi Zero polls plat-trunk directly
-instead of Pi 5. Everything else is identical to Option B.
+When ubuntu Software's CAD platform is ready. Pi Zero polls plat-trunk directly
+instead of the Pi 5. Everything else is identical to Option B. Prin's SketchUp
+workflow continues unchanged alongside it.
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -106,7 +108,6 @@ instead of Pi 5. Everything else is identical to Option B.
 │                                                     │
 │  plat-trunk     — STEP CAD + Framing Extractor      │
 │                   generates CSV, queues job         │
-│                   serves /api/jobs/howick/pending   │
 └──────────────────────┬──────────────────────────────┘
                        │ WiFi / internet
 ┌──────────────────────▼──────────────────────────────┐
@@ -123,7 +124,7 @@ instead of Pi 5. Everything else is identical to Option B.
 
 ---
 
-## Systems and where they run
+## Where everything runs
 
 | Software | Runs on | Role |
 |----------|---------|------|
@@ -131,7 +132,7 @@ instead of Pi 5. Everything else is identical to Option B.
 | FrameBuilderMRD | Design PC | Howick's CSV generator |
 | opcua-howick | Design PC (Option A) or Pi 5 (Option B) | Dashboard, job queue, OPC UA server |
 | howick-agent | Pi Zero only | Polls for jobs, writes CSV to virtual USB |
-| plat-trunk | Cloud / LAN (future) | ubuntu Software's STEP CAD platform |
+| plat-trunk | Cloud / LAN (Phase 3 — future) | ubuntu Software's STEP CAD platform |
 
 ---
 
@@ -140,110 +141,56 @@ instead of Pi 5. Everything else is identical to Option B.
 | Path | Who uses it | CSV comes from | Status |
 |------|-------------|----------------|--------|
 | SketchUp path | Prin | SketchUp → FrameBuilderMRD → drag into dashboard | Works today |
-| plat-trunk path | plat-trunk users | plat-trunk Framing Extractor → job queue | Future (Phase 3) |
+| plat-trunk path | plat-trunk users | plat-trunk Framing Extractor → job queue | Phase 3 (future) |
 
-Both paths produce identical CSV files. The delivery mechanism (howick-agent →
-virtual USB → FRAMA) is the same for both. Prin does not need to change his
-SketchUp workflow for Phase 3 — both paths run alongside each other permanently.
+Both paths produce identical CSV files. The delivery mechanism is the same for
+both. Prin does not need to change his SketchUp workflow for Phase 3.
 
 ---
 
-## Software internals
-
-### opcua-howick (Pi 5 or Design PC)
-
-Four concurrent services:
+## Dashboard and HTTP API (port 4841)
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  opcua-howick                                       │
-│                                                     │
-│  OPC UA server (port 4840)                          │
-│    Machine/Status, CurrentJob, PiecesProduced,      │
-│    CoilRemaining, LastError                         │
-│    Jobs/QueueDepth, CompletedCount                  │
-│                                                     │
-│  HTTP server (port 4841)                            │
-│    GET  /dashboard   — live pipeline UI             │
-│    POST /upload      — CSV upload from browser      │
-│    GET  /status      — machine state JSON           │
-│    GET  /jobs        — queue + history JSON         │
-│    POST /api/sensor/coil  — Phase 2 weight push     │
-│                                                     │
-│  File watcher                                       │
-│    watches job_input_dir for new .csv files         │
-│                                                     │
-│  Job poller                                         │
-│    polls plat-trunk API for pending jobs            │
-│    (Phase 3 — plat-trunk path)                      │
-└─────────────────────────────────────────────────────┘
-```
-
-### howick-agent (Pi Zero 2W)
-
-Minimal binary — polls job queue, writes CSV to virtual USB, pushes coil weight:
-
-```
-┌─────────────────────────────────────────────────────┐
-│  howick-agent                                       │
-│                                                     │
-│  Job poller    — GET /api/jobs/howick/pending       │
-│                  writes CSV to /mnt/usb_share       │
-│                  POST /api/jobs/howick/:id/complete │
-│                                                     │
-│  Sensor push   — reads HX711 load cell (Phase 2)   │
-│                  POST /api/sensor/coil to Pi 5      │
-│                                                     │
-│  No OPC UA server.  No HTTP server.                 │
-│  Binary: ~3MB   RAM: ~16MB                          │
-└─────────────────────────────────────────────────────┘
+GET  /dashboard          — live pipeline status, drag-and-drop upload
+POST /upload             — submit CSV job from browser
+GET  /status             — machine state as JSON
+GET  /jobs               — job queue + recent completions
+POST /api/sensor/coil    — Phase 2: Pi Zero pushes coil weight here
 ```
 
 ---
 
-## OPC UA address space
+## OPC UA server (port 4840)
 
-Any OPC UA client on the factory LAN can connect to `opc.tcp://howick-pi5.local:4840/`
-and read live machine state:
+Any OPC UA client on the factory LAN connects to `opc.tcp://howick-pi5.local:4840/`
+and reads live machine state:
 
 ```
 /Howick/
   Machine/
-    Status           String    "Running" | "Idle" | "Error" | "Offline"
-    CurrentJob       String    frameset name e.g. "W1"
-    PiecesProduced   UInt32
-    CoilRemaining    Double    metres remaining (Phase 2 — needs sensor)
-    LastError        String
+    Status           "Running" | "Idle" | "Error" | "Offline"
+    CurrentJob       frameset name e.g. "W1"
+    PiecesProduced   count
+    CoilRemaining    metres remaining (Phase 2 — needs sensor)
+    LastError        last error message
   Jobs/
-    QueueDepth       UInt32
-    CompletedCount   UInt32
+    QueueDepth       jobs waiting
+    CompletedCount   jobs delivered
 ```
 
-Updated every 500ms via subscription push to connected clients.
+Updated every 500ms.
 
 ---
 
 ## CSV format
 
 The Howick FRAMA reads a specific CSV format. Both SketchUp+FrameBuilderMRD
-and the plat-trunk Framing Extractor produce this same format. The delivery
-software (opcua-howick, howick-agent) treats the CSV as opaque — it delivers
-it, it does not parse it.
+and plat-trunk produce this same format. The software delivers it without
+parsing it — the machine's existing logic is unchanged.
 
-Reference jobs from Prin's machine:
+Reference jobs from Prin's machine used to develop and test this system:
 - **T1** — roof truss, 22 components, S8908 profile, 3945mm chords
 - **W1** — wall frame, 42 components, S8908 profile, 4740mm plates
-
-Operations seen in Prin's jobs: `DIMPLE`, `LIP_CUT`, `SWAGE`, `WEB`,
-`END_TRUSS`, `SERVICE_HOLE`, `NOTCH`, `LABEL_NRM`, `LABEL_INV`
-
----
-
-## Key unknown
-
-**What folder on the USB does the Howick FRAMA look for CSV files?**
-One question for Prin's operator. Sets `machine_input_dir` in `config.pi-zero.toml`.
-Could be the root of the USB or a named subfolder.
 
 ---
 
@@ -255,9 +202,20 @@ Could be the root of the USB or a named subfolder.
 | USB stick needed | Yes (still manual) | No — retired permanently |
 | Dashboard access | Design PC only | Any browser on factory WiFi |
 | Job delivery | Manual (drag in + walk stick) | Automatic over WiFi |
-| Coil sensor (Phase 2) | No (no Pi Zero GPIO) | Yes |
-| Start today | Yes | After hardware arrives |
+| Coil sensor (Phase 2) | No | Yes |
+| Start today | Yes | After hardware arrives (3 days) |
 | Upgrade path | Add Pi hardware any time | Already there |
+
+---
+
+## Key unknown
+
+**What folder on the USB does the Howick FRAMA look for CSV files?**
+One question for Prin's operator. Sets `machine_input_dir` in `config.pi-zero.toml`.
+
+---
+
+→ **Next: Document 3 — Hardware Quote** (what to order and where in Thailand)
 
 ---
 

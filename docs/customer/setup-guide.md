@@ -1,4 +1,5 @@
-# Setup Guide
+# Document 4 of 7 — Setup Guide
+## Howick FRAMA — Automated Job Delivery
 
 **Prepared for:** Prin — Si Racha Factory, Thailand
 **Prepared by:** Gerard Webb, ubuntu Software
@@ -18,7 +19,8 @@ This option requires no hardware purchase and can be running today.
 4. Drag a job file from FrameBuilderMRD into the dashboard — done
 
 Your USB stick method continues to work. Nothing is removed or changed.
-The dashboard runs alongside SketchUp and FrameBuilderMRD. It starts automatically when Windows starts.
+The dashboard runs alongside SketchUp and FrameBuilderMRD. It starts automatically
+when Windows starts.
 
 ### What Gerard does
 
@@ -38,8 +40,8 @@ Any browser on the network can reach the dashboard.
 
 **Step 1 — Order the hardware**
 
-Place one order at **raspberrypithailand.com**. Parts list in the Hardware Quote
-document. Approximately 3,700 THB. Delivery 3 days.
+Place one order at **raspberrypithailand.com**. Parts list in Document 3 (Hardware
+Quote). Approximately 3,700 THB. Delivery 3 days.
 
 **Step 2 — Plug in and share WiFi**
 
@@ -79,10 +81,10 @@ Software updates install automatically. No action required from anyone at the fa
 
 ---
 
-## Adding the coil sensor — Phase 2 (whenever you are ready)
+## Adding the coil sensor — Phase 2 (Option B only, whenever you are ready)
 
-Works with either Option A or B. Order the Phase 2 items from the Hardware Quote
-(Lazada Thailand). When they arrive:
+Requires Option B hardware (sensor wires to Pi Zero GPIO). Order the Phase 2 items
+from Document 3 (Hardware Quote) on Lazada Thailand. When they arrive:
 
 1. Weigh the empty coil spool — send Gerard the weight in kilograms
 2. Gerard installs and calibrates the sensor remotely — no production downtime
@@ -96,6 +98,10 @@ runs out mid-job.
 
 Contact Gerard directly. The system can be seen and fixed remotely.
 Most issues resolved the same day. No site visit needed.
+
+---
+
+→ **Next: Document 5 — Roadmap** (phases, status, and open questions)
 
 ---
 
