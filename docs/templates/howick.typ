@@ -21,7 +21,7 @@
       #set text(size: 8pt, fill: rgb("#999999"))
       #grid(
         columns: (1fr, 1fr),
-        align(left)[Confidential],
+        align(left)[ubuntu Software — Gerard Webb],
         align(right)[#context counter(page).display()],
       )
     ],
@@ -93,6 +93,8 @@
     text(size: 28pt, weight: 700, fill: rgb("#0f172a"))[#title]
     v(0.3em)
     line(length: 6cm, stroke: 2pt + rgb("#3b82f6"))
+    v(0.6em)
+    text(size: 9pt, fill: rgb("#64748b"))[ubuntu Software — Gerard Webb]
     v(2em)
   }
 
