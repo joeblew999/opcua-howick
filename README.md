@@ -30,12 +30,14 @@ topology diagrams.
 
 ## Two binaries
 
-| Binary | For | OPC UA | HTTP | RAM | Size |
-|--------|-----|--------|------|-----|------|
-| `opcua-howick` | Pi 5, NUC, Mac, Windows | ✅ | ✅ | ~64MB | ~15MB |
-| `howick-agent` | Pi Zero 2W (USB gadget) | ❌ | ❌ | ~16MB | ~3MB |
+| Binary | For | OPC UA | HTTP server | RAM | Size |
+|--------|-----|--------|-------------|-----|------|
+| `opcua-howick` | Pi 5, NUC, Mac, Windows | Server | ✅ | ~64MB | ~15MB |
+| `howick-agent` | Pi Zero 2W (USB gadget) | Client | ❌ | ~16MB | ~3MB |
 
-The Pi Zero only needs to poll and write. `howick-agent` does exactly that.
+`howick-agent` **subscribes** to the Pi 5 OPC UA server — the Pi 5 pushes a
+notification the instant a job is queued. No polling. Standard industrial M2M,
+same protocol used by SCADA systems connecting to Siemens PLCs and Fanuc CNCs.
 
 ---
 
@@ -75,6 +77,35 @@ One config per machine — deploy tasks copy it automatically on first deploy:
 | [config.windows.toml](config.windows.toml) | Windows Design PC |
 | [config.pi5.toml](config.pi5.toml) | Pi 5 |
 | [config.pi-zero.toml](config.pi-zero.toml) | Pi Zero 2W |
+
+---
+
+## OPC UA address space
+
+The Pi 5 exposes machine state and job queue as OPC UA nodes (namespace `urn:howick-edge-agent`):
+
+```
+/Howick/
+  Machine/  Status, CurrentJob, PiecesProduced, CoilRemaining, LastError
+  Jobs/     QueueDepth, CompletedCount, PendingJobId, PendingJobName, PendingJobCsv
+            CompleteJob(job_id)  ← method: Pi Zero calls this after writing CSV to USB
+```
+
+Any standard OPC UA client (UaExpert, Ignition, Node-RED, Python opcua) can connect to
+`opc.tcp://<pi5-ip>:4840/` and read live machine state or subscribe to job events.
+
+---
+
+## Running tests
+
+```bash
+cargo test                    # all tests (6 HTTP pipeline + 3 OPC UA integration)
+cargo test --test opcua       # OPC UA integration tests only (real server + real client)
+cargo test --test pipeline    # HTTP pipeline tests only
+RUST_LOG=debug cargo test     # verbose
+```
+
+Tests start real servers on random ports — no mocks, no fakes.
 
 ---
 
