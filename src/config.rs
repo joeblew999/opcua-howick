@@ -9,24 +9,24 @@ use std::path::PathBuf;
 /// - Hybrid: plat_trunk_url = "http://localhost:3000" (syncs to cloud separately)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
-    pub opcua:      OpcUaConfig,
-    pub machine:    MachineConfig,
+    pub opcua: OpcUaConfig,
+    pub machine: MachineConfig,
     pub plat_trunk: PlatTrunkConfig,
-    pub http:       HttpConfig,
+    pub http: HttpConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OpcUaConfig {
-    pub host:             String,
-    pub port:             u16,
+    pub host: String,
+    pub port: u16,
     pub application_name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MachineConfig {
-    pub machine_name:       String,
-    pub job_input_dir:      PathBuf,
-    pub machine_input_dir:  PathBuf,
+    pub machine_name: String,
+    pub job_input_dir: PathBuf,
+    pub machine_input_dir: PathBuf,
     pub machine_output_dir: PathBuf,
     /// USB gadget mode — set true when running on Pi Zero 2W acting as USB mass storage.
     /// When true, after each CSV write the USB storage is re-presented to the host machine.
@@ -55,23 +55,23 @@ pub struct HttpConfig {
 /// Topology C (Hybrid): url = "http://localhost:3000"
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlatTrunkConfig {
-    pub url:                        String,
-    pub api_key:                    String,
-    pub status_push_interval_secs:  u64,
+    pub url: String,
+    pub api_key: String,
+    pub status_push_interval_secs: u64,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
             opcua: OpcUaConfig {
-                host:             "0.0.0.0".to_string(),
-                port:             4840,
+                host: "0.0.0.0".to_string(),
+                port: 4840,
                 application_name: "Howick Edge Agent".to_string(),
             },
             machine: MachineConfig {
-                machine_name:       "Howick FRAMA".to_string(),
-                job_input_dir:      PathBuf::from("./jobs/input"),
-                machine_input_dir:  PathBuf::from("./jobs/machine"),
+                machine_name: "Howick FRAMA".to_string(),
+                job_input_dir: PathBuf::from("./jobs/input"),
+                machine_input_dir: PathBuf::from("./jobs/machine"),
                 machine_output_dir: PathBuf::from("./jobs/output"),
                 usb_gadget_mode: false,
             },
@@ -80,8 +80,8 @@ impl Default for Config {
                 port: 4841,
             },
             plat_trunk: PlatTrunkConfig {
-                url:                       "http://localhost:3000".to_string(),
-                api_key:                   String::new(),
+                url: "http://localhost:3000".to_string(),
+                api_key: String::new(),
                 status_push_interval_secs: 5,
             },
         }

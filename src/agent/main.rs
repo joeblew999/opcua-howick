@@ -34,10 +34,14 @@
 
 // Shared modules — only the ones we need
 // (server.rs and http_server.rs are NOT included here)
-#[path = "../config.rs"]   mod config;
-#[path = "../machine.rs"]  mod machine;
-#[path = "../poller.rs"]   mod poller;
-#[path = "../usb_gadget.rs"] mod usb_gadget;
+#[path = "../config.rs"]
+mod config;
+#[path = "../machine.rs"]
+mod machine;
+#[path = "../poller.rs"]
+mod poller;
+#[path = "../usb_gadget.rs"]
+mod usb_gadget;
 
 use std::path::PathBuf;
 use tracing_subscriber::EnvFilter;
@@ -50,7 +54,7 @@ async fn main() -> anyhow::Result<()> {
                 .add_directive("howick_agent=info".parse().unwrap())
                 .add_directive("opcua_howick=info".parse().unwrap()),
         )
-        .compact()  // compact format — saves log space on Pi Zero's SD card
+        .compact() // compact format — saves log space on Pi Zero's SD card
         .init();
 
     tracing::info!(
@@ -89,7 +93,8 @@ async fn main() -> anyhow::Result<()> {
     // Single service: job poller
     // No OPC UA server. No HTTP server. No file watcher.
     // Just: poll → write CSV → refresh USB → repeat.
-    tracing::info!("Running — polling {} every {}s",
+    tracing::info!(
+        "Running — polling {} every {}s",
         config.plat_trunk.url,
         config.plat_trunk.status_push_interval_secs,
     );

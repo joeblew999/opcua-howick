@@ -27,8 +27,7 @@ use tracing_subscriber::EnvFilter;
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
-            EnvFilter::from_default_env()
-                .add_directive("opcua_howick=info".parse().unwrap()),
+            EnvFilter::from_default_env().add_directive("opcua_howick=info".parse().unwrap()),
         )
         .init();
 
@@ -54,8 +53,10 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!(
         "Services: OPC UA opc.tcp://{}:{}/ | HTTP http://{}:{}/ | poller→{}",
-        config.opcua.host, config.opcua.port,
-        config.http.host,  config.http.port,
+        config.opcua.host,
+        config.opcua.port,
+        config.http.host,
+        config.http.port,
         config.plat_trunk.url,
     );
 

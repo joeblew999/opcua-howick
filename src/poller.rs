@@ -11,7 +11,6 @@
 /// The CF Worker stores jobs in R2 at `jobs/howick/{job_id}.csv`.
 /// This poller fetches pending jobs, writes CSV to the machine input directory,
 /// then marks them as completed via the API.
-
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
@@ -28,9 +27,9 @@ struct PendingJobsResponse {
 
 #[derive(Debug, Deserialize)]
 struct PendingJob {
-    job_id:        String,
+    job_id: String,
     frameset_name: String,
-    csv:           String,
+    csv: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -50,7 +49,7 @@ struct CompleteJobRequest {
 ///   3. Added to SharedState completed_jobs
 pub async fn run_job_poller(config: Config, state: SharedState) -> anyhow::Result<()> {
     let interval = Duration::from_secs(config.plat_trunk.status_push_interval_secs);
-    let client   = build_client(&config.plat_trunk)?;
+    let client = build_client(&config.plat_trunk)?;
     let base_url = config.plat_trunk.url.trim_end_matches('/').to_string();
 
     tracing::info!(
@@ -60,7 +59,15 @@ pub async fn run_job_poller(config: Config, state: SharedState) -> anyhow::Resul
     );
 
     loop {
-        if let Err(e) = poll_once(&client, &base_url, &config.plat_trunk, &config.machine, &state).await {
+        if let Err(e) = poll_once(
+            &client,
+            &base_url,
+            &config.plat_trunk,
+            &config.machine,
+            &state,
+        )
+        .await
+        {
             tracing::warn!("Poll error (will retry): {e}");
         }
         tokio::time::sleep(interval).await;
@@ -68,11 +75,11 @@ pub async fn run_job_poller(config: Config, state: SharedState) -> anyhow::Resul
 }
 
 async fn poll_once(
-    client:    &reqwest::Client,
-    base_url:  &str,
+    client: &reqwest::Client,
+    base_url: &str,
     pt_config: &PlatTrunkConfig,
     mc_config: &MachineConfig,
-    state:     &SharedState,
+    state: &SharedState,
 ) -> anyhow::Result<()> {
     let url = format!("{base_url}/api/jobs/howick/pending");
 
@@ -103,11 +110,10 @@ async fn poll_once(
         }
         // Mark complete on the backend
         let complete_url = format!("{base_url}/api/jobs/howick/{}/complete", job.job_id);
-        let mut req = client.post(&complete_url)
-            .json(&CompleteJobRequest {
-                job_id: job.job_id.clone(),
-                status: "completed".into(),
-            });
+        let mut req = client.post(&complete_url).json(&CompleteJobRequest {
+            job_id: job.job_id.clone(),
+            status: "completed".into(),
+        });
         if !pt_config.api_key.is_empty() {
             req = req.header("Authorization", format!("Bearer {}", pt_config.api_key));
         }
@@ -122,9 +128,9 @@ async fn poll_once(
 }
 
 async fn process_job(
-    job:       &PendingJob,
+    job: &PendingJob,
     mc_config: &MachineConfig,
-    state:     &SharedState,
+    state: &SharedState,
 ) -> anyhow::Result<()> {
     // Write CSV to machine input directory (handles USB gadget refresh if configured)
     let filename = format!("{}.csv", job.frameset_name);
@@ -141,16 +147,16 @@ async fn process_job(
     // Update shared state
     {
         let mut s = state.write().await;
-        s.status      = MachineStatus::Running;
+        s.status = MachineStatus::Running;
         s.current_job = Some(job.frameset_name.clone());
         s.completed_jobs.push(Job {
-            id:            job.job_id.clone(),
+            id: job.job_id.clone(),
             frameset_name: job.frameset_name.clone(),
-            csv_path:      dest,
-            submitted_at:  std::time::SystemTime::now(),
+            csv_path: dest,
+            submitted_at: std::time::SystemTime::now(),
         });
         // Reset to idle — real status tracking needs machine output monitoring (Phase 2)
-        s.status      = MachineStatus::Idle;
+        s.status = MachineStatus::Idle;
         s.current_job = None;
     }
 

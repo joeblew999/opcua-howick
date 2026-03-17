@@ -11,7 +11,6 @@
 ///
 /// If NOT running in USB gadget mode (e.g. Pi 5, NUC, Windows),
 /// this module is a no-op — files are written directly to the path.
-
 use std::path::Path;
 use std::time::Duration;
 
@@ -21,11 +20,7 @@ use crate::config::MachineConfig;
 ///
 /// In USB gadget mode: writes to the mounted image and refreshes USB.
 /// In standard mode: writes directly to the configured path.
-pub async fn write_job(
-    config: &MachineConfig,
-    filename: &str,
-    csv: &str,
-) -> anyhow::Result<()> {
+pub async fn write_job(config: &MachineConfig, filename: &str, csv: &str) -> anyhow::Result<()> {
     let dest = config.machine_input_dir.join(filename);
 
     tokio::fs::create_dir_all(&config.machine_input_dir).await?;

@@ -7,7 +7,6 @@
 ///   GET  /status          Machine status JSON
 ///   POST /jobs            Submit a CSV job (alternative to file drop)
 ///   GET  /jobs            List recent jobs
-
 use std::net::SocketAddr;
 
 use tokio::net::TcpListener;
@@ -17,8 +16,7 @@ use crate::machine::SharedState;
 
 /// Run the HTTP status server on config.http_port.
 pub async fn run_http_server(config: &Config, state: SharedState) -> anyhow::Result<()> {
-    let addr: SocketAddr = format!("{}:{}", config.http.host, config.http.port)
-        .parse()?;
+    let addr: SocketAddr = format!("{}:{}", config.http.host, config.http.port).parse()?;
 
     let listener = TcpListener::bind(addr).await?;
     tracing::info!("HTTP status server on http://{}/", addr);
@@ -48,31 +46,50 @@ async fn handle_connection(
     let first_line = req.lines().next().unwrap_or("");
     let mut parts = first_line.split_whitespace();
     let method = parts.next().unwrap_or("");
-    let path   = parts.next().unwrap_or("/");
+    let path = parts.next().unwrap_or("/");
 
     let (status_code, body) = match (method, path) {
-
         ("GET", "/status") | ("GET", "/status?") => {
             let s = state.read().await;
             let body = format!(
                 r#"{{"status":"{status}","current_job":{current_job},"pieces_produced":{pieces},"queue_depth":{queue},"coil_remaining":{coil}}}"#,
-                status       = s.status.as_str(),
-                current_job  = s.current_job.as_deref().map(|j| format!("\"{j}\"")).unwrap_or("null".into()),
-                pieces       = s.pieces_produced,
-                queue        = s.job_queue.len(),
-                coil         = s.coil_remaining_m,
+                status = s.status.as_str(),
+                current_job = s
+                    .current_job
+                    .as_deref()
+                    .map(|j| format!("\"{j}\""))
+                    .unwrap_or("null".into()),
+                pieces = s.pieces_produced,
+                queue = s.job_queue.len(),
+                coil = s.coil_remaining_m,
             );
             (200, body)
         }
 
         ("GET", "/jobs") => {
             let s = state.read().await;
-            let completed: Vec<String> = s.completed_jobs.iter().rev().take(10).map(|j| {
-                format!(r#"{{"id":"{}","frameset_name":"{}"}}"#, j.id, j.frameset_name)
-            }).collect();
-            let queued: Vec<String> = s.job_queue.iter().map(|j| {
-                format!(r#"{{"id":"{}","frameset_name":"{}"}}"#, j.id, j.frameset_name)
-            }).collect();
+            let completed: Vec<String> = s
+                .completed_jobs
+                .iter()
+                .rev()
+                .take(10)
+                .map(|j| {
+                    format!(
+                        r#"{{"id":"{}","frameset_name":"{}"}}"#,
+                        j.id, j.frameset_name
+                    )
+                })
+                .collect();
+            let queued: Vec<String> = s
+                .job_queue
+                .iter()
+                .map(|j| {
+                    format!(
+                        r#"{{"id":"{}","frameset_name":"{}"}}"#,
+                        j.id, j.frameset_name
+                    )
+                })
+                .collect();
             let body = format!(
                 r#"{{"queued":[{}],"completed":[{}]}}"#,
                 queued.join(","),
@@ -85,7 +102,7 @@ async fn handle_connection(
             // Read body — extract CSV and frameset_name from JSON
             // For now just acknowledge — the file watcher handles actual CSV ingestion
             let body_start = req.find("\r\n\r\n").map(|i| i + 4).unwrap_or(req.len());
-            let json_body  = &req[body_start..];
+            let json_body = &req[body_start..];
             if let Some(frameset_name) = extract_json_string(json_body, "frameset_name") {
                 let job_id = format!("{}-{}", frameset_name, timestamp_secs());
                 let body = format!(
@@ -97,9 +114,7 @@ async fn handle_connection(
             }
         }
 
-        ("GET", "/health") => {
-            (200, r#"{"ok":true}"#.into())
-        }
+        ("GET", "/health") => (200, r#"{"ok":true}"#.into()),
 
         _ => (404, r#"{"error":"not found"}"#.into()),
     };
@@ -119,11 +134,11 @@ async fn handle_connection(
 /// Very simple JSON string extractor — avoids pulling in serde for this tiny server.
 fn extract_json_string(json: &str, key: &str) -> Option<String> {
     let needle = format!("\"{key}\"");
-    let start  = json.find(&needle)? + needle.len();
-    let rest   = json[start..].trim_start();
-    let rest   = rest.strip_prefix(':')?.trim_start();
-    let rest   = rest.strip_prefix('"')?;
-    let end    = rest.find('"')?;
+    let start = json.find(&needle)? + needle.len();
+    let rest = json[start..].trim_start();
+    let rest = rest.strip_prefix(':')?.trim_start();
+    let rest = rest.strip_prefix('"')?;
+    let end = rest.find('"')?;
     Some(rest[..end].to_string())
 }
 

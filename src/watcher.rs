@@ -16,7 +16,10 @@ pub async fn run_job_watcher(config: MachineConfig, state: SharedState) -> anyho
     tokio::fs::create_dir_all(&config.machine_output_dir).await?;
 
     tracing::info!("Watching for jobs in: {}", config.job_input_dir.display());
-    tracing::info!("Machine input dir:    {}", config.machine_input_dir.display());
+    tracing::info!(
+        "Machine input dir:    {}",
+        config.machine_input_dir.display()
+    );
 
     let (tx, mut rx) = mpsc::channel(32);
 
@@ -90,7 +93,10 @@ async fn handle_new_job(
     // Write to machine input directory (handles USB gadget refresh if configured)
     let csv = tokio::fs::read_to_string(csv_path).await?;
     crate::usb_gadget::write_job(&config, filename, &csv).await?;
-    tracing::info!("CSV written to machine input: {}", config.machine_input_dir.join(filename).display());
+    tracing::info!(
+        "CSV written to machine input: {}",
+        config.machine_input_dir.join(filename).display()
+    );
 
     // Update state to running
     {

@@ -83,8 +83,15 @@ pub async fn run_server(config: &Config, state: SharedState) -> anyhow::Result<(
         handle_c.cancel();
     });
 
-    tracing::info!("OPC UA server running at opc.tcp://{}:{}/", config.opcua.host, config.opcua.port);
-    server.run().await.map_err(|e| anyhow::anyhow!("Server error: {e:?}"))?;
+    tracing::info!(
+        "OPC UA server running at opc.tcp://{}:{}/",
+        config.opcua.host,
+        config.opcua.port
+    );
+    server
+        .run()
+        .await
+        .map_err(|e| anyhow::anyhow!("Server error: {e:?}"))?;
 
     Ok(())
 }
@@ -114,7 +121,12 @@ fn build_address_space(
 
     // Root folder: /Howick
     let howick_folder = node(ns, "Howick");
-    address_space.add_folder(&howick_folder, "Howick", "Howick", &NodeId::objects_folder_id());
+    address_space.add_folder(
+        &howick_folder,
+        "Howick",
+        "Howick",
+        &NodeId::objects_folder_id(),
+    );
 
     // /Howick/Machine folder
     let machine_folder = node(ns, "Machine");
@@ -123,11 +135,36 @@ fn build_address_space(
     // Machine variables
     address_space.add_variables(
         vec![
-            Variable::new(&node(ns, "Machine/Status"), "Status", "Status", UAString::from("Offline")),
-            Variable::new(&node(ns, "Machine/CurrentJob"), "CurrentJob", "Current Job", UAString::from("")),
-            Variable::new(&node(ns, "Machine/PiecesProduced"), "PiecesProduced", "Pieces Produced", 0u32),
-            Variable::new(&node(ns, "Machine/CoilRemaining"), "CoilRemaining", "Coil Remaining (m)", 0f64),
-            Variable::new(&node(ns, "Machine/LastError"), "LastError", "Last Error", UAString::from("")),
+            Variable::new(
+                &node(ns, "Machine/Status"),
+                "Status",
+                "Status",
+                UAString::from("Offline"),
+            ),
+            Variable::new(
+                &node(ns, "Machine/CurrentJob"),
+                "CurrentJob",
+                "Current Job",
+                UAString::from(""),
+            ),
+            Variable::new(
+                &node(ns, "Machine/PiecesProduced"),
+                "PiecesProduced",
+                "Pieces Produced",
+                0u32,
+            ),
+            Variable::new(
+                &node(ns, "Machine/CoilRemaining"),
+                "CoilRemaining",
+                "Coil Remaining (m)",
+                0f64,
+            ),
+            Variable::new(
+                &node(ns, "Machine/LastError"),
+                "LastError",
+                "Last Error",
+                UAString::from(""),
+            ),
         ],
         &machine_folder,
     );
@@ -138,8 +175,18 @@ fn build_address_space(
 
     address_space.add_variables(
         vec![
-            Variable::new(&node(ns, "Jobs/QueueDepth"), "QueueDepth", "Queue Depth", 0u32),
-            Variable::new(&node(ns, "Jobs/CompletedCount"), "CompletedCount", "Completed Count", 0u32),
+            Variable::new(
+                &node(ns, "Jobs/QueueDepth"),
+                "QueueDepth",
+                "Queue Depth",
+                0u32,
+            ),
+            Variable::new(
+                &node(ns, "Jobs/CompletedCount"),
+                "CompletedCount",
+                "Completed Count",
+                0u32,
+            ),
         ],
         &jobs_folder,
     );
@@ -171,9 +218,7 @@ async fn sync_state_to_nodes(
                 (
                     &node(ns, "Machine/CurrentJob"),
                     None,
-                    DataValue::new_now(UAString::from(
-                        s.current_job.as_deref().unwrap_or(""),
-                    )),
+                    DataValue::new_now(UAString::from(s.current_job.as_deref().unwrap_or(""))),
                 ),
                 (
                     &node(ns, "Machine/PiecesProduced"),
