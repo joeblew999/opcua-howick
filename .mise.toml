@@ -459,57 +459,63 @@ ssh ${PI5_HOST:-pi@howick-pi5.local} '
 # ── Docs → PDF (pandoc + typst, no LaTeX needed) ─────────────────────────────
 # Prerequisites: mise install (installs pandoc + typst from [tools] above)
 
-[tasks."docs:pdf:bom"]
-description = "Export BOM to PDF for sending to customer (Prin)"
-run         = """
-mkdir -p docs/dist
-pandoc docs/bom.md \
-  --pdf-engine=typst \
-  --template=docs/templates/howick.typ \
-  --metadata title="Hardware Bill of Materials" \
-  -o docs/dist/bom.pdf
-echo "PDF: docs/dist/bom.pdf"
-"""
+# Numbered for reading order:
+#   01 — why and what to order (setup)
+#   02 — how to set it up    (provisioning)
+#   03 — full hardware BOM   (bom)
+#   04 — coil sensor Phase 2 (coil-sensor)
 
 [tasks."docs:pdf:setup"]
-description = "Export customer setup guide to PDF"
+description = "Export customer setup guide to PDF (01)"
 run         = """
 mkdir -p docs/dist
 pandoc docs/customer/setup.md \
   --pdf-engine=typst \
   --template=docs/templates/howick.typ \
   --metadata title="Howick FRAMA — Automated Job Delivery" \
-  -o docs/dist/setup.pdf
-echo "PDF: docs/dist/setup.pdf"
+  -o docs/dist/01-setup.pdf
+echo "PDF: docs/dist/01-setup.pdf"
 """
 
 [tasks."docs:pdf:provisioning"]
-description = "Export customer provisioning guide to PDF"
+description = "Export customer provisioning guide to PDF (02)"
 run         = """
 mkdir -p docs/dist
 pandoc docs/customer/provisioning.md \
   --pdf-engine=typst \
   --template=docs/templates/howick.typ \
   --metadata title="Howick FRAMA — System Setup Guide" \
-  -o docs/dist/provisioning.pdf
-echo "PDF: docs/dist/provisioning.pdf"
+  -o docs/dist/02-provisioning.pdf
+echo "PDF: docs/dist/02-provisioning.pdf"
+"""
+
+[tasks."docs:pdf:bom"]
+description = "Export hardware order list to PDF (03)"
+run         = """
+mkdir -p docs/dist
+pandoc docs/bom.md \
+  --pdf-engine=typst \
+  --template=docs/templates/howick.typ \
+  --metadata title="Hardware Bill of Materials" \
+  -o docs/dist/03-bom.pdf
+echo "PDF: docs/dist/03-bom.pdf"
 """
 
 [tasks."docs:pdf:coil-sensor"]
-description = "Export coil sensor doc to PDF"
+description = "Export coil sensor doc to PDF (04)"
 run         = """
 mkdir -p docs/dist
 pandoc docs/coil-sensor.md \
   --pdf-engine=typst \
   --template=docs/templates/howick.typ \
   --metadata title="Coil Inventory Sensor — Setup Guide" \
-  -o docs/dist/coil-sensor.pdf
-echo "PDF: docs/dist/coil-sensor.pdf"
+  -o docs/dist/04-coil-sensor.pdf
+echo "PDF: docs/dist/04-coil-sensor.pdf"
 """
 
 [tasks."docs:pdf:all"]
-description = "Export all customer-facing docs to PDF"
-depends     = ["docs:pdf:bom", "docs:pdf:setup", "docs:pdf:provisioning", "docs:pdf:coil-sensor"]
+description = "Export all docs to PDF into docs/dist/ (numbered 01–04)"
+depends     = ["docs:pdf:setup", "docs:pdf:provisioning", "docs:pdf:bom", "docs:pdf:coil-sensor"]
 run         = "ls -lh docs/dist/"
 
 # ── Local test helpers ────────────────────────────────────────────────────────

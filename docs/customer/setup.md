@@ -1,18 +1,27 @@
-# Howick FRAMA — Automated Job Delivery Setup
+# Howick FRAMA — Automated Job Delivery
 
-## What this does
+## What problem this solves
 
-Instead of copying files to a USB stick and walking to the machine, jobs are
-sent automatically from the browser to the machine over WiFi.
+Right now, every job requires someone to:
 
-The existing SketchUp and FrameBuilderMRD workflow is **not changed**. Both
-methods work side-by-side.
+1. Save the file on the design computer
+2. Copy it to a USB stick
+3. Walk to the machine and plug it in
+4. Walk back
+
+This takes time on every single job. If the USB stick is missing, or the wrong file is copied, production stops.
+
+**This system eliminates all of that.** Jobs go from the design computer to the machine over WiFi — automatically, in seconds, with no USB stick involved.
+
+The existing SketchUp and FrameBuilderMRD workflow is **not changed**. Both methods work side-by-side. The operator does not need to do anything differently.
 
 ---
 
 ## Hardware to order
 
-All items available from **raspberrypithailand.com** — official Raspberry Pi reseller,
+Two small computers. One-time purchase. Everything from one local store.
+
+Order from **raspberrypithailand.com** — official Raspberry Pi reseller,
 free nationwide shipping, 3-day delivery, full warranty.
 
 | Item | Est. Cost |
@@ -24,25 +33,28 @@ free nationwide shipping, 3-day delivery, full warranty.
 | USB-A to Micro-USB cable 3m | ~300 THB |
 | **Total** | **~3,700 THB** |
 
+This is a one-time cost. No monthly fees. No subscriptions.
+
 ---
 
 ## What gets installed
 
-Two small computers are placed near the machine:
-
 **Pi Zero 2W** — plugs into the machine's USB port via a 3m cable.
-The machine sees it as a USB stick. New job files appear on it automatically.
+The machine sees it exactly like a USB stick. Job files appear on it automatically over WiFi.
 
-**Pi 5** — sits on the factory WiFi. Provides a status dashboard showing
-machine state, job queue, and (Phase 2) coil material remaining.
+**Pi 5** — sits near the machine on factory WiFi. Provides a status dashboard
+showing machine state and job queue.
 
 ---
 
-## Phase 2 — Coil inventory sensor
+## Phase 2 — Coil inventory sensor (optional, future)
 
-A small weight sensor is placed under the coil spool. A 5m cable runs back
-to the Pi Zero 2W. The system then shows how many metres of material remain,
-so you know when to order more coil before running out mid-job.
+A small weight sensor placed under the coil spool measures how much steel
+material remains. The system then shows metres remaining on the dashboard —
+so you know when to order a new coil before the current one runs out mid-job.
+
+A coil running out mid-job scraps the partially-formed members and stops production.
+This sensor prevents that.
 
 | Item | Where | Est. Cost |
 |------|-------|-----------|
@@ -54,14 +66,14 @@ so you know when to order more coil before running out mid-job.
 
 ## Network requirements
 
-- Factory WiFi (existing)
-- No firewall changes needed
-- No fixed IP addresses needed
+- Factory WiFi (existing) — no changes needed
+- No firewall changes
+- No fixed IP addresses
 
 ---
 
 ## Support and remote access
 
-The system uses **Tailscale** — a secure tunnel that allows remote diagnosis
-and software updates from anywhere without accessing the factory network
-directly. All updates are pushed remotely.
+The system uses **Tailscale** — a secure tunnel that allows us to diagnose
+and fix issues remotely without accessing the factory network directly.
+Software updates are pushed automatically every hour. No action required.
