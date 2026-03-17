@@ -1,0 +1,71 @@
+# config.pi-zero.toml — Pi Zero 2W howick-agent config
+#
+# Copy to ~/config.toml on the Pi Zero 2W.
+# howick-agent polls the Pi 5 for pending jobs and writes each CSV
+# to /mnt/usb_share — the virtual USB drive presented to the Howick FRAMA.
+#
+# USB gadget setup: see docs/pi-zero-usb-gadget.md
+# The Howick FRAMA sees the Pi Zero as a normal USB stick.
+#
+# (**) Set machine_input_dir to the subfolder the Howick FRAMA looks for.
+#      Ask Prin's operator: is it the root of the USB, or a named folder?
+#      Root:      /mnt/usb_share
+#      Subfolder: /mnt/usb_share/Howick/Jobs    (example — confirm with operator)
+
+[opcua]
+# Pi Zero does not run OPC UA server — these values are unused by howick-agent
+# but the config struct requires them.
+host             = "0.0.0.0"
+port             = 4840
+application_name = "Howick Edge Agent - Pi Zero"
+
+[http]
+# Pi Zero does not run HTTP server — howick-agent only polls, never serves
+host = "0.0.0.0"
+port = 4841
+
+[machine]
+machine_name = "Howick FRAMA"
+
+# Incoming CSVs from Pi 5 land here temporarily before being written to USB
+job_input_dir = "/home/pi/jobs/input"
+
+# (**) WHERE on the virtual USB the Howick FRAMA reads CSVs — confirm with Prin's operator
+machine_input_dir = "/mnt/usb_share"
+
+machine_output_dir = "/home/pi/jobs/output"
+
+# Pi Zero IS the USB gadget — this triggers usb-refresh.sh after each write
+usb_gadget_mode = true
+
+# Queue: howick-agent fetches from Pi 5 queue (delivery_mode not used by howick-agent directly)
+delivery_mode = "queue"
+
+[plat_trunk]
+# Pi Zero polls the Pi 5 for pending jobs.
+# Override at runtime: PLAT_TRUNK_URL=http://howick-pi5.local:4841
+#
+# Future (Phase 3): change this to your plat-trunk URL when Framing Extractor is ready.
+# PLAT_TRUNK_URL=https://your-plat-trunk.workers.dev
+url                       = "http://howick-pi5.local:4841"
+api_key                   = ""
+status_push_interval_secs = 5
+
+[sensor]
+# Phase 2: load cell + HX711 on Pi Zero GPIO — reads coil weight and pushes to Pi 5.
+#
+# Wiring: HX711 DAT → GPIO 5 (pin 29), HX711 CLK → GPIO 6 (pin 31)
+# Override pins: HX711_DAT_PIN=5 HX711_CLK_PIN=6
+#
+# Calibration:
+#   1. Set enabled=false, run: COIL_WEIGHT_KG=10.0 — confirm 10kg appears on dashboard
+#   2. Weigh empty coil spool — enter weight in kg below as empty_spool_kg
+#   3. Set enabled=true with sensor wired and load cell under spool
+#   4. Adjust steel_kg_per_m if material is different from S8908 (0.74 kg/m)
+#
+# Dev test (no hardware): echo "23.5" > /tmp/coil_weight_kg
+enabled            = false    # (**) Set true after calibration
+empty_spool_kg     = 18.0     # (**) Weigh empty spool and enter here
+steel_kg_per_m     = 0.74     # S8908 profile — adjust for other profiles
+low_alert_m        = 50.0     # (**) Operator gets warned below this level
+poll_interval_secs = 30

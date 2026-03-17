@@ -102,3 +102,13 @@ delivery_mode = "direct"
 url                       = "http://localhost:3000"
 api_key                   = ""
 status_push_interval_secs = 5
+
+[sensor]
+# Phase 2 — coil weight sensor (load cell + HX711 on Pi Zero GPIO).
+# Disabled until hardware is installed and calibrated.
+# Test without hardware: mise run dev:sensor  (or COIL_KG=23.5 mise run dev:sensor)
+enabled            = false
+empty_spool_kg     = 18.0
+steel_kg_per_m     = 0.74
+low_alert_m        = 50.0
+poll_interval_secs = 30

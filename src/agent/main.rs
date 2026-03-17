@@ -40,6 +40,8 @@ mod config;
 mod machine;
 #[path = "../poller.rs"]
 mod poller;
+#[path = "../sensor.rs"]
+mod sensor;
 #[path = "../usb_gadget.rs"]
 mod usb_gadget;
 
@@ -90,22 +92,35 @@ async fn main() -> anyhow::Result<()> {
         s.status = machine::MachineStatus::Idle;
     }
 
-    // Single service: job poller
-    // No OPC UA server. No HTTP server. No file watcher.
-    // Just: poll → write CSV → refresh USB → repeat.
-    //
-    // TODO Phase 2: add sensor module — load cell + HX711 on GPIO, 5m cable to coil spool.
-    // Reads coil weight → converts to metres → pushes to Pi 5 OPC UA Machine/CoilRemaining.
-    // See docs/architecture.md Phase 2 and docs/customer/03-bom.md Phase 2 for hardware details.
     tracing::info!(
         "Running — polling {} every {}s",
         config.plat_trunk.url,
         config.plat_trunk.status_push_interval_secs,
     );
 
-    if let Err(e) = poller::run_job_poller(config, state).await {
-        tracing::error!("Job poller failed: {e}");
-        std::process::exit(1);
+    // Phase 2: coil sensor push loop (only when sensor.enabled = true in config)
+    if config.sensor.enabled {
+        tracing::info!(
+            poll_interval = config.sensor.poll_interval_secs,
+            "Coil sensor enabled — pushing weight to {}",
+            config.plat_trunk.url
+        );
+        let sensor_url = config.plat_trunk.url.clone();
+        let sensor_interval = config.sensor.poll_interval_secs;
+        tokio::select! {
+            r = poller::run_job_poller(config, state) => {
+                if let Err(e) = r { tracing::error!("Job poller failed: {e}"); }
+            }
+            r = sensor::run_sensor_push(sensor_url, sensor_interval) => {
+                if let Err(e) = r { tracing::error!("Sensor push failed: {e}"); }
+            }
+        }
+    } else {
+        // Sensor not fitted — just run the job poller
+        if let Err(e) = poller::run_job_poller(config, state).await {
+            tracing::error!("Job poller failed: {e}");
+            std::process::exit(1);
+        }
     }
 
     Ok(())

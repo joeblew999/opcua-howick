@@ -12,6 +12,9 @@
 ///   — plat-trunk API (called by howick-agent on Pi Zero) —
 ///   GET  /api/jobs/howick/pending       → next queued job for the agent
 ///   POST /api/jobs/howick/:id/complete  → agent marks job delivered to USB
+///
+///   — Phase 2: coil sensor (called by howick-agent sensor push loop) —
+///   POST /api/sensor/coil               → Pi Zero pushes raw weight; server converts to metres
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -20,7 +23,7 @@ use std::time::SystemTime;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 
-use crate::config::Config;
+use crate::config::{Config, SensorConfig};
 use crate::machine::SharedState;
 
 pub async fn run_http_server(config: &Config, state: SharedState) -> anyhow::Result<()> {
@@ -33,13 +36,15 @@ pub async fn run_http_server(config: &Config, state: SharedState) -> anyhow::Res
     );
 
     let job_input_dir = config.machine.job_input_dir.clone();
+    let sensor_config = config.sensor.clone();
 
     loop {
         let (stream, _) = listener.accept().await?;
         let state = state.clone();
         let job_input_dir = job_input_dir.clone();
+        let sensor_config = sensor_config.clone();
         tokio::spawn(async move {
-            if let Err(e) = handle_connection(stream, state, job_input_dir).await {
+            if let Err(e) = handle_connection(stream, state, job_input_dir, sensor_config).await {
                 tracing::warn!("HTTP connection error: {e}");
             }
         });
@@ -50,6 +55,7 @@ async fn handle_connection(
     mut stream: tokio::net::TcpStream,
     state: SharedState,
     job_input_dir: PathBuf,
+    sensor_config: SensorConfig,
 ) -> anyhow::Result<()> {
     let mut buf = vec![0u8; 2 * 1024 * 1024];
     let n = stream.read(&mut buf).await?;
@@ -131,27 +137,32 @@ async fn handle_connection(
         ("GET", "/status") | ("GET", "/status?") => {
             let s = state.read().await;
             let upload_secs = ago_secs(s.last_upload_at);
-            let agent_secs = ago_secs(s.agent_last_seen_at);
+            let agent_secs  = ago_secs(s.agent_last_seen_at);
+            let sensor_secs = ago_secs(s.sensor_last_read_at);
             let body = format!(
                 concat!(
                     r#"{{"status":"{status}","current_job":{current_job},"#,
                     r#""pieces_produced":{pieces},"queue_depth":{queue},"#,
-                    r#""coil_remaining":{coil},"last_error":"{error}","#,
+                    r#""coil_remaining":{coil},"coil_low_alert":{low_alert},"#,
+                    r#""last_error":"{error}","#,
                     r#""last_upload_secs_ago":{upload},"completed_count":{completed},"#,
-                    r#""agent_last_seen_secs_ago":{agent},"agent_last_error":"{agent_err}"}}"#,
+                    r#""agent_last_seen_secs_ago":{agent},"agent_last_error":"{agent_err}","#,
+                    r#""sensor_last_read_secs_ago":{sensor}}}"#,
                 ),
                 status      = s.status.as_str(),
                 current_job = s.current_job.as_deref()
                     .map(|j| format!("\"{j}\""))
                     .unwrap_or("null".into()),
-                pieces    = s.pieces_produced,
-                queue     = s.job_queue.len(),
-                coil      = s.coil_remaining_m,
-                error     = s.last_error,
-                upload    = upload_secs.map(|v| v.to_string()).unwrap_or("null".into()),
-                completed = s.completed_jobs.len(),
-                agent     = agent_secs.map(|v| v.to_string()).unwrap_or("null".into()),
-                agent_err = s.agent_last_error,
+                pieces     = s.pieces_produced,
+                queue      = s.job_queue.len(),
+                coil       = s.coil_remaining_m,
+                low_alert  = s.coil_low_alert,
+                error      = s.last_error,
+                upload     = upload_secs.map(|v| v.to_string()).unwrap_or("null".into()),
+                completed  = s.completed_jobs.len(),
+                agent      = agent_secs.map(|v| v.to_string()).unwrap_or("null".into()),
+                agent_err  = s.agent_last_error,
+                sensor     = sensor_secs.map(|v| v.to_string()).unwrap_or("null".into()),
             );
             ("200", "application/json", body)
         }
@@ -253,6 +264,42 @@ async fn handle_connection(
             drop(s);
             tracing::warn!("Agent reported error: {err}");
             ("200", "application/json", r#"{"ok":true}"#.into())
+        }
+
+        // ── Phase 2: coil sensor weight push ──────────────────────────────────
+        // Pi Zero posts raw load cell weight; we convert to metres and alert.
+        // Body: {"weight_kg": 23.5}
+        ("POST", "/api/sensor/coil") => {
+            let body_str = std::str::from_utf8(body_bytes).unwrap_or("").trim();
+            // Parse weight_kg from simple JSON (no serde dependency needed)
+            let weight_kg = extract_json_f64(body_str, "weight_kg");
+            match weight_kg {
+                Some(kg) => {
+                    let metres = crate::config::Config::coil_metres(&sensor_config, kg);
+                    let low = metres < sensor_config.low_alert_m && metres > 0.0;
+                    {
+                        let mut s = state.write().await;
+                        s.coil_remaining_m = metres;
+                        s.coil_low_alert = low;
+                        s.sensor_last_read_at = Some(SystemTime::now());
+                    }
+                    if low {
+                        tracing::warn!(
+                            metres = metres,
+                            threshold = sensor_config.low_alert_m,
+                            "⚠ Coil running low — alert fired"
+                        );
+                    } else {
+                        tracing::info!(weight_kg = kg, metres, "Coil weight updated");
+                    }
+                    ("200", "application/json", r#"{"ok":true}"#.into())
+                }
+                None => (
+                    "400",
+                    "application/json",
+                    r#"{"error":"expected {\"weight_kg\":23.5}"}"#.into(),
+                ),
+            }
         }
 
         ("GET", "/health") => ("200", "application/json", r#"{"ok":true}"#.into()),
@@ -429,11 +476,20 @@ function renderNode(icon, name, status, details, error) {
   </div>`;
 }
 
+function coilLabel(metres, lowAlert) {
+  if (metres === 0 || metres === null) return '— (no sensor)';
+  const m = metres.toFixed(0);
+  return lowAlert ? `⚠ ${m} m (LOW)` : `${m} m`;
+}
+
 function renderPipeline(s, jobs) {
-  const uploadAgo = ago(s.last_upload_secs_ago);
-  const agentSt   = agentStatus(s.agent_last_seen_secs_ago);
-  const agentAgo  = ago(s.agent_last_seen_secs_ago);
-  const lastDone  = jobs.completed.length > 0 ? jobs.completed[0].frameset_name : '—';
+  const uploadAgo  = ago(s.last_upload_secs_ago);
+  const agentSt    = agentStatus(s.agent_last_seen_secs_ago);
+  const agentAgo   = ago(s.agent_last_seen_secs_ago);
+  const sensorAgo  = ago(s.sensor_last_read_secs_ago);
+  const lastDone   = jobs.completed.length > 0 ? jobs.completed[0].frameset_name : '—';
+  const coilStr    = coilLabel(s.coil_remaining, s.coil_low_alert);
+  const coilErr    = s.coil_low_alert ? `Low coil — check before starting job` : '';
 
   const nodes = [
     renderNode('💻', 'Design PC', s.last_upload_secs_ago !== null ? 'Online' : 'Waiting',
@@ -445,8 +501,10 @@ function renderPipeline(s, jobs) {
       s.last_error || ''),
     '<div class="arrow">→</div>',
     renderNode('🔌', 'Pi Zero / USB', agentSt,
-      [`Last seen: ${agentAgo}`],
-      s.agent_last_error || ''),
+      [`Last seen: ${agentAgo}`,
+       `Coil: ${coilStr}`,
+       s.sensor_last_read_secs_ago !== null ? `Sensor: ${sensorAgo}` : 'Sensor: not fitted'],
+      (s.agent_last_error || '') + (coilErr ? (s.agent_last_error ? ' | ' : '') + coilErr : '')),
     '<div class="arrow">→</div>',
     renderNode('🏭', 'Howick FRAMA', lastDone !== '—' ? 'Active' : 'Waiting',
       [`Last job: ${lastDone}`,
@@ -545,6 +603,16 @@ async function upload(file) {
 </script>
 </body>
 </html>"#.to_string()
+}
+
+/// Extract a JSON number value by key from a flat JSON object string.
+fn extract_json_f64(json: &str, key: &str) -> Option<f64> {
+    let needle = format!("\"{key}\"");
+    let start = json.find(&needle)? + needle.len();
+    let rest = json[start..].trim_start();
+    let rest = rest.strip_prefix(':')?.trim_start();
+    let end = rest.find(|c: char| !c.is_ascii_digit() && c != '.' && c != '-')?;
+    rest[..end].parse::<f64>().ok()
 }
 
 #[allow(dead_code)]

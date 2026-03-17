@@ -1,0 +1,50 @@
+# config.option-a.toml — Option A: Design PC only (Windows)
+#
+# Copy to config.toml on the Design PC.
+# opcua-howick.exe runs alongside SketchUp + FrameBuilderMRD.
+# Operator drags CSV into browser at http://localhost:4841/dashboard
+# then carries USB stick to Howick FRAMA as before.
+#
+# (**) Set machine_input_dir to the USB stick path confirmed by Prin's operator.
+#      Likely C:\Howick\Jobs\ or C:\Jobs\ — ask the operator.
+
+[opcua]
+host             = "0.0.0.0"
+port             = 4840
+application_name = "Howick Edge Agent - Si Racha Factory"
+
+[http]
+host = "0.0.0.0"
+port = 4841
+
+[machine]
+machine_name = "Howick FRAMA"
+
+# Incoming uploads land here first (watcher picks them up)
+job_input_dir = "C:\\opcua-howick\\jobs\\input"
+
+# (**) WHERE on the USB the Howick FRAMA reads CSVs — confirm with Prin's operator
+machine_input_dir = "C:\\Howick\\Jobs\\"
+
+machine_output_dir = "C:\\opcua-howick\\jobs\\output"
+
+# Not a Pi Zero — no USB gadget emulation
+usb_gadget_mode = false
+
+# Direct: watcher copies CSV to machine_input_dir immediately (no Pi Zero needed)
+delivery_mode = "direct"
+
+[plat_trunk]
+# Not used in Option A — Pi Zero is not present
+url                       = "http://localhost:3000"
+api_key                   = ""
+status_push_interval_secs = 5
+
+[sensor]
+# Phase 2: coil sensor — not available in Option A (no Pi Zero GPIO)
+# Upgrade to Option B to add the load cell + HX711 sensor.
+enabled            = false
+empty_spool_kg     = 18.0
+steel_kg_per_m     = 0.74
+low_alert_m        = 50.0
+poll_interval_secs = 30

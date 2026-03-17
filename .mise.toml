@@ -617,9 +617,21 @@ pandoc docs/customer/setup-guide.md \
 echo "PDF: docs/dist/04-setup-guide.pdf"
 """
 
+[tasks."docs:pdf:roadmap"]
+description = "Export project roadmap to PDF (05)"
+run         = """
+mkdir -p docs/dist
+pandoc docs/customer/roadmap.md \
+  --pdf-engine=typst \
+  --template=docs/templates/howick.typ \
+  --metadata title="Project Roadmap" \
+  -o docs/dist/05-roadmap.pdf
+echo "PDF: docs/dist/05-roadmap.pdf"
+"""
+
 [tasks."docs:pdf:all"]
-description = "Export all customer docs to PDF into docs/dist/ (numbered 01–04)"
-depends     = ["docs:pdf:proposal", "docs:pdf:system-overview", "docs:pdf:hardware-quote", "docs:pdf:setup-guide"]
+description = "Export all customer docs to PDF into docs/dist/ (numbered 01–05)"
+depends     = ["docs:pdf:proposal", "docs:pdf:system-overview", "docs:pdf:hardware-quote", "docs:pdf:setup-guide", "docs:pdf:roadmap"]
 run         = "ls -lh docs/dist/"
 
 # ── Local test helpers ────────────────────────────────────────────────────────
@@ -647,3 +659,16 @@ run         = "curl -s http://localhost:4841/status | python3 -m json.tool"
 [tasks."test:health"]
 description = "Health check"
 run         = "curl -s http://localhost:4841/health"
+
+[tasks."dev:sensor"]
+description = "Simulate a coil weight push to opcua-howick (Phase 2 test — no hardware needed)"
+run         = """
+KG=${COIL_KG:-23.5}
+echo "Pushing coil weight: ${KG} kg → http://localhost:4841/api/sensor/coil"
+curl -s -X POST http://localhost:4841/api/sensor/coil \
+  -H 'Content-Type: application/json' \
+  -d "{\"weight_kg\":${KG}}" | python3 -m json.tool
+echo ""
+echo "Checking /status for coil_remaining:"
+curl -s http://localhost:4841/status | python3 -m json.tool | grep -E 'coil|sensor'
+"""

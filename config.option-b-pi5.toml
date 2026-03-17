@@ -1,0 +1,53 @@
+# config.option-b-pi5.toml — Option B: Pi 5 server config
+#
+# Copy to ~/config.toml on the Pi 5.
+# Pi 5 runs opcua-howick, serving the dashboard and job queue.
+# Pi Zero polls the Pi 5 at http://howick-pi5.local:4841/api/jobs/howick/pending
+# and writes each job CSV to its virtual USB drive.
+#
+# Operator opens http://howick-pi5.local:4841/dashboard on any browser
+# on the factory WiFi and drags CSVs in. USB stick retired permanently.
+
+[opcua]
+host             = "0.0.0.0"
+port             = 4840
+application_name = "Howick Edge Agent - Si Racha Factory"
+
+[http]
+host = "0.0.0.0"
+port = 4841
+
+[machine]
+machine_name = "Howick FRAMA"
+
+# Incoming uploads from dashboard land here
+job_input_dir = "/home/pi/jobs/input"
+
+# Pi 5 does NOT write to machine_input_dir directly — Pi Zero does that.
+# This path is unused in queue mode but must be set.
+machine_input_dir = "/home/pi/jobs/machine"
+
+machine_output_dir = "/home/pi/jobs/output"
+
+# Pi 5 is not the USB gadget — Pi Zero is
+usb_gadget_mode = false
+
+# Queue: watcher holds jobs for Pi Zero to pick up via HTTP
+delivery_mode = "queue"
+
+[plat_trunk]
+# Pi Zero polls THIS machine's HTTP server, not plat-trunk (no plat-trunk needed yet)
+# howick-agent on Pi Zero: set PLAT_TRUNK_URL=http://howick-pi5.local:4841
+url                       = "http://localhost:3000"
+api_key                   = ""
+status_push_interval_secs = 5
+
+[sensor]
+# Phase 2: coil sensor — RECEIVED here on Pi 5 from Pi Zero push.
+# Pi 5 never reads GPIO directly — Pi Zero sends weight via POST /api/sensor/coil.
+# Set enabled=false until Phase 2 hardware is installed and calibrated.
+enabled            = false
+empty_spool_kg     = 18.0     # (**) Weigh empty spool and enter here
+steel_kg_per_m     = 0.74     # S8908 profile calibrated — adjust if different profile
+low_alert_m        = 50.0     # (**) Adjust based on typical job sizes
+poll_interval_secs = 30

@@ -49,6 +49,12 @@ pub struct MachineState {
     pub agent_last_seen_at: Option<std::time::SystemTime>,
     /// Last error reported by howick-agent via POST /api/jobs/howick/:id/error
     pub agent_last_error: String,
+
+    // ── Phase 2: coil sensor ──────────────────────────────────────────────────
+    /// When Pi Zero last pushed a coil weight reading (None = sensor not fitted)
+    pub sensor_last_read_at: Option<std::time::SystemTime>,
+    /// True when coil_remaining_m < sensor.low_alert_m
+    pub coil_low_alert: bool,
 }
 
 impl MachineState {
@@ -64,6 +70,8 @@ impl MachineState {
             last_upload_at: None,
             agent_last_seen_at: None,
             agent_last_error: String::new(),
+            sensor_last_read_at: None,
+            coil_low_alert: false,
         }
     }
 }

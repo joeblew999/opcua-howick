@@ -13,6 +13,8 @@ pub struct Config {
     pub machine: MachineConfig,
     pub plat_trunk: PlatTrunkConfig,
     pub http: HttpConfig,
+    #[serde(default)]
+    pub sensor: SensorConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -70,6 +72,54 @@ pub struct HttpConfig {
     pub port: u16,
 }
 
+/// Coil weight sensor — Phase 2.
+///
+/// A load cell + HX711 ADC sits under the coil spool on the Pi Zero GPIO.
+/// The Pi Zero pushes raw weight readings to opcua-howick via POST /api/sensor/coil.
+/// opcua-howick converts kg → metres remaining and updates the dashboard +
+/// OPC UA Machine/CoilRemaining node.
+///
+/// Hardware (see docs/customer/hardware-quote.md — Phase 2):
+///   - Load cell 20kg     × 1
+///   - HX711 ADC module   × 1
+///   - 5m ribbon cable    × 1
+///   Cost: ~680 THB from Lazada Thailand.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SensorConfig {
+    /// Set true when Pi Zero has the load cell wired up and calibrated.
+    #[serde(default)]
+    pub enabled: bool,
+    /// Weight of the empty coil spool in kg.  Weigh it and enter here.
+    #[serde(default = "default_empty_spool_kg")]
+    pub empty_spool_kg: f64,
+    /// Steel consumed per metre of S8908 profile in kg/m.  Default calibrated for S8908.
+    #[serde(default = "default_steel_kg_per_m")]
+    pub steel_kg_per_m: f64,
+    /// Alert fires when coil drops below this many metres remaining.
+    #[serde(default = "default_low_alert_m")]
+    pub low_alert_m: f64,
+    /// How often to push a sensor reading from Pi Zero to Pi 5 (seconds).
+    #[serde(default = "default_sensor_poll_secs")]
+    pub poll_interval_secs: u64,
+}
+
+fn default_empty_spool_kg() -> f64 { 18.0 }
+fn default_steel_kg_per_m()  -> f64 { 0.74 }   // S8908 profile: ~740g/m
+fn default_low_alert_m()     -> f64 { 50.0 }
+fn default_sensor_poll_secs() -> u64 { 30 }
+
+impl Default for SensorConfig {
+    fn default() -> Self {
+        Self {
+            enabled:           false,
+            empty_spool_kg:    default_empty_spool_kg(),
+            steel_kg_per_m:    default_steel_kg_per_m(),
+            low_alert_m:       default_low_alert_m(),
+            poll_interval_secs: default_sensor_poll_secs(),
+        }
+    }
+}
+
 /// Connection back to plat-trunk — same HTTP API regardless of topology.
 ///
 /// Topology A (Cloud):  url = "https://your-worker.workers.dev"
@@ -107,6 +157,7 @@ impl Default for Config {
                 api_key: String::new(),
                 status_push_interval_secs: 5,
             },
+            sensor: SensorConfig::default(),
         }
     }
 }
@@ -116,6 +167,19 @@ impl Config {
         let content = std::fs::read_to_string(path)?;
         let config: Config = toml::from_str(&content)?;
         Ok(config)
+    }
+
+    /// Converts a raw weight reading (kg on load cell) to metres of steel remaining.
+    #[allow(dead_code)]
+    ///
+    /// Subtracts the empty spool weight then divides by the linear density.
+    /// Returns 0.0 if the calculation is negative (coil exhausted or not fitted).
+    pub fn coil_metres(sensor: &SensorConfig, raw_weight_kg: f64) -> f64 {
+        let steel_kg = raw_weight_kg - sensor.empty_spool_kg;
+        if steel_kg <= 0.0 {
+            return 0.0;
+        }
+        (steel_kg / sensor.steel_kg_per_m).max(0.0)
     }
 
     pub fn load_or_default(path: &std::path::Path) -> Self {
