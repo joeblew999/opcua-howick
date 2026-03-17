@@ -1,158 +1,111 @@
-# Statement of Work
+# Factory Automation Proposal
+## Howick FRAMA — Automated Job Delivery
 
-**Client:** Prin — Si Racha Factory, Thailand
+**Prepared for:** Prin — Si Racha Factory, Thailand
 **Prepared by:** Gerard Webb, ubuntu Software
 **Date:** March 2026
 
 ---
 
-## Executive Summary
+## Summary
 
-ubuntu Software will connect your Howick FRAMA roll-forming machine to the
-factory network so that jobs are delivered automatically from the design
-computer to the machine — eliminating manual USB stick transfers. A live
-status dashboard will show machine state and job queue on any phone or
-screen in the factory.
+Gerard Webb at ubuntu Software is offering to connect your Howick FRAMA machine
+to the factory network at no charge. You pay only for the hardware — approximately
+3,700 THB ordered locally. Everything else is provided free of charge.
 
-The project delivers in two phases. Phase 1 connects the machine and provides
-the dashboard. Phase 2 adds a coil inventory sensor so the operator knows
-how much material remains before starting a job.
-
-Total hardware investment: approximately 4,380 THB. No monthly fees.
-No subscriptions. Ubuntu Software manages all software remotely.
+Your existing workflow does not change. This system runs alongside what you
+already have. SketchUp, FrameBuilderMRD, and USB sticks all continue to work
+exactly as they do today.
 
 ---
 
-## The problem
+## What this adds to your factory
 
-Today, getting a job to the Howick FRAMA machine requires someone to:
+Right now, getting a job to the Howick FRAMA requires someone to copy a file
+to a USB stick and carry it to the machine — for every single job.
 
-1. Save the design file on the design computer
-2. Copy it to a USB stick
-3. Walk to the machine and plug it in
-4. Walk back to the design area
+This system adds a second, automatic path. Jobs can be sent from the design
+computer to the machine over WiFi in seconds. No USB stick required. No walking.
+The machine receives the job and runs it exactly as before.
 
-This is repeated for every job. If the USB stick is misplaced, or the wrong
-file is copied, production stops. There is no visibility into machine state,
-job queue, or material remaining unless someone physically checks.
+A status dashboard shows machine state and job queue on any phone or screen
+on the factory network.
 
----
-
-## Phase 1 — Automated job delivery and status dashboard
-
-### What we deliver
-
-A connected edge system that sends jobs from the design computer to the
-Howick FRAMA over the factory WiFi network, automatically, within 5 seconds.
-
-A live dashboard — accessible on any phone, tablet, or computer on the factory
-network — shows machine status, the current job, and the job queue.
-
-### How it works
-
-Two small computers are installed near the machine:
-
-- A Raspberry Pi Zero 2W plugs into the machine's USB port via a 3m cable.
-  The machine sees it exactly as a USB stick. Job files arrive on it
-  automatically over WiFi — no manual transfer required.
-
-- A Raspberry Pi 5 sits on the factory WiFi and runs the status dashboard,
-  job queue management, and remote management interface.
-
-### What does not change
-
-The existing SketchUp and FrameBuilderMRD workflow continues unchanged.
-The operator does not need to learn anything new. USB sticks continue to
-work alongside the new system.
-
-### Hardware cost
-
-~3,700 THB one-time. See the Hardware Quote document for the exact parts list.
-
-### Timeline
-
-Setup is completed remotely in a single session after hardware arrives.
-Hardware delivery from raspberrypithailand.com is typically 3 days.
+**Nothing is removed. Nothing is replaced. Both methods work side by side.**
 
 ---
 
-## Phase 2 — Coil inventory sensor
+## Phase 1 — Job delivery and dashboard
 
-### What we deliver
+A small computer (about the size of a USB stick) plugs into the Howick FRAMA
+USB port via a 3m cable. The machine sees it exactly as a USB stick — no
+changes to the machine or its software.
 
-A weight sensor installed under the coil spool that measures how much steel
-material remains and displays the value in metres on the status dashboard.
-When material drops below a configured threshold, an alert is sent so the
-operator has time to load a new coil before the current one runs out.
+A second small computer on the factory WiFi runs the dashboard and handles
+job delivery from the browser.
 
-### Why this matters
+| | |
+|-|-|
+| Hardware cost | ~3,700 THB (one-time) |
+| Software and setup | Free |
+| Ongoing management and updates | Free |
+| Monthly fees | None |
 
-A coil running out mid-job means the partially-formed members are scrap
-and the job must restart from the beginning on a new coil. The sensor
-prevents this by giving advance warning.
+---
 
-### Installation
+## Phase 2 — Coil inventory sensor (optional, add any time)
 
-We install and calibrate the sensor remotely after the operator weighs the
-empty coil spool and provides the reading. No production downtime.
+A weight sensor placed under the coil spool measures how much steel material
+remains and displays it in metres on the dashboard. An alert fires when material
+runs low — before the coil runs out mid-job.
 
-### Hardware cost
+A coil running out mid-job means scrap members and a full restart. This sensor
+prevents that situation.
 
-~680 THB additional. See the Hardware Quote document for the parts list.
+| | |
+|-|-|
+| Hardware cost | ~680 THB additional (one-time) |
+| Installation and setup | Free |
+
+This is completely optional and can be added at any time after Phase 1 is running.
 
 ---
 
 ## Phase 3 — Additional machines
 
-The same system can be extended to other roll-forming machines in the factory.
-Scope, hardware, and cost are defined per machine. Ubuntu Software will provide
-a separate quote when required.
+If you have other roll-forming machines in the factory, the same system can
+be extended to them. We discuss scope and hardware per machine when the time comes.
 
 ---
 
-## Support and remote management
+## Why this is free
 
-Ubuntu Software manages both computers remotely via a secure encrypted tunnel.
-This covers:
-
-- **Automatic software updates** — installed every hour, no action required
-- **Remote diagnostics and fault resolution** — no site visit needed in most cases
-- **Configuration changes** — alert thresholds, job routing, new machines
-
-Support is provided by Gerard Webb directly. Response time is same-day for
-operational issues.
+Ubuntu Software is building a platform for connected factory machines. Having
+a real installation running against real equipment and real processes is
+enormously valuable for testing and development. In exchange, you get a working
+system and ongoing support at no cost.
 
 ---
 
-## What we need from you
+## What this means in practice
 
-To begin:
-
-1. Place the hardware order at raspberrypithailand.com (see Hardware Quote)
-2. When hardware arrives: plug both computers into power and connect to factory WiFi
-3. Provide the factory WiFi name and password (shared securely, used once)
-
-Ubuntu Software handles everything after that.
+- **For the operator:** nothing changes. The machine runs as it always has.
+- **For you:** jobs can be sent remotely from the browser the moment a design is ready.
+- **For maintenance:** Gerard manages everything remotely. No site visits needed.
+- **For updates:** software updates itself every hour. No action required.
 
 ---
 
-## Investment
+## How to proceed
 
-| | Cost |
-|-|------|
-| Phase 1 hardware (Howick FRAMA + dashboard) | ~3,700 THB |
-| Phase 2 hardware (coil inventory sensor) | ~680 THB |
-| **Total hardware** | **~4,380 THB** |
-| Software and setup | Included |
-| Ongoing remote management | Included |
-| Monthly fees | None |
+1. Review the Hardware Quote document and place the order at raspberrypithailand.com
+2. Contact Gerard Webb to schedule the setup session
+
+Gerard handles everything from there. Setup takes one remote session after
+the hardware arrives.
 
 ---
-
-## Next steps
-
-To proceed, contact Gerard Webb at ubuntu Software to confirm the start date.
-We will coordinate the hardware order and schedule the setup session.
 
 **Gerard Webb**
 ubuntu Software
+gerard@ubuntu-software.com

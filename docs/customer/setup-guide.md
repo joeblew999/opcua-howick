@@ -1,83 +1,72 @@
 # Setup Guide
 
-Prepared for: **Prin — Si Racha Factory**
-Prepared by: **Gerard Webb, ubuntu Software**
+**Prepared for:** Prin — Si Racha Factory, Thailand
+**Prepared by:** Gerard Webb, ubuntu Software
+**Date:** March 2026
 
 ---
 
-## Overview
+## What you need to do — three steps
 
-Three steps to get the system running. ubuntu Software handles everything
-technical — you do not need any IT knowledge.
-
----
-
-## Step 1 — Order the hardware
-
-Place one order at **raspberrypithailand.com**. The full parts list is in
-the Hardware Quote document.
-
-You will receive two small computers, two memory cards, a power supply, and
-a USB cable. Delivery is typically 3 days.
+Gerard handles everything technical. Your involvement is minimal.
 
 ---
 
-## Step 2 — Plug in and send us your WiFi details
+### Step 1 — Order the hardware
+
+Place one order at **raspberrypithailand.com**. The full parts list is in the
+Hardware Quote document. Total cost approximately 3,700 THB. Delivery is
+typically 3 days.
+
+---
+
+### Step 2 — Plug in and share your WiFi details
 
 When the hardware arrives:
 
 1. Plug both computers into power near the Howick FRAMA machine
-2. Connect them to the factory WiFi network
-3. Send Gerard Webb the WiFi network name and password
+2. Connect them to the factory WiFi
+3. Send Gerard the WiFi network name and password
 
-That is all that is required from you. We take it from there.
-
-**What we do remotely:**
-
-- Install and configure all software on both computers
-- Connect the small computer (Pi Zero 2W) to the Howick FRAMA USB port
-- Configure the status dashboard
-- Run a test job from start to finish
-
-This takes approximately one session via remote access. We will arrange a
-time with you in advance.
+That is everything required from you. Gerard takes it from there.
 
 ---
 
-## Step 3 — Confirm the test job runs
+### Step 3 — Watch the test job run
 
-We send a test job from the browser while you watch the machine.
-You confirm the job arrives and runs correctly.
+Gerard will run a test job remotely while you watch the machine. You confirm
+it arrives and runs correctly. The whole session takes less than an hour.
 
-The USB stick method continues to work after setup — nothing is removed.
-Both methods work side by side.
-
----
-
-## After setup
-
-**For the operator:** nothing changes. The machine runs exactly as before.
-New jobs appear on the machine automatically. No USB stick needed unless preferred.
-
-**Software updates:** both computers check for updates every hour and install
-them automatically. No action required.
-
-**If something goes wrong:** contact Gerard Webb at ubuntu Software.
-We diagnose and fix issues remotely — no site visit needed.
+**Your USB stick method continues working after setup. Nothing is removed.**
 
 ---
 
-## Phase 2 — Adding the coil sensor
+## Day to day after setup
 
-Once Phase 1 is running, the coil sensor can be added at any time without
-disrupting production. See the Proposal document for details.
+The operator does not change anything about how they work. The machine runs
+exactly as before. New jobs simply appear on the machine automatically when
+sent from the browser — the operator can use whichever method they prefer.
 
-When ready:
-
-1. Order the Phase 2 items from the Hardware Quote
-2. Weigh the empty coil spool and send us the weight in kg
-3. We do the installation and calibration remotely
+Software updates install automatically. No action required from anyone.
 
 ---
 
-**Gerard Webb — ubuntu Software**
+## Adding the coil sensor (Phase 2, whenever you are ready)
+
+Order the four Phase 2 items from the Hardware Quote (Lazada Thailand).
+When they arrive:
+
+1. Weigh the empty coil spool and send Gerard the weight in kilograms
+2. Gerard installs and calibrates the sensor remotely — no production downtime
+
+---
+
+## If something goes wrong
+
+Contact Gerard Webb directly. Gerard can see the system remotely and fix most
+issues within the same day — no site visit needed.
+
+---
+
+**Gerard Webb**
+ubuntu Software
