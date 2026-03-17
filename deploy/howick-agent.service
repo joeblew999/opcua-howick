@@ -1,5 +1,5 @@
 [Unit]
-Description=OPC UA Edge Agent for Howick FRAMA Machine (Pi 5)
+Description=Howick Agent — USB Gadget Edge Agent (Pi Zero 2W)
 Documentation=https://github.com/joeblew999/opcua-howick
 After=network-online.target
 Wants=network-online.target
@@ -8,22 +8,23 @@ Wants=network-online.target
 Type=simple
 User=pi
 WorkingDirectory=/home/pi
-ExecStart=/home/pi/opcua-howick
+ExecStartPre=/bin/sleep 5
+ExecStart=/home/pi/howick-agent
 Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=opcua-howick
+SyslogIdentifier=howick-agent
 
 # Environment
-Environment=RUST_LOG=opcua_howick=info
+Environment=RUST_LOG=howick_agent=info
 Environment=RUST_BACKTRACE=1
 
 # Security hardening
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=/home/pi/jobs
+ReadWritePaths=/home/pi/jobs /mnt/usb_share
 
 [Install]
 WantedBy=multi-user.target

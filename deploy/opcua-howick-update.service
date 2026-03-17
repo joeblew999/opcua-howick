@@ -1,0 +1,11 @@
+[Unit]
+Description=opcua-howick auto-update from GitHub Releases
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/opcua-howick-update.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=opcua-howick-update

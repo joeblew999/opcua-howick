@@ -1,0 +1,180 @@
+# Operations — Full Lifecycle
+
+## Overview
+
+```
+Code push (MacBook)
+    ↓ git push → GitHub Actions CI
+    ↓ builds all binaries → GitHub Release artifacts
+    ↓
+Pi Zero 2W + Pi 5 (factory, Si Racha)
+    ↓ systemd timer checks GitHub Releases every hour
+    ↓ downloads new binary if version changed
+    ↓ restarts service automatically
+```
+
+No manual steps after initial provisioning.
+
+---
+
+## First-time provisioning
+
+### Prerequisites (MacBook)
+```bash
+cargo install cross          # cross-compilation
+mise install                 # installs pandoc + typst
+```
+
+### Pi Zero 2W — two steps (USB gadget setup requires reboot)
+
+**Step 1** — on same WiFi as the Pi (just after flash):
+```bash
+export ZERO_HOST=pi@howick-pi-zero.local
+mise run setup:first-boot:pi-zero
+# Pi reboots at end — wait ~30 seconds
+```
+
+**Step 2** — via Tailscale from anywhere:
+```bash
+export ZERO_HOST=pi@100.x.x.x   # Tailscale IP from step 1
+mise run setup:post-reboot:pi-zero
+```
+
+### Pi 5 — single step
+
+```bash
+export PI5_HOST=pi@howick-pi5.local
+mise run setup:first-boot:pi5
+```
+
+---
+
+## Day-to-day operations
+
+### Deploy a new version manually (urgent fix)
+```bash
+ZERO_HOST=pi@100.x.x.x mise run deploy:pi-zero
+PI5_HOST=pi@100.x.x.x  mise run deploy:pi5
+```
+
+### Trigger an update check immediately
+```bash
+ZERO_HOST=pi@100.x.x.x mise run update:check:pi-zero
+PI5_HOST=pi@100.x.x.x  mise run update:check:pi5
+```
+
+### SSH in
+```bash
+mise run ssh:pi-zero    # ZERO_HOST must be set
+mise run ssh:pi5        # PI5_HOST must be set
+```
+
+### Logs
+```bash
+mise run logs:pi-zero   # stream howick-agent logs
+mise run logs:pi5       # stream opcua-howick logs
+```
+
+### Status
+```bash
+mise run status:pi-zero  # systemd service status
+mise run status:pi5      # systemd + HTTP API
+```
+
+### Check auto-update timer status
+```bash
+ssh $ZERO_HOST 'systemctl list-timers howick-agent-update.timer'
+ssh $PI5_HOST  'systemctl list-timers opcua-howick-update.timer'
+```
+
+### Check installed version
+```bash
+ssh $ZERO_HOST 'cat ~/.howick-agent-version'
+ssh $PI5_HOST  'cat ~/.opcua-howick-version'
+```
+
+---
+
+## Release process
+
+1. Merge to `master` — CI runs check + fmt + test
+2. Create a GitHub Release (tag e.g. `v0.2.0`)
+3. CI builds all binaries and attaches to the release
+4. Both Pis pick up the new version within 1 hour automatically
+
+**To force immediate update on both Pis:**
+```bash
+mise run update:check:pi-zero
+mise run update:check:pi5
+```
+
+---
+
+## Auto-update internals
+
+Each Pi runs a systemd timer:
+
+| Timer | Fires | Script |
+|-------|-------|--------|
+| `howick-agent-update.timer` | 5min after boot, then every hour | `/usr/local/bin/howick-agent-update.sh` |
+| `opcua-howick-update.timer` | 5min after boot, then every hour | `/usr/local/bin/opcua-howick-update.sh` |
+
+Each script:
+1. Calls GitHub API to get latest release tag
+2. Compares with `~/.howick-agent-version` (or `~/.opcua-howick-version`)
+3. If newer: downloads binary, writes version file, restarts service
+4. If same: exits silently
+
+Logs visible via `journalctl -u howick-agent-update` / `journalctl -u opcua-howick-update`.
+
+---
+
+## Secrets (Doppler)
+
+All secrets (`PLAT_TRUNK_API_KEY`, `PLAT_TRUNK_URL`) live in Doppler, not on disk.
+
+| Project | Config | Used by |
+|---------|--------|---------|
+| `opcua-howick` | `pi-zero` | howick-agent on Pi Zero 2W |
+| `opcua-howick` | `pi5` | opcua-howick on Pi 5 |
+
+```bash
+mise run doppler:secrets              # list secrets locally
+mise run doppler:setup:pi-zero        # re-auth Pi Zero if needed
+mise run doppler:setup:pi5            # re-auth Pi 5 if needed
+```
+
+---
+
+## Monitoring (Pi 5)
+
+Netdata dashboard: `http://<pi5-tailscale-ip>:19999`
+Or via Netdata Cloud: `https://app.netdata.cloud`
+
+Tracks: CPU, RAM, disk, network, `opcua-howick.service` state.
+Alerts if service crashes.
+
+```bash
+mise run netdata:install:pi5   # first-time install
+```
+
+---
+
+## Hostnames
+
+| Device | mDNS hostname | Tailscale env var |
+|--------|--------------|-------------------|
+| Pi Zero 2W | `howick-pi-zero.local` | `ZERO_HOST` |
+| Pi 5 | `howick-pi5.local` | `PI5_HOST` |
+
+Always use Tailscale IPs (`100.x.x.x`) after initial setup — mDNS only works on the same WiFi.
+
+---
+
+## Docs → PDF
+
+```bash
+mise run docs:pdf:all    # regenerates all PDFs into docs/dist/
+```
+
+Customer docs: `docs/dist/setup.pdf`, `docs/dist/provisioning.pdf`

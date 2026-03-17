@@ -14,15 +14,36 @@ to the machine automatically — with status flowing back.
 
 ## Hardware
 
-A small compute module sits physically next to the Howick machine:
+Two devices per machine:
 
-| Option | Cost | Notes |
-|--------|------|-------|
-| Raspberry Pi 5 | ~$80 | Recommended for v1. ARM64, cross-compile from MacBook |
-| Beelink Mini PC | ~$150 | x86, easier dev, runs Linux |
-| Mac Mini M4 | ~$600 | Overkill but Gerard already has Apple Silicon familiarity |
+| Device | Role | Cost |
+|--------|------|------|
+| Raspberry Pi Zero 2W | USB gadget (pretends to be USB stick) + coil sensor via GPIO | ~$41 |
+| Raspberry Pi 5 4GB | Full OPC UA server + HTTP API on factory LAN | ~$80 |
 
-Connected to factory LAN via ethernet. Tailscale for remote access from plat-trunk CF Worker.
+Both connect to factory WiFi. Tailscale on both for remote access.
+
+### Physical layout
+
+```
+[Coil spool]
+     │
+     │ load cell + HX711, 5m cable
+     │
+[Pi Zero 2W] ── GPIO reads coil weight → metres remaining
+     │        ── WiFi → pushes CoilRemaining to Pi 5
+     │
+     │ Micro-USB 3m cable (USB gadget mode)
+     │
+[Howick FRAMA USB port] ── reads CSV from fake USB stick
+
+[Pi 5] ── factory WiFi/Ethernet
+        ── OPC UA :4840  (machine state, job queue, CoilRemaining)
+        ── HTTP   :4841  (plat-trunk status panel)
+        ── Netdata :19999 (monitoring)
+```
+
+Note: coil spool and FRAMA machine are ~5m apart — long sensor cable, not two Pis.
 
 ---
 
@@ -112,6 +133,7 @@ The exact folder paths are machine-specific — to be confirmed with Prin.
 - [ ] Config file (machine folder paths, OPC UA endpoint)
 - [ ] CSV file drop to machine input folder
 - [ ] Basic status: Idle / Running based on folder activity
+- [ ] **Tailscale** on Pi Zero 2W — SSH + remote deploy from anywhere (day one, free)
 
 ## Phase 2
 
@@ -119,33 +141,38 @@ The exact folder paths are machine-specific — to be confirmed with Prin.
 - [ ] `CancelJob()` method implementation
 - [ ] Job queue management
 - [ ] Completion detection and history
+- [ ] plat-trunk CF Worker → edge agent bridge
+- [ ] **Coil sensor** — load cell + HX711 on Pi Zero 2W GPIO, 5m cable to spool
+      - Pi Zero reads weight → converts to metres → pushes to Pi 5 OPC UA `Machine/CoilRemaining`
+      - howick-agent needs a `sensor` module (GPIO + HX711 driver)
 
 ## Phase 3
 
-- [ ] Tailscale integration for remote access
-- [ ] plat-trunk CF Worker → edge agent bridge
-- [ ] Coil inventory sensor integration (if hardware available)
 - [ ] FRAMECAD Nexa API bridge (second machine)
 
 ---
 
 ## Cross-Compilation for Raspberry Pi
 
-From MacBook (Apple Silicon):
+Use mise tasks — they handle cross, targets, and deploy:
 
 ```bash
-# Install cross-compilation target
-rustup target add aarch64-unknown-linux-gnu
+# Pi 5 (full OPC UA binary)
+PI5_HOST=pi@100.x.x.x mise run deploy:pi5
 
-# Install cross tool
-cargo install cross
+# Pi Zero 2W (minimal howick-agent)
+ZERO_HOST=pi@100.x.x.x mise run deploy:pi-zero
 
-# Build for Pi
-cross build --release --target aarch64-unknown-linux-gnu
+# SSH (Tailscale IPs)
+mise run ssh:pi5
+mise run ssh:pi-zero
 
-# Deploy
-scp target/aarch64-unknown-linux-gnu/release/opcua-howick pi@factory-pi.local:~/
+# Logs
+mise run logs:pi5
+mise run logs:pi-zero
 ```
+
+Prerequisites: `cargo install cross` and Tailscale running on both Pis.
 
 ---
 
@@ -158,9 +185,11 @@ scp target/aarch64-unknown-linux-gnu/release/opcua-howick pi@factory-pi.local:~/
 
 ## Deployment Option B — Windows (Recommended for First Demo)
 
-Since Prin's factory currently uses a USB stick to transfer CSV files to the
-Howick machine's Windows control PC, the simplest integration is to run
-`opcua-howick.exe` directly on that Windows PC. No Pi, no network share needed.
+Prin's factory currently uses a Windows PC running SketchUp + FrameBuilderMRD
+to write CSVs to a USB stick. **Do not touch that workflow.**
+Run `opcua-howick.exe` alongside it on the same PC — both write to the same
+watched folder. Operator keeps doing exactly what they do today; opcua-howick
+just adds a second path for jobs coming from plat-trunk.
 
 ```
 opcua-howick.exe (running on Howick Windows PC)

@@ -93,6 +93,10 @@ async fn main() -> anyhow::Result<()> {
     // Single service: job poller
     // No OPC UA server. No HTTP server. No file watcher.
     // Just: poll → write CSV → refresh USB → repeat.
+    //
+    // TODO Phase 2: add sensor module — load cell + HX711 on GPIO, 5m cable to coil spool.
+    // Reads coil weight → converts to metres → pushes to Pi 5 OPC UA Machine/CoilRemaining.
+    // See docs/architecture.md Phase 2 and docs/bom.md Phase 2 for hardware details.
     tracing::info!(
         "Running — polling {} every {}s",
         config.plat_trunk.url,

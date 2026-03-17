@@ -92,7 +92,7 @@ async fn handle_new_job(
 
     // Write to machine input directory (handles USB gadget refresh if configured)
     let csv = tokio::fs::read_to_string(csv_path).await?;
-    crate::usb_gadget::write_job(&config, filename, &csv).await?;
+    crate::usb_gadget::write_job(config, filename, &csv).await?;
     tracing::info!(
         "CSV written to machine input: {}",
         config.machine_input_dir.join(filename).display()

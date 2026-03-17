@@ -49,43 +49,37 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Linux x86_64
+          - name: linux x86_64 — opcua-howick
             target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
             cross: false
             bin: opcua-howick
 
-          - name: macOS Apple Silicon
+          - name: macos arm64 — opcua-howick
             target: aarch64-apple-darwin
             os: macos-latest
             cross: false
             bin: opcua-howick
 
-          - name: macOS Intel
+          - name: macos x86_64 — opcua-howick
             target: x86_64-apple-darwin
             os: macos-latest
             cross: false
             bin: opcua-howick
 
-          - name: Raspberry Pi 5 (arm64)
+          - name: pi-5 arm64 — opcua-howick
             target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
             cross: true
             bin: opcua-howick
 
-          - name: Raspberry Pi 3/4 (arm32)
-            target: armv7-unknown-linux-gnueabihf
-            os: ubuntu-latest
-            cross: true
-            bin: opcua-howick
-
-          - name: Pi Zero 2W — howick-agent (USB gadget)
+          - name: pi-zero-2w arm64 — howick-agent
             target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
             cross: true
             bin: howick-agent
 
-          - name: Windows x86_64
+          - name: windows x86_64 — opcua-howick
             target: x86_64-pc-windows-msvc
             os: windows-latest
             cross: false

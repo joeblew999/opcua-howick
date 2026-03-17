@@ -7,7 +7,7 @@ via a USB stick. An operator runs FrameBuilderMRD, copies the CSV to a
 stick, walks to the machine, plugs it in.
 
 A Raspberry Pi Zero 2W (~$15) can **pretend to be a USB stick** while
-simultaneously connecting to the factory WiFi. opcua-howick runs on it,
+simultaneously connecting to the factory WiFi. howick-agent runs on it,
 polls plat-trunk for new jobs, and writes CSVs to the fake USB partition.
 The Howick machine sees a new file appear on its "USB stick" and runs it
 automatically.
@@ -19,8 +19,8 @@ From the operator's perspective: no walking, no swapping, no USB sticks.
 plat-trunk (browser, anywhere)
     ↓ design wall → Generate CSV → Send to Machine
 CF Worker → R2 (or Tauri local)
-    ↓ opcua-howick polls every 5s
-Pi Zero 2W (WiFi to factory LAN)
+    ↓ howick-agent polls every 5s
+Pi Zero 2W (WiFi to factory LAN, Tailscale for remote access)
     ↓ USB cable (looks like USB mass storage to machine)
 Howick FRAMA USB port
     ↓ reads new CSV automatically
@@ -31,183 +31,112 @@ Steel members come out
 
 ## Hardware
 
+See [bom.md](bom.md) for full BOM and where to order in Thailand.
+
 | Item | Cost | Notes |
 |------|------|-------|
-| Raspberry Pi Zero 2W | ~$15 | Has USB OTG (can act as USB device) |
-| USB-A to micro-USB cable | ~$3 | Long (2-3m) to reach machine USB port |
-| microSD card (8GB+) | ~$5 | OS + storage partition |
-| **Total** | **~$23** | One-time, permanent replacement for USB sticks |
-
-**Why Pi Zero 2W specifically:**
-- USB OTG port — can act as USB *device* (not just host)
-- Built-in WiFi — no USB WiFi dongle needed
-- Small enough to hide behind the machine
-- Runs full Linux — opcua-howick binary runs natively
+| Raspberry Pi Zero 2W | ~$15 | USB OTG — can act as USB device |
+| Anker Micro-USB 10ft cable | ~$10 | Long enough to reach machine USB port |
+| microSD 32GB | ~$8 | OS + storage partition |
+| USB-A charger (5V/2.5A) | ~$8 | Use extension cable if outlet is far |
+| **Total** | **~$41** | One-time, permanent replacement for USB sticks |
 
 ---
 
 ## How USB Gadget Mode Works
 
-The Pi Zero 2W's USB port can operate in two modes:
-- **Host mode** (normal) — Pi controls USB devices (keyboard, drives, etc.)
-- **Device/gadget mode** — Pi IS the USB device (appears as drive, keyboard, etc.)
-
-We use `g_mass_storage` — a Linux kernel module that makes the Pi appear
+The Pi Zero 2W's USB port operates in **device/gadget mode** — it appears
 as a USB mass storage device (USB stick) to whatever it's plugged into.
 
-The Pi exposes a disk image file as the USB storage. opcua-howick mounts
-that image, writes CSVs to it, then signals the kernel to "re-present" the
-updated storage to the host machine.
+We use `g_mass_storage` — a Linux kernel module that exposes a disk image
+file (`/piusb.bin`) as USB storage. howick-agent writes CSVs into that
+image, then signals the kernel to re-present the storage to the machine.
 
 ---
 
-## Setup Guide
+## Setup — everything is a mise task
 
-### 1. Flash Pi Zero 2W
+All setup steps run from your MacBook via SSH. Set `ZERO_HOST` to the Pi's
+local hostname first, then Tailscale IP once Tailscale is installed.
 
 ```bash
-# Use Raspberry Pi Imager
-# OS: Raspberry Pi OS Lite (64-bit)
-# Enable SSH, set WiFi credentials for factory network
-# Hostname: howick-pi
+export ZERO_HOST=pi@howick-pi-zero.local
 ```
 
-### 2. Create the USB mass storage image
+### Step 1 — Flash the Pi
+
+Use **Raspberry Pi Imager** on your MacBook:
+- OS: Raspberry Pi OS Lite (64-bit)
+- Hostname: `howick-pi-zero`
+- Enable SSH
+- Set factory WiFi credentials
+
+### Step 2 — Install Tailscale (do this first)
 
 ```bash
-ssh pi@howick-pi.local
-
-# Create a 512MB FAT32 disk image (adjust size as needed)
-sudo dd if=/dev/zero of=/piusb.bin bs=1M count=512
-sudo mkdosfs /piusb.bin -F 32 -n "HOWICK"
-
-# Create mount point
-sudo mkdir -p /mnt/usb_share
+mise run tailscale:install:pi-zero
 ```
 
-### 3. Enable USB gadget mode
+Note the `100.x.x.x` Tailscale IP printed at the end. Update `ZERO_HOST`:
 
 ```bash
-# Add to /boot/config.txt
-echo "dtoverlay=dwc2" | sudo tee -a /boot/config.txt
-
-# Add to /boot/cmdline.txt (after rootwait, on same line)
-# modules-load=dwc2,g_mass_storage
-
-# Create gadget config on boot
-sudo tee /etc/rc.local << 'EOF'
-#!/bin/bash
-# Mount the USB image
-mount -o loop,sync,noatime /piusb.bin /mnt/usb_share
-
-# Load mass storage gadget pointing at the image
-modprobe g_mass_storage file=/piusb.bin stall=0 ro=0
-
-exit 0
-EOF
-sudo chmod +x /etc/rc.local
+export ZERO_HOST=pi@100.x.x.x
 ```
 
-### 4. Install opcua-howick
+From this point you can SSH from anywhere — no need to be on factory WiFi.
+
+### Step 3 — USB gadget setup
 
 ```bash
-# Download howick-agent (minimal binary — no OPC UA, no HTTP, ~3MB)
-# From GitHub Releases page:
-wget https://github.com/joeblew999/opcua-howick/releases/latest/download/howick-agent-aarch64-unknown-linux-gnu
-chmod +x howick-agent-aarch64-unknown-linux-gnu
-mv howick-agent-aarch64-unknown-linux-gnu howick-agent
+mise run setup:usb-gadget:pi-zero
+```
 
-# Or deploy from your MacBook:
+This does in one shot:
+- Creates the 512MB FAT32 disk image at `/piusb.bin` labelled `HOWICK`
+- Enables `dwc2` overlay in `/boot/firmware/config.txt`
+- Adds `dwc2,g_mass_storage` to `/boot/firmware/cmdline.txt`
+- Creates `/etc/rc.local` to mount + load gadget on boot
+- Installs `/usr/local/bin/usb-refresh.sh` for post-write USB re-presentation
+- Reboots the Pi
+
+### Step 4 — Set up secrets with Doppler
+
+```bash
+mise run doppler:setup:pi-zero
+```
+
+This installs the Doppler CLI on the Pi and links it to the `opcua-howick / pi-zero` config.
+Set `PLAT_TRUNK_API_KEY` and `PLAT_TRUNK_URL` in the Doppler dashboard —
+they are injected at runtime, never written to disk.
+
+### Step 5 — Deploy howick-agent
+
+```bash
 mise run deploy:pi-zero
 ```
 
-### 5. Configure opcua-howick
+Builds, copies binary, installs systemd service, starts it. Done.
+
+### Step 6 — Verify
 
 ```bash
-cat > ~/config.toml << 'EOF'
-[opcua]
-host             = "0.0.0.0"
-port             = 4840
-application_name = "Howick Edge Agent - Si Racha Factory"
-
-[http]
-host = "0.0.0.0"
-port = 4841
-
-[machine]
-machine_name      = "Howick FRAMA"
-job_input_dir     = "/home/pi/jobs/input"
-# This is the mounted USB image — Howick machine reads from here
-machine_input_dir = "/mnt/usb_share"
-machine_output_dir = "/home/pi/jobs/output"
-
-[plat_trunk]
-# Cloud topology:
-url = "https://your-worker.workers.dev"
-# LAN topology (Tauri on factory LAN):
-# url = "http://tauri-machine.local:3000"
-api_key                   = ""
-status_push_interval_secs = 5
-EOF
-```
-
-### 6. Install as systemd service
-
-```bash
-sudo tee /etc/systemd/system/howick-agent.service << 'EOF'
-[Unit]
-Description=Howick Edge Agent
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=simple
-User=pi
-WorkingDirectory=/home/pi
-ExecStartPre=/bin/sleep 5
-ExecStart=/home/pi/howick-agent
-Restart=always
-RestartSec=5
-Environment=RUST_LOG=opcua_howick=info
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-sudo systemctl daemon-reload
-sudo systemctl enable opcua-howick
-sudo systemctl start opcua-howick
-```
-
-### 7. Handle USB re-presentation after write
-
-When opcua-howick writes a new CSV, the Howick machine needs to see the
-updated storage. Add a script that opcua-howick calls after each write:
-
-```bash
-sudo tee /usr/local/bin/usb-refresh.sh << 'EOF'
-#!/bin/bash
-# Sync filesystem and re-present USB storage to host
-sync
-echo 1 > /sys/bus/platform/drivers/dwc2/dwc2/gadget/suspended 2>/dev/null || true
-sleep 0.5
-echo 0 > /sys/bus/platform/drivers/dwc2/dwc2/gadget/suspended 2>/dev/null || true
-EOF
-sudo chmod +x /usr/local/bin/usb-refresh.sh
+mise run status:pi-zero    # check service is running
+mise run logs:pi-zero      # stream live logs
 ```
 
 ---
 
-## Deployment via mise
-
-From your MacBook:
+## Deployment via mise (ongoing)
 
 ```bash
-# Build for Pi Zero 2W (arm64)
-mise run build:pi5    # aarch64-unknown-linux-gnu
+# Push a new binary after code changes
+ZERO_HOST=pi@100.x.x.x mise run deploy:pi-zero
 
-# Deploy (SSH key auth required)
-PI_HOST=pi@howick-pi.local mise run deploy:pi
+# Stream logs
+mise run logs:pi-zero
+
+# SSH in
+mise run ssh:pi-zero
 ```
 
 ---
@@ -216,33 +145,37 @@ PI_HOST=pi@howick-pi.local mise run deploy:pi
 
 ### Phase 0 — Right now (no hardware change)
 Designer downloads CSV from plat-trunk Machine tab → copies to USB stick manually.
-Still eliminates SketchUp + FrameBuilderMRD. Prin can validate the CSV output.
+Existing SketchUp + FrameBuilderMRD workflow untouched. Prin validates CSV output.
 
-### Phase 1 — Pi Zero 2W (~$23, ~1 hour setup)
-Pi plugged into machine USB port via long cable.
-Jobs flow: browser → plat-trunk → Pi → machine. No walking. No USB swapping.
+### Phase 1 — Pi Zero 2W + Pi 5 (~$121, ~2 hour setup)
+Pi Zero plugged into machine USB port via long cable.
+Pi 5 on factory LAN running full OPC UA + HTTP.
+Jobs flow: browser → plat-trunk → Pi Zero → machine. No walking. No USB swapping.
 
-### Phase 2 — OPC UA visibility (optional, same Pi)
-The Pi already runs an OPC UA server (port 4840).
-Any OPC UA client on the factory LAN can see machine status, job queue,
-pieces produced. Future: connect to factory MES, ERP, or Prin's phone.
+### Phase 2 — OPC UA visibility (Pi 5, no extra hardware)
+Full OPC UA server on Pi 5 (port 4840) exposing machine state:
+job queue depth, pieces produced, coil remaining.
+Any OPC UA client on factory LAN — or Prin's phone — sees live status.
 
 ---
 
 ## Physical Setup at the Factory
 
 ```
-[Factory LAN / WiFi]
-        |
-   [Pi Zero 2W]  ←── WiFi ──── plat-trunk (cloud or Tauri)
-        |
-   [USB cable, 2m]
-        |
-   [Howick FRAMA USB port]
-        |
-   [Machine reads CSV, produces steel]
+[Factory WiFi]
+      |
+[Pi Zero 2W] ←── WiFi ──── plat-trunk (cloud or Tauri)
+      |        └── Tailscale ──── your MacBook (remote)
+[USB cable, 3m]
+      |
+[Howick FRAMA USB port]
+      |
+[Machine reads CSV, produces steel]
+
+[Pi 5] ←── WiFi / Ethernet ──── factory LAN
+       └── OPC UA :4840, HTTP :4841
 ```
 
-The Pi sits behind or under the machine. The USB cable is the only
+The Pi Zero sits behind or under the machine. The USB cable is the only
 physical connection to the machine. From the machine's perspective it
 has always had a USB stick plugged in — it just never runs out of jobs.

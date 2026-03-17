@@ -2,6 +2,10 @@
 # Rust version is pinned in rust-toolchain.toml (rustup standard).
 # mise respects rust-toolchain.toml automatically — do not add rust here.
 
+[tools]
+pandoc = "latest"
+typst  = "latest"
+
 [env]
 RUST_BACKTRACE = "1"
 RUST_LOG       = "opcua_howick=info"
@@ -47,16 +51,12 @@ depends     = ["check", "fmt-check", "test"]
 description = "Cross-compile for Raspberry Pi 5 (aarch64)"
 run         = "cross build --release --target aarch64-unknown-linux-gnu"
 
-[tasks."build:pi4"]
-description = "Cross-compile for Raspberry Pi 3/4 (armv7)"
-run         = "cross build --release --target armv7-unknown-linux-gnueabihf"
-
 # Pi Zero 2W — uses howick-agent (minimal binary, no OPC UA, no HTTP)
 # ~3MB binary, ~16MB RAM — fits Pi Zero 2W (512MB)
 # USB gadget mode: appears as USB mass storage to Howick machine
 # See docs/pi-zero-usb-gadget.md for full setup guide
-[tasks."build:agent"]
-description = "Build howick-agent (minimal: Pi Zero 2W, no OPC UA, no HTTP)"
+[tasks."build:pi-zero:local"]
+description = "Build howick-agent locally (no cross — for local testing only)"
 run         = "cargo build --release --bin howick-agent"
 
 [tasks."build:agent:pi-zero"]
@@ -67,17 +67,19 @@ run         = "cross build --release --bin howick-agent --target aarch64-unknown
 description = "Build + deploy howick-agent to Pi Zero 2W (USB gadget mode)"
 run         = """
 cross build --release --bin howick-agent --target aarch64-unknown-linux-gnu
-scp target/aarch64-unknown-linux-gnu/release/howick-agent ${PI_HOST:-pi@howick-pi.local}:~/howick-agent.new
-scp config.toml ${PI_HOST:-pi@howick-pi.local}:~/config.toml.example
-ssh ${PI_HOST:-pi@howick-pi.local} '
+scp target/aarch64-unknown-linux-gnu/release/howick-agent ${ZERO_HOST:-pi@howick-pi-zero.local}:~/howick-agent.new
+scp config.toml ${ZERO_HOST:-pi@howick-pi-zero.local}:~/config.toml.example
+ssh ${ZERO_HOST:-pi@howick-pi-zero.local} '
   mv ~/howick-agent.new ~/howick-agent
   chmod +x ~/howick-agent
   sudo systemctl restart howick-agent 2>/dev/null || echo "Service not installed yet — see docs/pi-zero-usb-gadget.md"
   sleep 2
   sudo systemctl status howick-agent --no-pager 2>/dev/null || echo "Run: ./howick-agent"
 '
+VERSION=$(cargo metadata --no-deps --format-version 1 | python3 -c "import sys,json; print(json.load(sys.stdin)['packages'][0]['version'])")
+ssh ${ZERO_HOST:-pi@howick-pi-zero.local} "echo 'v${VERSION}' > ~/.howick-agent-version"
 echo ""
-echo "Pi Zero deployed (minimal howick-agent)"
+echo "Pi Zero deployed (howick-agent v${VERSION})"
 echo "Edit ~/config.toml: usb_gadget_mode=true, machine_input_dir=/mnt/usb_share"
 echo "See docs/pi-zero-usb-gadget.md for USB gadget setup"
 """
@@ -91,48 +93,424 @@ description = "Build for macOS Apple Silicon"
 run         = "cargo build --release --target aarch64-apple-darwin"
 
 [tasks."build:windows"]
-description = "Build for Windows x86_64 (Howick control PC — replaces USB stick)"
+description = "Build for Windows x86_64 (runs alongside SketchUp + FrameBuilderMRD on Howick control PC)"
 run         = "cargo build --release --target x86_64-pc-windows-msvc"
 
 [tasks."build:all"]
-description = "Build all factory targets"
-depends     = ["build:pi5", "build:pi4", "build:linux"]
+description = "Build all factory targets (Pi 5, Pi Zero 2W, Linux, Windows)"
+depends     = ["build:pi5", "build:agent:pi-zero", "build:linux", "build:windows"]
+
+# ── Full lifecycle — first boot ───────────────────────────────────────────────
+# Pi Zero 2W: two steps because USB gadget setup reboots the Pi.
+#
+#   Step 1 (same WiFi as Pi):
+#     ZERO_HOST=pi@howick-pi-zero.local mise run setup:first-boot:pi-zero
+#     (Pi reboots at end — wait ~30s)
+#
+#   Step 2 (via Tailscale IP from anywhere):
+#     ZERO_HOST=pi@100.x.x.x mise run setup:post-reboot:pi-zero
+#
+# Pi 5: single step:
+#     PI5_HOST=pi@howick-pi5.local mise run setup:first-boot:pi5
+
+[tasks."setup:first-boot:pi-zero"]
+description = "Pi Zero 2W first boot — Tailscale + USB gadget (reboots at end)"
+run         = """
+echo "Step 1/2: Installing Tailscale..."
+mise run tailscale:install:pi-zero
+echo ""
+echo "Step 2/2: USB gadget setup (will reboot Pi)..."
+mise run setup:usb-gadget:pi-zero
+echo ""
+echo "Pi is rebooting. Wait ~30s then run:"
+echo "  ZERO_HOST=pi@<tailscale-ip> mise run setup:post-reboot:pi-zero"
+"""
+
+[tasks."setup:post-reboot:pi-zero"]
+description = "Pi Zero 2W post-reboot — Doppler + deploy binary + auto-update timer"
+run         = """
+echo "Step 1/3: Doppler secrets..."
+mise run doppler:setup:pi-zero
+echo ""
+echo "Step 2/3: Deploy howick-agent binary..."
+mise run deploy:pi-zero
+echo ""
+echo "Step 3/3: Install auto-update timer..."
+mise run setup:autoupdate:pi-zero
+echo ""
+echo "Pi Zero 2W fully provisioned."
+echo "Logs:   mise run logs:pi-zero"
+echo "Status: mise run status:pi-zero"
+"""
+
+[tasks."setup:first-boot:pi5"]
+description = "Pi 5 first boot — Tailscale + dirs + Doppler + deploy + auto-update"
+run         = """
+echo "Step 1/4: Installing Tailscale..."
+mise run tailscale:install:pi5
+echo ""
+echo "Step 2/4: Base setup..."
+mise run setup:pi5
+echo ""
+echo "Step 3/4: Doppler secrets..."
+mise run doppler:setup:pi5
+echo ""
+echo "Step 4/4: Deploy binary + auto-update timer..."
+mise run deploy:pi5
+mise run setup:autoupdate:pi5
+echo ""
+echo "Pi 5 fully provisioned."
+echo "Logs:    mise run logs:pi5"
+echo "Status:  mise run status:pi5"
+echo "Monitor: http://<tailscale-ip>:19999"
+"""
+
+# ── Auto-update (pull from GitHub Releases every hour) ────────────────────────
+
+[tasks."setup:autoupdate:pi-zero"]
+description = "Install auto-update timer on Pi Zero 2W (pulls GitHub Releases hourly)"
+run         = """
+ssh ${ZERO_HOST:-pi@howick-pi-zero.local} 'sudo bash -s' << 'REMOTE'
+set -euo pipefail
+
+cp /tmp/howick-agent-update.sh /usr/local/bin/howick-agent-update.sh 2>/dev/null || true
+chmod +x /usr/local/bin/howick-agent-update.sh
+
+# Install systemd units
+cp /tmp/howick-agent-update.service /etc/systemd/system/
+cp /tmp/howick-agent-update.timer   /etc/systemd/system/
+
+systemctl daemon-reload
+systemctl enable howick-agent-update.timer
+systemctl start  howick-agent-update.timer
+
+echo "Auto-update timer installed."
+systemctl list-timers howick-agent-update.timer --no-pager
+REMOTE
+"""
+
+[tasks."setup:autoupdate:pi-zero:upload"]
+description = "Upload auto-update scripts to Pi Zero 2W then install"
+run         = """
+scp deploy/howick-agent-update.sh      ${ZERO_HOST:-pi@howick-pi-zero.local}:/tmp/
+scp deploy/howick-agent-update.service ${ZERO_HOST:-pi@howick-pi-zero.local}:/tmp/
+scp deploy/howick-agent-update.timer   ${ZERO_HOST:-pi@howick-pi-zero.local}:/tmp/
+mise run setup:autoupdate:pi-zero
+"""
+
+[tasks."setup:autoupdate:pi5"]
+description = "Install auto-update timer on Pi 5 (pulls GitHub Releases hourly)"
+run         = """
+ssh ${PI5_HOST:-pi@howick-pi5.local} 'sudo bash -s' << 'REMOTE'
+set -euo pipefail
+
+cp /tmp/opcua-howick-update.sh /usr/local/bin/opcua-howick-update.sh 2>/dev/null || true
+chmod +x /usr/local/bin/opcua-howick-update.sh
+
+# Install systemd units
+cp /tmp/opcua-howick-update.service /etc/systemd/system/
+cp /tmp/opcua-howick-update.timer   /etc/systemd/system/
+
+systemctl daemon-reload
+systemctl enable opcua-howick-update.timer
+systemctl start  opcua-howick-update.timer
+
+echo "Auto-update timer installed."
+systemctl list-timers opcua-howick-update.timer --no-pager
+REMOTE
+"""
+
+[tasks."setup:autoupdate:pi5:upload"]
+description = "Upload auto-update scripts to Pi 5 then install"
+run         = """
+scp deploy/opcua-howick-update.sh      ${PI5_HOST:-pi@howick-pi5.local}:/tmp/
+scp deploy/opcua-howick-update.service ${PI5_HOST:-pi@howick-pi5.local}:/tmp/
+scp deploy/opcua-howick-update.timer   ${PI5_HOST:-pi@howick-pi5.local}:/tmp/
+mise run setup:autoupdate:pi5
+"""
+
+[tasks."update:check:pi-zero"]
+description = "Manually trigger update check on Pi Zero 2W"
+run         = "ssh ${ZERO_HOST:-pi@howick-pi-zero.local} 'sudo /usr/local/bin/howick-agent-update.sh'"
+
+[tasks."update:check:pi5"]
+description = "Manually trigger update check on Pi 5"
+run         = "ssh ${PI5_HOST:-pi@howick-pi5.local} 'sudo /usr/local/bin/opcua-howick-update.sh'"
+
+# ── First-time Pi setup ───────────────────────────────────────────────────────
+# Run these once per Pi after flashing. Tailscale must be installed first.
+
+[tasks."setup:usb-gadget:pi-zero"]
+description = "One-shot USB gadget setup on Pi Zero 2W (run once after flash)"
+run         = """
+ssh ${ZERO_HOST:-pi@howick-pi-zero.local} 'sudo bash -s' << 'REMOTE'
+set -euo pipefail
+
+# 1. Create 512MB FAT32 disk image
+if [ ! -f /piusb.bin ]; then
+  echo "Creating /piusb.bin..."
+  dd if=/dev/zero of=/piusb.bin bs=1M count=512 status=progress
+  mkdosfs /piusb.bin -F 32 -n "HOWICK"
+fi
+
+# 2. Mount point
+mkdir -p /mnt/usb_share
+
+# 3. Enable dwc2 overlay
+CONFIGTXT=/boot/firmware/config.txt
+if ! grep -q "dtoverlay=dwc2" "$CONFIGTXT"; then
+  echo "dtoverlay=dwc2" >> "$CONFIGTXT"
+  echo "Enabled dwc2 in $CONFIGTXT"
+fi
+
+# 4. Load modules at boot
+CMDLINE=/boot/firmware/cmdline.txt
+if ! grep -q "modules-load=dwc2,g_mass_storage" "$CMDLINE"; then
+  sed -i 's/rootwait/rootwait modules-load=dwc2,g_mass_storage/' "$CMDLINE"
+  echo "Added modules-load to $CMDLINE"
+fi
+
+# 5. rc.local — mount image and load gadget on boot
+cat > /etc/rc.local << 'EOF'
+#!/bin/bash
+mount -o loop,sync,noatime /piusb.bin /mnt/usb_share
+modprobe g_mass_storage file=/piusb.bin stall=0 ro=0
+exit 0
+EOF
+chmod +x /etc/rc.local
+
+# 6. USB refresh script — called by howick-agent after each CSV write
+cat > /usr/local/bin/usb-refresh.sh << 'EOF'
+#!/bin/bash
+sync
+echo 1 > /sys/bus/platform/drivers/dwc2/dwc2/gadget/suspended 2>/dev/null || true
+sleep 0.5
+echo 0 > /sys/bus/platform/drivers/dwc2/dwc2/gadget/suspended 2>/dev/null || true
+EOF
+chmod +x /usr/local/bin/usb-refresh.sh
+
+echo ""
+echo "USB gadget setup complete. Rebooting in 5 seconds..."
+sleep 5
+reboot
+REMOTE
+"""
+
+[tasks."setup:pi5"]
+description = "First-time setup on Pi 5 — jobs dir, Netdata, verify service"
+run         = """
+ssh ${PI5_HOST:-pi@howick-pi5.local} 'sudo bash -s' << 'REMOTE'
+set -euo pipefail
+
+# Jobs directory
+mkdir -p /home/pi/jobs/input /home/pi/jobs/output
+chown -R pi:pi /home/pi/jobs
+
+echo "Pi 5 base setup complete."
+echo "Next: mise run tailscale:install:pi5 && mise run doppler:setup:pi5 && mise run deploy:pi5"
+REMOTE
+"""
 
 # ── Factory deployment ────────────────────────────────────────────────────────
+# PI5_HOST  — Tailscale IP or hostname of Pi 5  (e.g. pi@100.x.x.x)
+# ZERO_HOST — Tailscale IP or hostname of Pi Zero 2W (e.g. pi@100.x.x.x)
 
-[tasks."deploy:pi"]
-description = "Build for Pi 5 + deploy via SSH + restart service"
+[tasks."deploy:pi5"]
+description = "Build full opcua-howick binary + deploy to Pi 5 via SSH + restart"
 run         = """
 cross build --release --target aarch64-unknown-linux-gnu
-scp target/aarch64-unknown-linux-gnu/release/opcua-howick ${PI_HOST:-pi@factory-pi.local}:~/opcua-howick.new
-ssh ${PI_HOST:-pi@factory-pi.local} '
+VERSION=$(cargo metadata --no-deps --format-version 1 | python3 -c "import sys,json; print(json.load(sys.stdin)['packages'][0]['version'])")
+scp target/aarch64-unknown-linux-gnu/release/opcua-howick ${PI5_HOST:-pi@howick-pi5.local}:~/opcua-howick.new
+ssh ${PI5_HOST:-pi@howick-pi5.local} "
   mv ~/opcua-howick.new ~/opcua-howick
   chmod +x ~/opcua-howick
+  echo 'v${VERSION}' > ~/.opcua-howick-version
   sudo systemctl restart opcua-howick
   sleep 2
   sudo systemctl status opcua-howick --no-pager
-'
+"
 """
 
+[tasks."deploy:config:pi5"]
+description = "Deploy config.toml to Pi 5"
+run         = "scp config.toml ${PI5_HOST:-pi@howick-pi5.local}:~/config.toml"
+
+[tasks."deploy:config:pi-zero"]
+description = "Deploy config.toml to Pi Zero 2W"
+run         = "scp config.toml ${ZERO_HOST:-pi@howick-pi-zero.local}:~/config.toml"
+
 [tasks."deploy:windows"]
-description = "Copy opcua-howick.exe to Howick Windows PC over network"
+description = "Copy opcua-howick.exe to Howick Windows PC over network (runs alongside existing SketchUp + FrameBuilderMRD)"
 run         = """
 cargo build --release --target x86_64-pc-windows-msvc
 cp target/x86_64-pc-windows-msvc/release/opcua-howick.exe ${WINDOWS_HOST:-//howick-pc/c$/opcua-howick/}/opcua-howick.exe
 echo "Deployed to Windows PC. Edit config.toml then run opcua-howick.exe"
 """
 
-[tasks."deploy:config"]
-description = "Deploy config.toml to factory Pi"
-run         = "scp config.toml ${PI_HOST:-pi@factory-pi.local}:~/config.toml"
+# ── SSH shortcuts ──────────────────────────────────────────────────────────────
 
-[tasks."logs:pi"]
-description = "Stream live logs from factory Pi"
-run         = "ssh ${PI_HOST:-pi@factory-pi.local} 'journalctl -u opcua-howick -f'"
+[tasks."ssh:pi5"]
+description = "SSH into Pi 5 (use Tailscale IP via PI5_HOST)"
+run         = "ssh ${PI5_HOST:-pi@howick-pi5.local}"
 
-[tasks."status:pi"]
-description = "Check machine status via HTTP API"
-run         = "curl -s http://${PI_ADDR:-factory-pi.local}:4841/status | python3 -m json.tool"
+[tasks."ssh:pi-zero"]
+description = "SSH into Pi Zero 2W (use Tailscale IP via ZERO_HOST)"
+run         = "ssh ${ZERO_HOST:-pi@howick-pi-zero.local}"
+
+# ── Logs + status ──────────────────────────────────────────────────────────────
+
+[tasks."logs:pi5"]
+description = "Stream live logs from Pi 5"
+run         = "ssh ${PI5_HOST:-pi@howick-pi5.local} 'journalctl -u opcua-howick -f'"
+
+[tasks."logs:pi-zero"]
+description = "Stream live logs from Pi Zero 2W"
+run         = "ssh ${ZERO_HOST:-pi@howick-pi-zero.local} 'journalctl -u howick-agent -f'"
+
+[tasks."status:pi5"]
+description = "Check Pi 5 service status + HTTP API"
+run         = """
+ssh ${PI5_HOST:-pi@howick-pi5.local} 'sudo systemctl status opcua-howick --no-pager'
+curl -s http://${PI5_ADDR:-howick-pi5.local}:4841/status | python3 -m json.tool
+"""
+
+[tasks."status:pi-zero"]
+description = "Check Pi Zero 2W service status"
+run         = "ssh ${ZERO_HOST:-pi@howick-pi-zero.local} 'sudo systemctl status howick-agent --no-pager'"
+
+# ── Tailscale ─────────────────────────────────────────────────────────────────
+# Install and check Tailscale on each Pi.
+# After install, note the 100.x.x.x IPs and set PI5_HOST / ZERO_HOST accordingly.
+
+[tasks."tailscale:install:pi5"]
+description = "Install Tailscale on Pi 5"
+run         = """
+ssh ${PI5_HOST:-pi@howick-pi5.local} '
+  curl -fsSL https://tailscale.com/install.sh | sh
+  sudo tailscale up
+  echo "Pi 5 Tailscale IP:"
+  tailscale ip -4
+'
+"""
+
+[tasks."tailscale:install:pi-zero"]
+description = "Install Tailscale on Pi Zero 2W"
+run         = """
+ssh ${ZERO_HOST:-pi@howick-pi-zero.local} '
+  curl -fsSL https://tailscale.com/install.sh | sh
+  sudo tailscale up
+  echo "Pi Zero Tailscale IP:"
+  tailscale ip -4
+'
+"""
+
+[tasks."tailscale:status:pi5"]
+description = "Check Tailscale status on Pi 5"
+run         = "ssh ${PI5_HOST:-pi@howick-pi5.local} 'tailscale status'"
+
+[tasks."tailscale:status:pi-zero"]
+description = "Check Tailscale status on Pi Zero 2W"
+run         = "ssh ${ZERO_HOST:-pi@howick-pi-zero.local} 'tailscale status'"
+
+# ── Doppler (secrets management) ──────────────────────────────────────────────
+# Doppler replaces config.toml secrets (plat_trunk.api_key, etc.) on each Pi.
+# Set up project at https://dashboard.doppler.com
+# Project: opcua-howick  Config: pi5 / pi-zero
+
+[tasks."doppler:setup:pi5"]
+description = "Install Doppler CLI on Pi 5 + authenticate"
+run         = """
+ssh ${PI5_HOST:-pi@howick-pi5.local} '
+  curl -Ls https://cli.doppler.com/install.sh | sudo sh
+  doppler login
+  doppler setup --project opcua-howick --config pi5
+  echo "Doppler configured. Run: doppler run -- ./opcua-howick"
+'
+"""
+
+[tasks."doppler:setup:pi-zero"]
+description = "Install Doppler CLI on Pi Zero 2W + authenticate"
+run         = """
+ssh ${ZERO_HOST:-pi@howick-pi-zero.local} '
+  curl -Ls https://cli.doppler.com/install.sh | sudo sh
+  doppler login
+  doppler setup --project opcua-howick --config pi-zero
+  echo "Doppler configured. Run: doppler run -- ./howick-agent"
+'
+"""
+
+[tasks."doppler:secrets"]
+description = "List all secrets in Doppler for this project (local)"
+run         = "doppler secrets --project opcua-howick"
+
+# ── Netdata (install on Pi 5 only — Pi Zero 2W has too little RAM) ─────────────
+
+[tasks."netdata:install:pi5"]
+description = "Install Netdata on Pi 5 for system + howick-agent monitoring"
+run         = """
+ssh ${PI5_HOST:-pi@howick-pi5.local} '
+  wget -O /tmp/netdata-kickstart.sh https://get.netdata.cloud/kickstart.sh
+  sh /tmp/netdata-kickstart.sh --non-interactive
+  echo "Netdata installed. Dashboard: http://$(hostname -I | cut -d\" \" -f1):19999"
+  echo "Connect to Netdata Cloud at https://app.netdata.cloud to monitor remotely."
+'
+"""
+
+# ── Docs → PDF (pandoc + typst, no LaTeX needed) ─────────────────────────────
+# Prerequisites: mise install (installs pandoc + typst from [tools] above)
+
+[tasks."docs:pdf:bom"]
+description = "Export BOM to PDF for sending to customer (Prin)"
+run         = """
+mkdir -p docs/dist
+pandoc docs/bom.md \
+  --pdf-engine=typst \
+  --template=docs/templates/howick.typ \
+  --metadata title="Hardware Bill of Materials" \
+  -o docs/dist/bom.pdf
+echo "PDF: docs/dist/bom.pdf"
+"""
+
+[tasks."docs:pdf:setup"]
+description = "Export customer setup guide to PDF"
+run         = """
+mkdir -p docs/dist
+pandoc docs/customer/setup.md \
+  --pdf-engine=typst \
+  --template=docs/templates/howick.typ \
+  --metadata title="Howick FRAMA — Automated Job Delivery" \
+  -o docs/dist/setup.pdf
+echo "PDF: docs/dist/setup.pdf"
+"""
+
+[tasks."docs:pdf:provisioning"]
+description = "Export customer provisioning guide to PDF"
+run         = """
+mkdir -p docs/dist
+pandoc docs/customer/provisioning.md \
+  --pdf-engine=typst \
+  --template=docs/templates/howick.typ \
+  --metadata title="Howick FRAMA — System Setup Guide" \
+  -o docs/dist/provisioning.pdf
+echo "PDF: docs/dist/provisioning.pdf"
+"""
+
+[tasks."docs:pdf:coil-sensor"]
+description = "Export coil sensor doc to PDF"
+run         = """
+mkdir -p docs/dist
+pandoc docs/coil-sensor.md \
+  --pdf-engine=typst \
+  --template=docs/templates/howick.typ \
+  --metadata title="Coil Inventory Sensor — Setup Guide" \
+  -o docs/dist/coil-sensor.pdf
+echo "PDF: docs/dist/coil-sensor.pdf"
+"""
+
+[tasks."docs:pdf:all"]
+description = "Export all customer-facing docs to PDF"
+depends     = ["docs:pdf:bom", "docs:pdf:setup", "docs:pdf:provisioning", "docs:pdf:coil-sensor"]
+run         = "ls -lh docs/dist/"
 
 # ── Local test helpers ────────────────────────────────────────────────────────
 

@@ -1,28 +1,27 @@
 #!/usr/bin/env bash
-# Deploy opcua-howick to a factory Raspberry Pi.
-# Wraps the mise deploy:pi task — prefer using that directly:
+# Deploy opcua-howick (full OPC UA + HTTP) to Pi 5.
+# Wraps the mise deploy:pi5 task — prefer using that directly:
 #
-#   PI_HOST=pi@192.168.1.100 mise run deploy:pi
+#   PI5_HOST=pi@100.x.x.x mise run deploy:pi5
 #
 # This script exists for cases where mise is not installed on the deploy host.
 #
 # Usage: ./deploy/deploy-pi.sh [user@host]
-#   Default host: pi@factory-pi.local
+#   Default host: pi@howick-pi5.local
 
 set -euo pipefail
 
-PI_HOST="${1:-pi@factory-pi.local}"
+PI5_HOST="${1:-pi@howick-pi5.local}"
 TARGET="aarch64-unknown-linux-gnu"
 BINARY="opcua-howick"
 
-echo "=== opcua-howick factory deploy ==="
-echo "Target: $PI_HOST"
+echo "=== opcua-howick Pi 5 deploy ==="
+echo "Target: $PI5_HOST"
 echo ""
 
-# Build
-echo "Building for Raspberry Pi 5 (aarch64)..."
+# Prefer mise
 if command -v mise &>/dev/null; then
-  PI_HOST="$PI_HOST" mise run deploy:pi
+  PI5_HOST="$PI5_HOST" mise run deploy:pi5
   exit 0
 fi
 
@@ -34,15 +33,16 @@ if ! command -v cross &>/dev/null; then
   exit 1
 fi
 
-cross build --release --target "$TARGET"
+echo "Building for Pi 5 (aarch64)..."
+cross build --release --bin "$BINARY" --target "$TARGET"
 
 BINARY_PATH="target/$TARGET/release/$BINARY"
-echo "Deploying to $PI_HOST..."
-scp "$BINARY_PATH" "$PI_HOST:~/$BINARY.new"
-scp deploy/opcua-howick.service "$PI_HOST:~/opcua-howick.service"
-scp config.toml "$PI_HOST:~/config.toml.example"
+echo "Deploying to $PI5_HOST..."
+scp "$BINARY_PATH" "$PI5_HOST:~/$BINARY.new"
+scp deploy/opcua-howick.service "$PI5_HOST:~/opcua-howick.service"
+scp config.toml "$PI5_HOST:~/config.toml.example"
 
-ssh "$PI_HOST" << 'REMOTE'
+ssh "$PI5_HOST" << 'REMOTE'
   set -e
   mv ~/opcua-howick.new ~/opcua-howick
   chmod +x ~/opcua-howick
@@ -63,7 +63,7 @@ REMOTE
 
 echo ""
 echo "=== Deploy complete ==="
-echo "OPC UA: opc.tcp://$(echo $PI_HOST | cut -d@ -f2):4840/"
-echo "HTTP:   http://$(echo $PI_HOST | cut -d@ -f2):4841/status"
+echo "OPC UA: opc.tcp://$(echo $PI5_HOST | cut -d@ -f2):4840/"
+echo "HTTP:   http://$(echo $PI5_HOST | cut -d@ -f2):4841/status"
 echo ""
-echo "Verify with: mise run status:pi"
+echo "Verify with: mise run status:pi5"
