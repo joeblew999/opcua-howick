@@ -1,4 +1,10 @@
-# Operations — Full Lifecycle
+# Operations Runbook
+## Howick FRAMA — Full Lifecycle
+
+**Prepared by:** Gerard Webb, ubuntu Software
+**Date:** March 2026
+
+---
 
 ## Overview
 
@@ -39,6 +45,8 @@ mise run setup:first-boot:pi-zero
 export ZERO_HOST=pi@100.x.x.x   # Tailscale IP from step 1
 mise run setup:post-reboot:pi-zero
 ```
+
+See `docs/customer/pi-zero-setup.md` for the detailed USB gadget setup.
 
 ### Pi 5 — single step
 
@@ -171,10 +179,8 @@ Always use Tailscale IPs (`100.x.x.x`) after initial setup — mDNS only works o
 
 ---
 
-## Docs → PDF
+## Customer docs → PDF
 
 ```bash
 mise run docs:pdf:all    # regenerates all PDFs into docs/dist/
 ```
-
-Customer docs: `docs/dist/setup.pdf`, `docs/dist/provisioning.pdf`

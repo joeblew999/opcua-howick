@@ -164,6 +164,7 @@ Design opcua-howick and the plat-trunk Tauri integration so that:
 
 ## Related
 
+- `docs/customer/system-overview.md` — topology and architecture for this deployment
 - plat-trunk ADR-0039: Tauri v2 as unification layer
 - plat-trunk ADR-0038: Automerge versioning model
 - plat-trunk ADR-0008: Sync architecture
