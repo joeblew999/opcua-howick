@@ -464,44 +464,49 @@ ssh ${PI5_HOST:-pi@howick-pi5.local} '
 #   hardware-quote  — clean order sheet (send when Prin says yes)
 #   setup-guide     — provisioning steps (what Prin does vs what we do)
 
+# Send to Prin in this order:
+#   01-proposal.pdf      — read first: what the system is, all phases, investment
+#   02-hardware-quote.pdf — read second: what to order and where
+#   03-setup-guide.pdf   — read third: what Prin does vs what we do
+
 [tasks."docs:pdf:proposal"]
-description = "Export proposal to PDF"
+description = "Export proposal to PDF (01)"
 run         = """
 mkdir -p docs/dist
 pandoc docs/customer/proposal.md \
   --pdf-engine=typst \
   --template=docs/templates/howick.typ \
   --metadata title="Factory Automation Proposal" \
-  -o docs/dist/proposal.pdf
-echo "PDF: docs/dist/proposal.pdf"
+  -o docs/dist/01-proposal.pdf
+echo "PDF: docs/dist/01-proposal.pdf"
 """
 
 [tasks."docs:pdf:hardware-quote"]
-description = "Export hardware quote to PDF"
+description = "Export hardware quote to PDF (02)"
 run         = """
 mkdir -p docs/dist
 pandoc docs/customer/hardware-quote.md \
   --pdf-engine=typst \
   --template=docs/templates/howick.typ \
   --metadata title="Hardware Quote" \
-  -o docs/dist/hardware-quote.pdf
-echo "PDF: docs/dist/hardware-quote.pdf"
+  -o docs/dist/02-hardware-quote.pdf
+echo "PDF: docs/dist/02-hardware-quote.pdf"
 """
 
 [tasks."docs:pdf:setup-guide"]
-description = "Export setup guide to PDF"
+description = "Export setup guide to PDF (03)"
 run         = """
 mkdir -p docs/dist
 pandoc docs/customer/setup-guide.md \
   --pdf-engine=typst \
   --template=docs/templates/howick.typ \
   --metadata title="Setup Guide" \
-  -o docs/dist/setup-guide.pdf
-echo "PDF: docs/dist/setup-guide.pdf"
+  -o docs/dist/03-setup-guide.pdf
+echo "PDF: docs/dist/03-setup-guide.pdf"
 """
 
 [tasks."docs:pdf:all"]
-description = "Export all customer docs to PDF into docs/dist/"
+description = "Export all customer docs to PDF into docs/dist/ (numbered 01–03)"
 depends     = ["docs:pdf:proposal", "docs:pdf:hardware-quote", "docs:pdf:setup-guide"]
 run         = "ls -lh docs/dist/"
 
