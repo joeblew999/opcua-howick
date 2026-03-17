@@ -203,6 +203,14 @@ impl Config {
             tracing::info!("PLAT_TRUNK_URL override: {url}");
             config.plat_trunk.url = url;
         }
+        if let Ok(mode) = std::env::var("DELIVERY_MODE") {
+            config.machine.delivery_mode = match mode.to_lowercase().as_str() {
+                "queue"  => DeliveryMode::Queue,
+                "direct" => DeliveryMode::Direct,
+                _        => config.machine.delivery_mode,
+            };
+            tracing::info!("DELIVERY_MODE override: {mode}");
+        }
         config
     }
 

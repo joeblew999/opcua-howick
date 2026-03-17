@@ -16,35 +16,36 @@
 ///   — Phase 2: coil sensor (called by howick-agent sensor push loop) —
 ///   POST /api/sensor/coil               → Pi Zero pushes raw weight; server converts to metres
 
-use std::net::SocketAddr;
-use std::path::PathBuf;
 use std::time::SystemTime;
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 
-use crate::config::{Config, SensorConfig};
+use crate::config::{Config, MachineConfig, SensorConfig};
 use crate::machine::SharedState;
 
-pub async fn run_http_server(config: &Config, state: SharedState) -> anyhow::Result<()> {
-    let addr: SocketAddr = format!("{}:{}", config.http.host, config.http.port).parse()?;
-    let listener = TcpListener::bind(addr).await?;
+pub async fn run_http_server(
+    listener: TcpListener,
+    config: &Config,
+    state: SharedState,
+) -> anyhow::Result<()> {
+    let addr = listener.local_addr()?;
     tracing::info!(
         "HTTP server on http://{}/ — dashboard at http://{}/dashboard",
         addr,
         addr
     );
 
-    let job_input_dir = config.machine.job_input_dir.clone();
+    let machine_config = config.machine.clone();
     let sensor_config = config.sensor.clone();
 
     loop {
         let (stream, _) = listener.accept().await?;
         let state = state.clone();
-        let job_input_dir = job_input_dir.clone();
+        let machine_config = machine_config.clone();
         let sensor_config = sensor_config.clone();
         tokio::spawn(async move {
-            if let Err(e) = handle_connection(stream, state, job_input_dir, sensor_config).await {
+            if let Err(e) = handle_connection(stream, state, machine_config, sensor_config).await {
                 tracing::warn!("HTTP connection error: {e}");
             }
         });
@@ -54,9 +55,10 @@ pub async fn run_http_server(config: &Config, state: SharedState) -> anyhow::Res
 async fn handle_connection(
     mut stream: tokio::net::TcpStream,
     state: SharedState,
-    job_input_dir: PathBuf,
+    machine_config: MachineConfig,
     sensor_config: SensorConfig,
 ) -> anyhow::Result<()> {
+    let job_input_dir = &machine_config.job_input_dir;
     let mut buf = vec![0u8; 2 * 1024 * 1024];
     let n = stream.read(&mut buf).await?;
     buf.truncate(n);
@@ -92,6 +94,8 @@ async fn handle_connection(
         }
 
         // ── CSV upload from browser ────────────────────────────────────────────
+        // Processes jobs inline — no file-watcher dependency.
+        // Watcher handles externally dropped files; dashboard uploads go direct.
         ("POST", "/upload") => {
             let filename = header("x-filename")
                 .map(sanitise_filename)
@@ -115,19 +119,52 @@ async fn handle_connection(
                         .into(),
                 )
             } else {
-                tokio::fs::create_dir_all(&job_input_dir).await?;
+                tokio::fs::create_dir_all(job_input_dir).await?;
                 let dest = job_input_dir.join(&filename);
                 tokio::fs::write(&dest, csv.as_bytes()).await?;
                 tracing::info!("Uploaded: {} → {}", filename, dest.display());
 
-                {
-                    let mut s = state.write().await;
-                    s.last_upload_at = Some(SystemTime::now());
+                let frameset_name = filename.trim_end_matches(".csv").to_string();
+                let job_id = format!(
+                    "{}-{}",
+                    frameset_name,
+                    SystemTime::now()
+                        .duration_since(SystemTime::UNIX_EPOCH)
+                        .map(|d| d.as_secs())
+                        .unwrap_or(0)
+                );
+
+                use crate::config::DeliveryMode;
+                use crate::machine::{Job, MachineStatus};
+                match machine_config.delivery_mode {
+                    DeliveryMode::Direct => {
+                        crate::usb_gadget::write_job(&machine_config, &filename, &csv).await?;
+                        let mut s = state.write().await;
+                        s.last_upload_at = Some(SystemTime::now());
+                        s.completed_jobs.push(Job {
+                            id: job_id.clone(),
+                            frameset_name: frameset_name.clone(),
+                            csv_path: dest,
+                            submitted_at: SystemTime::now(),
+                        });
+                        s.status = MachineStatus::Idle;
+                        s.current_job = None;
+                        tracing::info!("Job {} delivered directly to machine", job_id);
+                    }
+                    DeliveryMode::Queue => {
+                        let mut s = state.write().await;
+                        s.last_upload_at = Some(SystemTime::now());
+                        s.job_queue.push(Job {
+                            id: job_id.clone(),
+                            frameset_name: frameset_name.clone(),
+                            csv_path: dest,
+                            submitted_at: SystemTime::now(),
+                        });
+                        tracing::info!("Job {} queued (depth: {})", job_id, s.job_queue.len());
+                    }
                 }
 
-                let frameset = filename.trim_end_matches(".csv");
-                let body =
-                    format!(r#"{{"ok":true,"frameset_name":"{frameset}","queued":true}}"#);
+                let body = format!(r#"{{"ok":true,"frameset_name":"{frameset_name}","queued":true}}"#);
                 ("200", "application/json", body)
             }
         }

@@ -2,3 +2,5 @@
 docs/dist/
 /jobs/
 /pki/
+pki-server-*/
+pki-test-client-*/

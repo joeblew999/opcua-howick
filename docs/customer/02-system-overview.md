@@ -162,23 +162,58 @@ POST /api/sensor/coil    — Phase 2: Pi Zero pushes coil weight here
 
 ## OPC UA server (port 4840)
 
-Any OPC UA client on the factory LAN connects to `opc.tcp://howick-pi5.local:4840/`
-and reads live machine state:
+### What is OPC UA?
+
+OPC UA (Unified Architecture) is the international standard for industrial machine
+communication — used by Siemens, ABB, Fanuc, and every major SCADA and MES vendor
+worldwide. It is the same protocol used to monitor CNC machines, PLCs, and robots
+in large factories.
+
+opcua-howick runs a full, standards-compliant OPC UA server on the Pi 5. This is
+not a cut-down version — it is the same `async-opcua` library used in production
+industrial systems, exposing a proper address space with live subscriptions.
+
+### What it gives you
+
+Any OPC UA client on the factory WiFi can connect and subscribe to live machine data:
 
 ```
+opc.tcp://howick-pi5.local:4840/
+
 /Howick/
   Machine/
     Status           "Running" | "Idle" | "Error" | "Offline"
-    CurrentJob       frameset name e.g. "W1"
-    PiecesProduced   count
-    CoilRemaining    metres remaining (Phase 2 — needs sensor)
+    CurrentJob       frameset name e.g. "T1", "W1"
+    PiecesProduced   count (future)
+    CoilRemaining    metres of steel remaining (Phase 2 — needs sensor)
     LastError        last error message
   Jobs/
-    QueueDepth       jobs waiting
-    CompletedCount   jobs delivered
+    QueueDepth       jobs waiting to be delivered
+    CompletedCount   jobs delivered to machine
 ```
 
-Updated every 500ms.
+All values update every 500ms automatically via OPC UA subscriptions — no polling needed.
+
+### Connecting right now — free tool
+
+**UaExpert** (free, Windows/Mac/Linux) — the standard OPC UA browser used by engineers
+worldwide:
+
+1. Download from unified-automation.com → Downloads → OPC UA Clients
+2. Add server: `opc.tcp://howick-pi5.local:4840/`
+3. Browse to `Objects → Howick → Machine`
+4. Right-click any node → Add to subscription
+5. Watch values update live every 500ms
+
+### Why this matters
+
+Any factory monitoring system, SCADA, or MES that speaks OPC UA can connect to the
+Pi 5 and read machine state — with no changes to opcua-howick. This is the same
+integration path used to connect Siemens S7 PLCs, Fanuc CNCs, and Beckhoff controllers
+to factory dashboards. You are getting that capability on a Pi 5 for free.
+
+Future integrations (energy monitoring, production reporting, ERP systems) connect
+to the same OPC UA endpoint — no changes required.
 
 ---
 

@@ -28,22 +28,14 @@
 //! usb_gadget_mode   = true               # trigger USB refresh after write
 //!
 //! [plat_trunk]
-//! url = "https://your-worker.workers.dev"
+//! # OPC UA M2M (recommended — Pi Zero subscribes to Pi 5 OPC UA server):
+//! url = "opc.tcp://howick-pi5.local:4840/"
+//! # HTTP fallback (cloud plat-trunk or legacy):
+//! # url = "https://your-worker.workers.dev"
 //! status_push_interval_secs = 5
 //! ```
 
-// Shared modules — only the ones we need
-// (server.rs and http_server.rs are NOT included here)
-#[path = "../config.rs"]
-mod config;
-#[path = "../machine.rs"]
-mod machine;
-#[path = "../poller.rs"]
-mod poller;
-#[path = "../sensor.rs"]
-mod sensor;
-#[path = "../usb_gadget.rs"]
-mod usb_gadget;
+use opcua_howick::{config, machine, opcua_client, poller, sensor};
 
 use std::path::PathBuf;
 use tracing_subscriber::EnvFilter;
@@ -92,36 +84,59 @@ async fn main() -> anyhow::Result<()> {
         s.status = machine::MachineStatus::Idle;
     }
 
-    tracing::info!(
-        "Running — polling {} every {}s",
-        config.plat_trunk.url,
-        config.plat_trunk.status_push_interval_secs,
-    );
+    // Choose transport: OPC UA subscription (M2M) or HTTP polling (cloud / legacy)
+    let use_opcua = config.plat_trunk.url.starts_with("opc.tcp://");
+    if use_opcua {
+        tracing::info!(
+            url = %config.plat_trunk.url,
+            "OPC UA mode — subscribing to Pi 5 OPC UA server (no polling needed)"
+        );
+    } else {
+        tracing::info!(
+            url = %config.plat_trunk.url,
+            interval = config.plat_trunk.status_push_interval_secs,
+            "HTTP mode — polling plat-trunk every {}s",
+            config.plat_trunk.status_push_interval_secs,
+        );
+    }
 
     // Phase 2: coil sensor push loop (only when sensor.enabled = true in config)
     if config.sensor.enabled {
-        tracing::info!(
-            poll_interval = config.sensor.poll_interval_secs,
-            "Coil sensor enabled — pushing weight to {}",
-            config.plat_trunk.url
-        );
         let sensor_url = config.plat_trunk.url.clone();
         let sensor_interval = config.sensor.poll_interval_secs;
+        tracing::info!(
+            poll_interval = sensor_interval,
+            "Coil sensor enabled — pushing weight to {sensor_url}"
+        );
         tokio::select! {
-            r = poller::run_job_poller(config, state) => {
-                if let Err(e) = r { tracing::error!("Job poller failed: {e}"); }
+            r = run_job_transport(config, state, use_opcua) => {
+                if let Err(e) = r { tracing::error!("Job transport failed: {e}"); }
             }
             r = sensor::run_sensor_push(sensor_url, sensor_interval) => {
                 if let Err(e) = r { tracing::error!("Sensor push failed: {e}"); }
             }
         }
     } else {
-        // Sensor not fitted — just run the job poller
-        if let Err(e) = poller::run_job_poller(config, state).await {
-            tracing::error!("Job poller failed: {e}");
+        if let Err(e) = run_job_transport(config, state, use_opcua).await {
+            tracing::error!("Job transport failed: {e}");
             std::process::exit(1);
         }
     }
 
     Ok(())
+}
+
+/// Run the appropriate job transport based on the server URL scheme.
+/// - `opc.tcp://` → OPC UA subscription (event-driven, no polling)
+/// - `http://` / `https://` → HTTP polling (cloud plat-trunk or legacy)
+async fn run_job_transport(
+    config: config::Config,
+    state: machine::SharedState,
+    use_opcua: bool,
+) -> anyhow::Result<()> {
+    if use_opcua {
+        opcua_client::run_opcua_agent(config, state).await
+    } else {
+        poller::run_job_poller(config, state).await
+    }
 }

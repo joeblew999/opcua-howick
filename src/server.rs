@@ -1,13 +1,15 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use opcua::server::address_space::Variable;
+use opcua::server::address_space::{MethodBuilder, Variable};
 use opcua::server::diagnostics::NamespaceMetadata;
 use opcua::server::node_manager::memory::{
     simple_node_manager, InMemoryNodeManager, SimpleNodeManager, SimpleNodeManagerImpl,
 };
 use opcua::server::{ServerBuilder, SubscriptionCache};
-use opcua::types::{BuildInfo, DataValue, DateTime, NodeId, UAString};
+use opcua::types::{
+    BuildInfo, DataTypeId, DataValue, DateTime, NodeId, StatusCode, UAString, Variant,
+};
 
 use crate::config::Config;
 use crate::machine::SharedState;
@@ -19,8 +21,7 @@ fn node(ns: u16, name: &str) -> NodeId {
     NodeId::new(ns, name)
 }
 
-/// Build and run the OPC UA server.
-/// Returns when the server is shut down (ctrl-c).
+/// Build and run the OPC UA server (production — binds to config host:port).
 pub async fn run_server(config: &Config, state: SharedState) -> anyhow::Result<()> {
     tracing::info!(
         "Starting OPC UA server on {}:{}",
@@ -28,30 +29,16 @@ pub async fn run_server(config: &Config, state: SharedState) -> anyhow::Result<(
         config.opcua.port
     );
 
-    let (server, handle) = ServerBuilder::new_anonymous(&config.opcua.application_name)
-        .application_uri(NS_URI)
-        .product_uri("https://github.com/joeblew999/opcua-howick")
-        .host(config.opcua.host.clone())
-        .port(config.opcua.port)
-        .build_info(BuildInfo {
-            product_uri: "https://github.com/joeblew999/opcua-howick".into(),
-            manufacturer_name: "Ubuntu Software Pty Ltd".into(),
-            product_name: "opcua-howick".into(),
-            software_version: env!("CARGO_PKG_VERSION").into(),
-            build_number: "1".into(),
-            build_date: DateTime::now(),
-        })
-        .with_node_manager(simple_node_manager(
-            NamespaceMetadata {
-                namespace_uri: NS_URI.to_owned(),
-                ..Default::default()
-            },
-            "howick",
-        ))
-        .trust_client_certs(true)
-        .diagnostics_enabled(false)
-        .build()
-        .unwrap();
+    let completions: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
+
+    let (server, handle) = build_server_builder(
+        &config.opcua.application_name,
+        &config.opcua.host,
+        config.opcua.port,
+        None,
+    )
+    .build()
+    .unwrap();
 
     let node_manager: Arc<InMemoryNodeManager<SimpleNodeManagerImpl>> = handle
         .node_managers()
@@ -60,15 +47,14 @@ pub async fn run_server(config: &Config, state: SharedState) -> anyhow::Result<(
     let ns = handle.get_namespace_index(NS_URI).unwrap();
     let subscriptions = handle.subscriptions().clone();
 
-    // Build the address space
-    build_address_space(ns, &node_manager, &config.machine.machine_name);
+    build_address_space(ns, &node_manager, &config.machine.machine_name, completions.clone());
 
-    // Spawn state sync task — pushes machine state into OPC UA nodes
     let state_clone = state.clone();
-    let node_manager_clone = node_manager.clone();
-    let subscriptions_clone = subscriptions.clone();
+    let nm_clone = node_manager.clone();
+    let subs_clone = subscriptions.clone();
+    let completions_clone = completions.clone();
     tokio::spawn(async move {
-        sync_state_to_nodes(ns, state_clone, node_manager_clone, subscriptions_clone).await;
+        sync_state_to_nodes(ns, state_clone, nm_clone, subs_clone, completions_clone).await;
     });
 
     // Graceful shutdown on ctrl-c
@@ -95,25 +81,123 @@ pub async fn run_server(config: &Config, state: SharedState) -> anyhow::Result<(
     Ok(())
 }
 
-/// Populate the OPC UA address space with Howick machine nodes.
+/// Build and run the OPC UA server on a pre-bound listener (used in integration tests).
+///
+/// # Pattern from async-opcua integration tests
+/// ```rust,ignore
+/// let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+/// let addr = listener.local_addr().unwrap();
+/// tokio::spawn(run_server_with(listener, &config, state));
+/// // connect client to opc.tcp://127.0.0.1:{addr.port()}/
+/// ```
+pub async fn run_server_with(
+    listener: tokio::net::TcpListener,
+    config: &Config,
+    state: SharedState,
+) -> anyhow::Result<()> {
+    let addr = listener.local_addr()?;
+    let completions: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
+
+    let (server, handle) = build_server_builder(
+        &config.opcua.application_name,
+        "127.0.0.1",
+        addr.port(),
+        Some(format!("opc.tcp://127.0.0.1:{}/", addr.port())),
+    )
+    .build()
+    .unwrap();
+
+    let node_manager: Arc<InMemoryNodeManager<SimpleNodeManagerImpl>> = handle
+        .node_managers()
+        .get_of_type::<SimpleNodeManager>()
+        .unwrap();
+    let ns = handle.get_namespace_index(NS_URI).unwrap();
+    let subscriptions = handle.subscriptions().clone();
+
+    build_address_space(ns, &node_manager, &config.machine.machine_name, completions.clone());
+
+    let state_clone = state.clone();
+    let nm_clone = node_manager.clone();
+    let subs_clone = subscriptions.clone();
+    let completions_clone = completions.clone();
+    tokio::spawn(async move {
+        sync_state_to_nodes(ns, state_clone, nm_clone, subs_clone, completions_clone).await;
+    });
+
+    server
+        .run_with(listener)
+        .await
+        .map_err(|e| anyhow::anyhow!("Server error: {e:?}"))?;
+
+    Ok(())
+}
+
+/// Shared server builder configuration.
+fn build_server_builder(
+    app_name: &str,
+    host: &str,
+    port: u16,
+    discovery_url: Option<String>,
+) -> ServerBuilder {
+    // application_uri must differ from NS_URI — otherwise the namespace table
+    // would register "urn:howick-edge-agent" at index 1 (server URI) AND
+    // index 2 (our node manager), and clients would resolve to index 1 where
+    // no nodes are registered.
+    let mut builder = ServerBuilder::new_anonymous(app_name)
+        .application_uri("urn:howick-edge-server")
+        .product_uri("https://github.com/joeblew999/opcua-howick")
+        .host(host.to_owned())
+        .port(port)
+        .pki_dir(format!("./pki-server-{port}"))
+        .build_info(BuildInfo {
+            product_uri: "https://github.com/joeblew999/opcua-howick".into(),
+            manufacturer_name: "Ubuntu Software Pty Ltd".into(),
+            product_name: "opcua-howick".into(),
+            software_version: env!("CARGO_PKG_VERSION").into(),
+            build_number: "1".into(),
+            build_date: DateTime::now(),
+        })
+        .with_node_manager(simple_node_manager(
+            NamespaceMetadata {
+                namespace_uri: NS_URI.to_owned(),
+                ..Default::default()
+            },
+            "howick",
+        ))
+        .trust_client_certs(true)
+        .diagnostics_enabled(false);
+
+    if let Some(url) = discovery_url {
+        builder = builder.discovery_urls(vec![url]);
+    }
+
+    builder
+}
+
+/// Populate the OPC UA address space with Howick machine nodes and methods.
 ///
 /// Address space layout:
-/// ```
+/// ```text
 /// /Howick/
 ///   Machine/
-///     Status           String
-///     CurrentJob       String
+///     Status           String  — "Running" | "Idle" | "Error" | "Offline"
+///     CurrentJob       String  — frameset name e.g. "T1"
 ///     PiecesProduced   UInt32
 ///     CoilRemaining    Double  (metres)
 ///     LastError        String
 ///   Jobs/
-///     QueueDepth       UInt32  (number of jobs waiting)
+///     QueueDepth       UInt32
 ///     CompletedCount   UInt32
+///     PendingJobId     String  — job_id of next pending job ("" = none)
+///     PendingJobName   String  — frameset name of pending job
+///     PendingJobCsv    String  — full CSV content (howick-agent reads this)
+///     CompleteJob      Method  — call with job_id to mark delivered
 /// ```
 fn build_address_space(
     ns: u16,
     manager: &Arc<InMemoryNodeManager<SimpleNodeManagerImpl>>,
     machine_name: &str,
+    completions: Arc<Mutex<Vec<String>>>,
 ) {
     let address_space = manager.address_space();
     let mut address_space = address_space.write();
@@ -131,7 +215,6 @@ fn build_address_space(
     let machine_folder = node(ns, "Machine");
     address_space.add_folder(&machine_folder, "Machine", machine_name, &howick_folder);
 
-    // Machine variables
     address_space.add_variables(
         vec![
             Variable::new(
@@ -186,25 +269,121 @@ fn build_address_space(
                 "Completed Count",
                 0u32,
             ),
+            // M2M job delivery nodes — howick-agent reads these via OPC UA subscription
+            Variable::new(
+                &node(ns, "Jobs/PendingJobId"),
+                "PendingJobId",
+                "Pending Job ID",
+                UAString::from(""),
+            ),
+            Variable::new(
+                &node(ns, "Jobs/PendingJobName"),
+                "PendingJobName",
+                "Pending Job Name",
+                UAString::from(""),
+            ),
+            Variable::new(
+                &node(ns, "Jobs/PendingJobCsv"),
+                "PendingJobCsv",
+                "Pending Job CSV",
+                UAString::from(""),
+            ),
         ],
         &jobs_folder,
     );
 
-    tracing::info!("OPC UA address space built — {} nodes under /Howick", 7);
+    // CompleteJob method — howick-agent calls this after writing CSV to USB
+    // Signature: CompleteJob(job_id: String) -> ()
+    let method_node = node(ns, "Jobs/CompleteJob");
+    MethodBuilder::new(&method_node, "CompleteJob", "CompleteJob")
+        .component_of(jobs_folder.clone())
+        .input_args(
+            &mut *address_space,
+            &node(ns, "Jobs/CompleteJob/InputArgs"),
+            &[("JobId", DataTypeId::String).into()],
+        )
+        .insert(&mut *address_space);
+
+    // Method callback: queue job_id for async processing by sync_state_to_nodes
+    manager.inner().add_method_callback(method_node, move |args| {
+        let Some(Variant::String(s)) = args.first() else {
+            return Err(StatusCode::BadTypeMismatch);
+        };
+        let job_id = s.value().clone().unwrap_or_default();
+        if job_id.is_empty() {
+            return Err(StatusCode::BadInvalidArgument);
+        }
+        tracing::info!(job_id = %job_id, "OPC UA CompleteJob called");
+        completions.lock().unwrap().push(job_id);
+        Ok(Vec::new())
+    });
+
+    tracing::info!("OPC UA address space built — Howick/Machine + Howick/Jobs + CompleteJob method");
 }
 
-/// Continuously sync shared MachineState into the OPC UA node values.
-/// OPC UA subscriptions will push updates to connected clients automatically.
+/// Snapshot of machine state for the sync task (avoids holding lock during async I/O).
+struct StateSnapshot {
+    status: String,
+    current_job: String,
+    pieces_produced: u32,
+    coil_remaining_m: f64,
+    last_error: String,
+    queue_depth: u32,
+    completed_count: u32,
+    pending: Option<(String, String, std::path::PathBuf)>, // (id, name, csv_path)
+}
+
+/// Continuously sync SharedState → OPC UA nodes every 500ms.
+/// Also processes pending CompleteJob method calls.
 async fn sync_state_to_nodes(
     ns: u16,
     state: SharedState,
     manager: Arc<InMemoryNodeManager<SimpleNodeManagerImpl>>,
     subscriptions: Arc<SubscriptionCache>,
+    completions: Arc<Mutex<Vec<String>>>,
 ) {
     let mut interval = tokio::time::interval(Duration::from_millis(500));
     loop {
         interval.tick().await;
-        let s = state.read().await;
+
+        // Process any pending CompleteJob calls (from method callback — sync Mutex)
+        let to_complete: Vec<String> = completions.lock().unwrap().drain(..).collect();
+        if !to_complete.is_empty() {
+            let mut s = state.write().await;
+            for job_id in to_complete {
+                if let Some(idx) = s.job_queue.iter().position(|j| j.id == job_id) {
+                    let job = s.job_queue.remove(idx);
+                    tracing::info!(job_id = %job.id, "Job marked complete via OPC UA");
+                    s.completed_jobs.push(job);
+                }
+            }
+        }
+
+        // Capture state snapshot (drop async lock before file I/O)
+        let snap = {
+            let s = state.read().await;
+            StateSnapshot {
+                status: s.status.as_str().to_string(),
+                current_job: s.current_job.clone().unwrap_or_default(),
+                pieces_produced: s.pieces_produced,
+                coil_remaining_m: s.coil_remaining_m,
+                last_error: s.last_error.clone(),
+                queue_depth: s.job_queue.len() as u32,
+                completed_count: s.completed_jobs.len() as u32,
+                pending: s.job_queue.first().map(|j| {
+                    (j.id.clone(), j.frameset_name.clone(), j.csv_path.clone())
+                }),
+            }
+        }; // async lock dropped here — safe to do file I/O
+
+        // Read pending job CSV from disk (outside the state lock)
+        let (pending_id, pending_name, pending_csv) = if let Some((id, name, path)) = snap.pending
+        {
+            let csv = tokio::fs::read_to_string(&path).await.unwrap_or_default();
+            (id, name, csv)
+        } else {
+            (String::new(), String::new(), String::new())
+        };
 
         let _ = manager.set_values(
             &subscriptions,
@@ -212,37 +391,52 @@ async fn sync_state_to_nodes(
                 (
                     &node(ns, "Machine/Status"),
                     None,
-                    DataValue::new_now(UAString::from(s.status.as_str())),
+                    DataValue::new_now(UAString::from(snap.status)),
                 ),
                 (
                     &node(ns, "Machine/CurrentJob"),
                     None,
-                    DataValue::new_now(UAString::from(s.current_job.as_deref().unwrap_or(""))),
+                    DataValue::new_now(UAString::from(snap.current_job)),
                 ),
                 (
                     &node(ns, "Machine/PiecesProduced"),
                     None,
-                    DataValue::new_now(s.pieces_produced),
+                    DataValue::new_now(snap.pieces_produced),
                 ),
                 (
                     &node(ns, "Machine/CoilRemaining"),
                     None,
-                    DataValue::new_now(s.coil_remaining_m),
+                    DataValue::new_now(snap.coil_remaining_m),
                 ),
                 (
                     &node(ns, "Machine/LastError"),
                     None,
-                    DataValue::new_now(UAString::from(s.last_error.as_str())),
+                    DataValue::new_now(UAString::from(snap.last_error)),
                 ),
                 (
                     &node(ns, "Jobs/QueueDepth"),
                     None,
-                    DataValue::new_now(s.job_queue.len() as u32),
+                    DataValue::new_now(snap.queue_depth),
                 ),
                 (
                     &node(ns, "Jobs/CompletedCount"),
                     None,
-                    DataValue::new_now(s.completed_jobs.len() as u32),
+                    DataValue::new_now(snap.completed_count),
+                ),
+                (
+                    &node(ns, "Jobs/PendingJobId"),
+                    None,
+                    DataValue::new_now(UAString::from(pending_id)),
+                ),
+                (
+                    &node(ns, "Jobs/PendingJobName"),
+                    None,
+                    DataValue::new_now(UAString::from(pending_name)),
+                ),
+                (
+                    &node(ns, "Jobs/PendingJobCsv"),
+                    None,
+                    DataValue::new_now(UAString::from(pending_csv)),
                 ),
             ]
             .into_iter(),

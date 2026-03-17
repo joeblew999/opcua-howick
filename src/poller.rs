@@ -3,7 +3,7 @@
 /// This is the cloud-topology counterpart to the file watcher.
 /// In all topologies, opcua-howick calls the same HTTP API:
 ///
-/// ```
+/// ```text
 /// Topology A (Cloud):  polls https://your-worker.workers.dev/api/jobs/howick/pending
 /// Topology B/C (LAN):  polls http://localhost:3000/api/jobs/howick/pending
 /// ```

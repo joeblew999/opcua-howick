@@ -143,6 +143,12 @@ and ongoing support at no cost.
 - **For you:** jobs can be sent from any browser on the factory network the moment a design is ready.
 - **For maintenance:** Gerard manages everything remotely. No site visits needed.
 - **For updates:** software updates automatically. No action required.
+- **For monitoring (Option B):** the Pi 5 runs a full OPC UA server — an industry-standard
+  machine monitoring protocol used by Siemens, ABB, and every major SCADA vendor. Connect
+  any OPC UA client (including free tools) to `opc.tcp://howick-pi5.local:4840/` and watch
+  machine status, job queue depth, and coil remaining in real time. This is the same protocol
+  used in large factories worldwide. You are getting industrial-grade monitoring on a
+  credit-card-sized computer for free.
 
 ---
 

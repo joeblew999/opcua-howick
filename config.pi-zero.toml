@@ -40,12 +40,14 @@ usb_gadget_mode = true
 delivery_mode = "queue"
 
 [plat_trunk]
-# Pi Zero polls the Pi 5 for pending jobs.
-# Override at runtime: PLAT_TRUNK_URL=http://howick-pi5.local:4841
+# Pi Zero connects to Pi 5 via OPC UA — subscribes to Jobs/PendingJobId.
+# The Pi 5 pushes a notification instantly when a new job is queued.
+# No polling loop. This is standard industrial M2M over OPC UA.
 #
-# Future (Phase 3): change this to your plat-trunk URL when Framing Extractor is ready.
-# PLAT_TRUNK_URL=https://your-plat-trunk.workers.dev
-url                       = "http://howick-pi5.local:4841"
+# Override at runtime: PLAT_TRUNK_URL=opc.tcp://howick-pi5.local:4840/
+#
+# HTTP fallback (cloud plat-trunk): change to https://your-plat-trunk.workers.dev
+url                       = "opc.tcp://howick-pi5.local:4840/"
 api_key                   = ""
 status_push_interval_secs = 5
 

@@ -12,14 +12,9 @@
 //!   - Job poller                 — polls plat-trunk API for R2-queued jobs
 //!   - File watcher               — picks up CSV files dropped locally
 
-mod config;
-mod http_server;
-mod machine;
-mod poller;
-mod server;
-mod usb_gadget;
-mod watcher;
+use opcua_howick::{config, http_server, machine, poller, server, watcher};
 
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use tracing_subscriber::EnvFilter;
 
@@ -60,6 +55,9 @@ async fn main() -> anyhow::Result<()> {
         config.plat_trunk.url,
     );
 
+    let http_addr: SocketAddr = format!("{}:{}", config.http.host, config.http.port).parse()?;
+    let http_listener = tokio::net::TcpListener::bind(http_addr).await?;
+
     tokio::select! {
         r = watcher::run_job_watcher(config.machine.clone(), state.clone()) => {
             if let Err(e) = r { tracing::error!("File watcher: {e}"); }
@@ -70,7 +68,7 @@ async fn main() -> anyhow::Result<()> {
         r = server::run_server(&config, state.clone()) => {
             if let Err(e) = r { tracing::error!("OPC UA server: {e}"); }
         }
-        r = http_server::run_http_server(&config, state.clone()) => {
+        r = http_server::run_http_server(http_listener, &config, state.clone()) => {
             if let Err(e) = r { tracing::error!("HTTP server: {e}"); }
         }
     }
