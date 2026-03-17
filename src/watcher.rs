@@ -4,7 +4,7 @@ use std::time::SystemTime;
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use tokio::sync::mpsc;
 
-use crate::config::MachineConfig;
+use crate::config::{DeliveryMode, MachineConfig};
 use crate::machine::{Job, MachineStatus, SharedState};
 
 /// Watch the job input directory for new CSV files.
@@ -90,26 +90,36 @@ async fn handle_new_job(
         tracing::info!("Job {} queued (queue depth: {})", job_id, s.job_queue.len());
     }
 
-    // Write to machine input directory (handles USB gadget refresh if configured)
-    let csv = tokio::fs::read_to_string(csv_path).await?;
-    crate::usb_gadget::write_job(config, filename, &csv).await?;
-    tracing::info!(
-        "CSV written to machine input: {}",
-        config.machine_input_dir.join(filename).display()
-    );
-
-    // Update state to running
-    {
-        let mut s = state.write().await;
-        s.status = MachineStatus::Running;
-        s.current_job = Some(frameset_name.clone());
-        // Move from queue to in-progress (simplified: pop from queue)
-        if let Some(pos) = s.job_queue.iter().position(|j| j.id == job_id) {
-            let job = s.job_queue.remove(pos);
-            s.completed_jobs.push(job);
+    match config.delivery_mode {
+        DeliveryMode::Direct => {
+            // Write directly to machine_input_dir — Topology A (Design PC, no Pi Zero)
+            let csv = tokio::fs::read_to_string(csv_path).await?;
+            crate::usb_gadget::write_job(config, filename, &csv).await?;
+            tracing::info!(
+                "CSV written to machine input: {}",
+                config.machine_input_dir.join(filename).display()
+            );
+            // Move from queue to completed
+            let mut s = state.write().await;
+            s.status = MachineStatus::Running;
+            s.current_job = Some(frameset_name.clone());
+            if let Some(pos) = s.job_queue.iter().position(|j| j.id == job_id) {
+                let job = s.job_queue.remove(pos);
+                s.completed_jobs.push(job);
+            }
+            s.status = MachineStatus::Idle;
+            tracing::info!("Job {} delivered directly to machine", job_id);
         }
-        s.status = MachineStatus::Idle; // Will be set properly once output monitoring exists
-        tracing::info!("Job {} submitted to machine", job_id);
+        DeliveryMode::Queue => {
+            // Hold in queue — howick-agent (Pi Zero) picks up via HTTP local queue endpoint
+            // Topology B/C: agent polls /api/jobs/howick/pending and confirms via /complete
+            tracing::info!(
+                "Job {} queued for agent pickup (delivery_mode=queue)",
+                job_id
+            );
+            let mut s = state.write().await;
+            s.status = MachineStatus::Idle;
+        }
     }
 
     Ok(())

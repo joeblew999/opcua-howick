@@ -22,6 +22,23 @@ pub struct OpcUaConfig {
     pub application_name: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum DeliveryMode {
+    /// File watcher writes CSV directly to machine_input_dir.
+    /// Use for Topology A (Design PC only) — no Pi Zero.
+    Direct,
+    /// File watcher holds CSV in queue; howick-agent picks it up via HTTP.
+    /// Use for Topology B/C (Pi Zero polls opcua-howick or plat-trunk).
+    Queue,
+}
+
+impl Default for DeliveryMode {
+    fn default() -> Self {
+        DeliveryMode::Direct
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MachineConfig {
     pub machine_name: String,
@@ -33,6 +50,11 @@ pub struct MachineConfig {
     /// Set false for all other deployments (Pi 5, NUC, Windows, Mac).
     #[serde(default)]
     pub usb_gadget_mode: bool,
+    /// How uploaded CSVs reach the Howick FRAMA machine:
+    ///   "direct" — watcher writes immediately to machine_input_dir (Topology A, no Pi Zero)
+    ///   "queue"  — watcher holds in queue; howick-agent picks up via HTTP (Topology B/C)
+    #[serde(default)]
+    pub delivery_mode: DeliveryMode,
 }
 
 /// HTTP status server — the CF Worker / Tauri backend calls this to get
@@ -74,6 +96,7 @@ impl Default for Config {
                 machine_input_dir: PathBuf::from("./jobs/machine"),
                 machine_output_dir: PathBuf::from("./jobs/output"),
                 usb_gadget_mode: false,
+                delivery_mode: DeliveryMode::Direct,
             },
             http: HttpConfig {
                 host: "0.0.0.0".to_string(),
@@ -96,7 +119,7 @@ impl Config {
     }
 
     pub fn load_or_default(path: &std::path::Path) -> Self {
-        match Self::load(path) {
+        let mut config = match Self::load(path) {
             Ok(c) => {
                 tracing::info!("Loaded config from {}", path.display());
                 c
@@ -108,7 +131,13 @@ impl Config {
                 );
                 Self::default()
             }
+        };
+        // Allow env var overrides for common fields (useful in dev tasks)
+        if let Ok(url) = std::env::var("PLAT_TRUNK_URL") {
+            tracing::info!("PLAT_TRUNK_URL override: {url}");
+            config.plat_trunk.url = url;
         }
+        config
     }
 
     pub fn topology(&self) -> &'static str {

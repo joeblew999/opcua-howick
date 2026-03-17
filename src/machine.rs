@@ -42,6 +42,13 @@ pub struct MachineState {
     pub last_error: String,
     pub job_queue: Vec<Job>,
     pub completed_jobs: Vec<Job>,
+
+    /// When a CSV was last uploaded via the web UI
+    pub last_upload_at: Option<std::time::SystemTime>,
+    /// When howick-agent last polled the local job queue (delivery_mode=queue)
+    pub agent_last_seen_at: Option<std::time::SystemTime>,
+    /// Last error reported by howick-agent via POST /api/jobs/howick/:id/error
+    pub agent_last_error: String,
 }
 
 impl MachineState {
@@ -54,6 +61,9 @@ impl MachineState {
             last_error: String::new(),
             job_queue: Vec::new(),
             completed_jobs: Vec::new(),
+            last_upload_at: None,
+            agent_last_seen_at: None,
+            agent_last_error: String::new(),
         }
     }
 }

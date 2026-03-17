@@ -43,26 +43,39 @@ depends     = ["dev:setup"]
 run         = "RUST_LOG=opcua_howick=debug cargo run --bin opcua-howick"
 
 [tasks."dev:agent"]
-description = "Run howick-agent locally — polls localhost:3000, writes to jobs/machine/"
+description = "Run howick-agent — polls mock-plat-trunk on :3000 (Path 2 / plat-trunk simulation)"
 depends     = ["dev:setup"]
 run         = "RUST_LOG=howick_agent=debug cargo run --bin howick-agent"
 
+[tasks."dev:agent:local"]
+description = "Run howick-agent — polls opcua-howick on :4841 (Path 1 / local queue, needs delivery_mode=queue in config.toml)"
+depends     = ["dev:setup"]
+run         = """
+grep -q 'delivery_mode = "queue"' config.toml || {
+  echo "ERROR: set delivery_mode = \"queue\" in config.toml first"
+  exit 1
+}
+PLAT_TRUNK_URL=http://localhost:4841 RUST_LOG=howick_agent=debug cargo run --bin howick-agent
+"""
+
 [tasks."dev:mock"]
-description = "Start mock plat-trunk backend on :3000 (needed by dev:agent)"
+description = "Start mock plat-trunk backend on :3000 (Path 2 — simulates plat-trunk serving T1+W1 fixture jobs)"
 run         = "cargo run --bin mock-plat-trunk"
 
 [tasks."dev:job"]
-description = "Drop a test CSV into jobs/input/ to exercise the file watcher (use with dev)"
+description = "Drop a real fixture CSV into jobs/input/ — T1 (roof truss) by default, use JOB=W1 for wall frame"
 depends     = ["dev:setup"]
 run         = """
-cat > jobs/input/TEST-W1.csv << 'EOF'
-UNIT,MILLIMETRE
-PROFILE,S8908,Standard Profile
-FRAMESET,TEST-W1
-COMPONENT,TEST-W1-1,LABEL_NRM,1,2400.0,DIMPLE,20.65,DIMPLE,70.65
-COMPONENT,TEST-W1-2,LABEL_NRM,1,1800.0,DIMPLE,20.65,DIMPLE,70.65
-EOF
-echo "Dropped: jobs/input/TEST-W1.csv"
+JOB=${JOB:-T1}
+SRC="dev/fixtures/${JOB}.csv"
+DEST="jobs/input/${JOB}.csv"
+if [ ! -f "$SRC" ]; then
+  echo "ERROR: fixture not found: $SRC"
+  echo "Available: $(ls dev/fixtures/*.csv 2>/dev/null | xargs -I{} basename {} .csv | tr '\n' ' ')"
+  exit 1
+fi
+cp "$SRC" "$DEST"
+echo "Dropped: $DEST  ($(wc -l < "$SRC") lines)"
 ls -lh jobs/input/ jobs/machine/ 2>/dev/null
 """
 
@@ -551,9 +564,10 @@ ssh ${PI5_HOST:-pi@howick-pi5.local} '
 #   setup-guide     — provisioning steps (what Prin does vs what we do)
 
 # Send to Prin in this order:
-#   01-proposal.pdf      — read first: what the system is, all phases, investment
-#   02-hardware-quote.pdf — read second: what to order and where
-#   03-setup-guide.pdf   — read third: what Prin does vs what we do
+#   01-proposal.pdf       — what the system is, both options, phases
+#   02-system-overview.pdf — full topology diagrams, where everything runs (Prin is a Process Engineer)
+#   03-hardware-quote.pdf  — what to order and where
+#   04-setup-guide.pdf     — what Prin does vs what Gerard does
 
 [tasks."docs:pdf:proposal"]
 description = "Export proposal to PDF (01)"
@@ -567,43 +581,62 @@ pandoc docs/customer/proposal.md \
 echo "PDF: docs/dist/01-proposal.pdf"
 """
 
+[tasks."docs:pdf:system-overview"]
+description = "Export system overview / topology to PDF (02)"
+run         = """
+mkdir -p docs/dist
+pandoc docs/customer/system-overview.md \
+  --pdf-engine=typst \
+  --template=docs/templates/howick.typ \
+  --metadata title="System Overview" \
+  -o docs/dist/02-system-overview.pdf
+echo "PDF: docs/dist/02-system-overview.pdf"
+"""
+
 [tasks."docs:pdf:hardware-quote"]
-description = "Export hardware quote to PDF (02)"
+description = "Export hardware quote to PDF (03)"
 run         = """
 mkdir -p docs/dist
 pandoc docs/customer/hardware-quote.md \
   --pdf-engine=typst \
   --template=docs/templates/howick.typ \
   --metadata title="Hardware Quote" \
-  -o docs/dist/02-hardware-quote.pdf
-echo "PDF: docs/dist/02-hardware-quote.pdf"
+  -o docs/dist/03-hardware-quote.pdf
+echo "PDF: docs/dist/03-hardware-quote.pdf"
 """
 
 [tasks."docs:pdf:setup-guide"]
-description = "Export setup guide to PDF (03)"
+description = "Export setup guide to PDF (04)"
 run         = """
 mkdir -p docs/dist
 pandoc docs/customer/setup-guide.md \
   --pdf-engine=typst \
   --template=docs/templates/howick.typ \
   --metadata title="Setup Guide" \
-  -o docs/dist/03-setup-guide.pdf
-echo "PDF: docs/dist/03-setup-guide.pdf"
+  -o docs/dist/04-setup-guide.pdf
+echo "PDF: docs/dist/04-setup-guide.pdf"
 """
 
 [tasks."docs:pdf:all"]
-description = "Export all customer docs to PDF into docs/dist/ (numbered 01–03)"
-depends     = ["docs:pdf:proposal", "docs:pdf:hardware-quote", "docs:pdf:setup-guide"]
+description = "Export all customer docs to PDF into docs/dist/ (numbered 01–04)"
+depends     = ["docs:pdf:proposal", "docs:pdf:system-overview", "docs:pdf:hardware-quote", "docs:pdf:setup-guide"]
 run         = "ls -lh docs/dist/"
 
 # ── Local test helpers ────────────────────────────────────────────────────────
 
 [tasks."test:submit"]
-description = "Submit a test CSV job to local opcua-howick"
+description = "Submit a fixture CSV directly to opcua-howick HTTP API — JOB=T1 (default) or JOB=W1"
 run         = """
+JOB=${JOB:-T1}
+SRC="dev/fixtures/${JOB}.csv"
+if [ ! -f "$SRC" ]; then
+  echo "ERROR: fixture not found: $SRC"
+  exit 1
+fi
+CSV=$(cat "$SRC" | python3 -c "import sys; print(sys.stdin.read().replace('\\n','\\\\n').replace('\"','\\\\\"'), end='')")
 curl -s -X POST http://localhost:4841/jobs \
   -H 'Content-Type: application/json' \
-  -d '{"frameset_name":"TEST-W1","csv":"UNIT,MILLIMETRE\nPROFILE,S8908,Standard Profile\nFRAMESET,TEST-W1\nCOMPONENT,TEST-W1-1,LABEL_NRM,1,2400.0,DIMPLE,20.65,DIMPLE,70.65"}' \
+  -d "{\"frameset_name\":\"${JOB}\",\"csv\":\"${CSV}\"}" \
   | python3 -m json.tool
 """
 

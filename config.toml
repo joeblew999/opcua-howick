@@ -1,23 +1,66 @@
-# opcua-howick configuration
+# opcua-howick — configuration
 #
-# DEPLOYMENT OPTIONS for Prin's factory (Si Racha, Thailand):
+# ── Topology overview ──────────────────────────────────────────────────────────
 #
-# Option A — Pi on LAN, writes to Howick PC via network share:
-#   machine_input_dir = "//howick-pc/howick-jobs/"   (SMB share)
+# The Design PC is the centre of Prin's world:
+#   SketchUp + FrameBuilderMRD run there, generating the job CSVs.
 #
-# Option B — Run opcua-howick.exe directly ON the Howick Windows PC:
-#   machine_input_dir = "C:\\Howick\\Jobs\\"         (local path, TBC with Prin)
-#   This is the simplest path to demo — no USB stick, no Pi needed.
-#   Just drop opcua-howick.exe on the machine PC and configure this file.
+# THREE supported deployment topologies — change the two settings marked (**):
 #
-# Current status: machine_input_dir is a placeholder.
-# Ask Prin's operator: "What folder do you copy the USB files into
-# on the Howick machine computer?"
+# ┌─────────────────────────────────────────────────────────────────────────────┐
+# │ A. Design PC only (simplest — no Pi hardware needed to start)               │
+# │                                                                             │
+# │  [Design PC]                                                                │
+# │    SketchUp + FrameBuilderMRD → generates CSV                               │
+# │    opcua-howick.exe running here                                             │
+# │    operator opens http://localhost:4841/dashboard in browser                │
+# │    drags CSV in → watcher picks it up → copies to USB stick path            │
+# │    operator still physically carries USB stick to Howick FRAMA              │
+# │                                                                             │
+# │  (**) machine_input_dir = "C:\\Howick\\Jobs\\"  (TBC with Prin's operator)  │
+# │  (**) usb_gadget_mode   = false                                             │
+# └─────────────────────────────────────────────────────────────────────────────┘
 #
-# Topologies (ADR-0012):
-#   Cloud:  plat_trunk.url = "https://your-worker.workers.dev"
-#   LAN:    plat_trunk.url = "http://localhost:3000"  (Tauri)
-#   Hybrid: LAN primary + Automerge CRDT syncs to cloud
+# ┌─────────────────────────────────────────────────────────────────────────────┐
+# │ B. Pi 5 on LAN + Pi Zero USB gadget (no walk, no USB stick at all)         │
+# │                                                                             │
+# │  [Design PC]                                                                │
+# │    browser → http://howick-pi5.local:4841/dashboard                         │
+# │    drag CSV in                                                              │
+# │                                                                             │
+# │  [Pi 5] — runs opcua-howick                                                 │
+# │    receives upload → queues job → serves it to Pi Zero                      │
+# │    OPC UA server for plat-trunk / monitoring                                │
+# │                                                                             │
+# │  [Pi Zero 2W] — runs howick-agent, USB gadget mode                         │
+# │    appears as USB mass storage device to Howick FRAMA                       │
+# │    polls Pi 5 → writes CSV to virtual USB → FRAMA reads it                 │
+# │    USB stick retired permanently                                            │
+# │                                                                             │
+# │  (**) machine_input_dir = "/mnt/usb_share"  (root of USB, TBC with Prin)   │
+# │  (**) usb_gadget_mode   = true   (Pi Zero config only)                      │
+# └─────────────────────────────────────────────────────────────────────────────┘
+#
+# ┌─────────────────────────────────────────────────────────────────────────────┐
+# │ C. Design PC + Pi Zero USB gadget (no Pi 5 needed)                         │
+# │                                                                             │
+# │  [Design PC] — runs opcua-howick.exe                                        │
+# │    browser → http://localhost:4841/dashboard                                │
+# │    Pi Zero polls this machine directly                                      │
+# │                                                                             │
+# │  [Pi Zero 2W] — runs howick-agent                                           │
+# │    polls Design PC → writes CSV to virtual USB → FRAMA reads it            │
+# │                                                                             │
+# │  (**) machine_input_dir — N/A (Pi Zero writes direct to USB)               │
+# │  (**) usb_gadget_mode   = true   (Pi Zero config only)                      │
+# └─────────────────────────────────────────────────────────────────────────────┘
+#
+# ── Key unknown ────────────────────────────────────────────────────────────────
+# What folder (or subfolder) on the USB does the Howick FRAMA look for CSVs?
+# Ask Prin's operator. Could be root ("/mnt/usb_share") or a subfolder.
+# This sets machine_input_dir in whichever topology is used.
+#
+# ── Current setting: local dev (no hardware) ──────────────────────────────────
 
 [opcua]
 host             = "0.0.0.0"
@@ -31,30 +74,31 @@ port = 4841
 [machine]
 machine_name = "Howick FRAMA"
 
-# Job input: plat-trunk drops CSVs here (or operators copy manually)
+# Where uploaded CSVs land before being processed by the file watcher
 job_input_dir = "./jobs/input"
 
-# Machine input: WHERE THE HOWICK SOFTWARE WATCHES FOR CSV FILES
-# TODO: ask Prin's operator for the exact path
-# Option A (Pi → network share): "//howick-pc/howick-jobs/"
-# Option B (Windows, local):     "C:\\Howick\\Jobs\\"
+# (**) WHERE on the USB / local path the Howick FRAMA reads CSVs from
+#
+# Topology A (Design PC, Windows):  "C:\\Howick\\Jobs\\"     ← TBC with Prin
+# Topology B (Pi 5 → Pi Zero USB):  "/mnt/usb_share"         ← root, or subfolder
+# Topology C (Design PC → Pi Zero): N/A — Pi Zero writes direct to USB
+# Local dev:                         "./jobs/machine"
 machine_input_dir = "./jobs/machine"
 
-# Machine output: where completion signals appear (if any)
 machine_output_dir = "./jobs/output"
 
+# USB gadget mode — true ONLY on Pi Zero 2W
+usb_gadget_mode = false
+
+# delivery_mode — how uploaded CSVs reach the Howick FRAMA:
+#   "direct" — watcher writes immediately to machine_input_dir (Topology A, no Pi Zero)
+#   "queue"  — watcher holds for howick-agent to pick up via HTTP   (Topology B/C)
+delivery_mode = "direct"
+
 [plat_trunk]
-# Cloud topology: url = "https://your-worker.workers.dev"
-# LAN topology:   url = "http://localhost:3000"
+# In Topology B/C: Pi Zero polls THIS machine's HTTP server for jobs.
+# Point howick-agent config at http://<this-machine-ip>:3000
+# (Pi 5 serves /api/jobs/howick/pending directly — no separate plat-trunk needed)
 url                       = "http://localhost:3000"
 api_key                   = ""
 status_push_interval_secs = 5
-
-# ── Pi Zero 2W USB gadget mode ────────────────────────────────────────────────
-# Set usb_gadget_mode = true when running on Pi Zero 2W acting as USB mass storage.
-# machine_input_dir must point to the mounted USB image (e.g. /mnt/usb_share).
-# See docs/pi-zero-usb-gadget.md for full setup guide.
-#
-# [machine]
-# usb_gadget_mode   = true
-# machine_input_dir = "/mnt/usb_share"

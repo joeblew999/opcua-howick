@@ -2,15 +2,19 @@
 //!
 //! Simulates the two HTTP endpoints that howick-agent polls:
 //!
-//!   GET  /api/jobs/howick/pending          → returns one test job, then empty
-//!   POST /api/jobs/howick/{id}/complete    → acknowledges completion
+//!   GET  /api/jobs/howick/pending          → serves real fixture CSVs in order, then empty
+//!   POST /api/jobs/howick/{id}/complete    → acknowledges completion, advances queue
+//!
+//! Job queue (from dev/fixtures/):
+//!   1. T1.csv  — roof truss,  22 components, 3945mm chords
+//!   2. W1.csv  — wall frame,  42 components, 4740mm plates
 //!
 //! Usage (two terminals):
 //!
 //!   terminal 1:  mise run dev:mock    # this binary — listens on :3000
 //!   terminal 2:  mise run dev:agent   # howick-agent polls :3000
 //!
-//! Then watch ./jobs/machine/ for the written CSV.
+//! Then watch ./jobs/machine/ for the written CSVs.
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -18,13 +22,31 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
 
-const TEST_JOB_ID: &str = "dev-001";
-const TEST_FRAMESET: &str = "TEST-W1";
-const TEST_CSV: &str = "UNIT,MILLIMETRE\n\
-    PROFILE,S8908,Standard Profile\n\
-    FRAMESET,TEST-W1\n\
-    COMPONENT,TEST-W1-1,LABEL_NRM,1,2400.0,DIMPLE,20.65,DIMPLE,70.65\n\
-    COMPONENT,TEST-W1-2,LABEL_NRM,1,1800.0,DIMPLE,20.65,DIMPLE,70.65\n";
+struct Job {
+    id: &'static str,
+    frameset: &'static str,
+    fixture: &'static str, // relative path from crate root
+}
+
+const JOBS: &[Job] = &[
+    Job {
+        id: "dev-001",
+        frameset: "T1",
+        fixture: "dev/fixtures/T1.csv",
+    },
+    Job {
+        id: "dev-002",
+        frameset: "W1",
+        fixture: "dev/fixtures/W1.csv",
+    },
+];
+
+struct Queue {
+    /// Index of the next job to serve (0-based). JOBS.len() means queue exhausted.
+    next: usize,
+    /// True when the current job has been served but not yet acknowledged.
+    pending: bool,
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -33,19 +55,24 @@ async fn main() -> anyhow::Result<()> {
     let addr: SocketAddr = "0.0.0.0:3000".parse()?;
     let listener = TcpListener::bind(addr).await?;
 
-    // Track whether the test job has been served and completed
-    let job_served = Arc::new(Mutex::new(false));
+    let queue = Arc::new(Mutex::new(Queue {
+        next: 0,
+        pending: false,
+    }));
 
     println!("Mock plat-trunk listening on http://localhost:3000");
-    println!("  Test job: {TEST_JOB_ID} — {TEST_FRAMESET}");
+    println!("  Job queue ({} jobs):", JOBS.len());
+    for (i, j) in JOBS.iter().enumerate() {
+        println!("    {}. {} — {}  ({})", i + 1, j.id, j.frameset, j.fixture);
+    }
     println!("  Start agent: mise run dev:agent");
     println!();
 
     loop {
         let (stream, peer) = listener.accept().await?;
-        let job_served = job_served.clone();
+        let queue = queue.clone();
         tokio::spawn(async move {
-            if let Err(e) = handle(stream, peer, job_served).await {
+            if let Err(e) = handle(stream, peer, queue).await {
                 tracing::warn!("Connection error from {peer}: {e}");
             }
         });
@@ -55,7 +82,7 @@ async fn main() -> anyhow::Result<()> {
 async fn handle(
     mut stream: tokio::net::TcpStream,
     _peer: SocketAddr,
-    job_served: Arc<Mutex<bool>>,
+    queue: Arc<Mutex<Queue>>,
 ) -> anyhow::Result<()> {
     let mut buf = [0u8; 4096];
     let n = stream.read(&mut buf).await?;
@@ -68,23 +95,54 @@ async fn handle(
 
     let (code, body) = match (method, path) {
         ("GET", "/api/jobs/howick/pending") => {
-            let served = *job_served.lock().await;
-            if served {
-                println!("  [mock] GET pending → empty (job already completed)");
-                (200, r#"{"jobs":[]}"#.to_string())
+            let mut q = queue.lock().await;
+            if q.next >= JOBS.len() || q.pending {
+                if q.pending {
+                    let job = &JOBS[q.next];
+                    println!("  [mock] GET pending → re-serving {} (not yet acknowledged)", job.id);
+                    // Re-serve the same job
+                    match serve_job(job).await {
+                        Ok(body) => (200, body),
+                        Err(e) => {
+                            tracing::error!("Failed to read fixture {}: {e}", job.fixture);
+                            (500, r#"{"error":"fixture read failed"}"#.to_string())
+                        }
+                    }
+                } else {
+                    println!("  [mock] GET pending → empty (all {} jobs completed)", JOBS.len());
+                    (200, r#"{"jobs":[]}"#.to_string())
+                }
             } else {
-                println!("  [mock] GET pending → serving job {TEST_JOB_ID}");
-                let csv_escaped = TEST_CSV.replace('\n', "\\n").replace('"', "\\\"");
-                let body = format!(
-                    r#"{{"jobs":[{{"job_id":"{TEST_JOB_ID}","frameset_name":"{TEST_FRAMESET}","csv":"{csv_escaped}"}}]}}"#
-                );
-                (200, body)
+                let job = &JOBS[q.next];
+                println!("  [mock] GET pending → serving {} ({})", job.id, job.frameset);
+                match serve_job(job).await {
+                    Ok(body) => {
+                        q.pending = true;
+                        (200, body)
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to read fixture {}: {e}", job.fixture);
+                        (500, r#"{"error":"fixture read failed"}"#.to_string())
+                    }
+                }
             }
         }
 
         ("POST", p) if p.contains("/complete") => {
-            *job_served.lock().await = true;
-            println!("  [mock] POST complete → acknowledged, queue now empty");
+            let mut q = queue.lock().await;
+            if q.pending && q.next < JOBS.len() {
+                let job = &JOBS[q.next];
+                println!("  [mock] POST complete → {} acknowledged", job.id);
+                q.next += 1;
+                q.pending = false;
+                if q.next < JOBS.len() {
+                    println!("  [mock] Next job queued: {}", JOBS[q.next].id);
+                } else {
+                    println!("  [mock] All {} jobs done — queue empty", JOBS.len());
+                }
+            } else {
+                println!("  [mock] POST complete → no pending job (ignored)");
+            }
             (200, r#"{"ok":true}"#.to_string())
         }
 
@@ -99,6 +157,7 @@ async fn handle(
     let reason = match code {
         200 => "OK",
         400 => "Bad Request",
+        500 => "Internal Server Error",
         _ => "Not Found",
     };
 
@@ -109,4 +168,21 @@ async fn handle(
 
     stream.write_all(response.as_bytes()).await?;
     Ok(())
+}
+
+/// Read fixture file and build the JSON response body for one job.
+async fn serve_job(job: &Job) -> anyhow::Result<String> {
+    let csv = tokio::fs::read_to_string(job.fixture).await?;
+    // Escape CSV for embedding in JSON string value
+    let csv_escaped = csv
+        .replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('\r', "")
+        .replace('\n', "\\n");
+    Ok(format!(
+        r#"{{"jobs":[{{"job_id":"{id}","frameset_name":"{fs}","csv":"{csv}"}}]}}"#,
+        id = job.id,
+        fs = job.frameset,
+        csv = csv_escaped,
+    ))
 }

@@ -10,71 +10,108 @@
 ## Summary
 
 Gerard Webb at ubuntu Software is offering to connect your Howick FRAMA machine
-to the factory network at no charge. You pay only for the hardware — approximately
-3,700 THB ordered locally. Everything else is provided free of charge.
+to the factory network at no charge. You pay only for the hardware. Everything
+else — software, setup, and ongoing management — is provided free of charge.
 
-Your existing workflow does not change. This system runs alongside what you
-already have. SketchUp, FrameBuilderMRD, and USB sticks all continue to work
-exactly as they do today.
+Your existing workflow does not change. SketchUp, FrameBuilderMRD, and USB sticks
+all continue to work exactly as they do today. This system adds a second, faster
+path for getting jobs to the machine — running alongside what you already have.
 
 ---
 
-## What this adds to your factory
+## The problem this solves
 
-Right now, getting a job to the Howick FRAMA requires someone to copy a file
-to a USB stick and carry it to the machine — for every single job.
+Every job requires someone to copy a file to a USB stick, walk it to the Howick
+FRAMA, and plug it in. This happens for every single job, every day.
 
-This system adds a second, automatic path. Jobs can be sent from the design
-computer to the machine over WiFi in seconds. No USB stick required. No walking.
-The machine receives the job and runs it exactly as before.
-
-A status dashboard shows machine state and job queue on any phone or screen
-on the factory network.
+This system eliminates that walk. A job sent from the design computer reaches
+the machine over WiFi in seconds, automatically.
 
 **Nothing is removed. Nothing is replaced. Both methods work side by side.**
 
 ---
 
-## Phase 1 — Job delivery and dashboard
+## How it works — two setup options
 
-A small computer (about the size of a USB stick) plugs into the Howick FRAMA
-USB port via a 3m cable. The machine sees it exactly as a USB stick — no
-changes to the machine or its software.
+### Option A — Design PC only (simplest, start here)
 
-A second small computer on the factory WiFi runs the dashboard and handles
-job delivery from the browser.
+The software runs directly on the design computer alongside SketchUp and
+FrameBuilderMRD. No extra hardware required.
 
-| | |
-|-|-|
-| Hardware cost | ~3,700 THB (one-time) |
-| Software and setup | Free |
-| Ongoing management and updates | Free |
-| Monthly fees | None |
+```
+Design PC
+├── SketchUp + FrameBuilderMRD   generates job file as normal
+├── opcua-howick (this software)  dashboard + job queue
+└── Browser                       open http://localhost:4841/dashboard
+      drag job file in
+            │
+            │ (operator still carries USB stick to machine)
+            ▼
+      Howick FRAMA reads CSV — no changes to machine
+```
+
+The operator drags the job file into the browser instead of copying it to a USB
+stick. The USB stick stays as a backup — nothing is removed.
+
+**Hardware cost: none.** Software runs on the existing Design PC.
 
 ---
 
-## Phase 2 — Coil inventory sensor (optional, add any time)
+### Option B — Dedicated hardware (no USB stick, full automation)
 
-A weight sensor placed under the coil spool measures how much steel material
-remains and displays it in metres on the dashboard. An alert fires when material
-runs low — before the coil runs out mid-job.
+Two small computers on the factory WiFi handle everything. The design computer,
+phones, and tablets can all reach the Job Dashboard from anywhere on the network.
 
-A coil running out mid-job means scrap members and a full restart. This sensor
-prevents that situation.
+```
+Design PC
+├── SketchUp + FrameBuilderMRD   generates job file as normal
+└── Browser                       open http://pi5.local:4841/dashboard
+      drag job file in
+            │ WiFi
+            ▼
+      Pi 5 (credit-card sized computer on factory WiFi)
+      └── opcua-howick   dashboard, job queue, OPC UA server
+            │ WiFi
+            ▼
+      Pi Zero (smaller than a USB stick, plugged into FRAMA permanently)
+      └── howick-agent   receives job over WiFi, writes to virtual USB
+            │ USB cable 3m
+            ▼
+      Howick FRAMA reads CSV — no changes to machine
+```
 
-| | |
-|-|-|
-| Hardware cost | ~680 THB additional (one-time) |
-| Installation and setup | Free |
+The USB stick is retired permanently. The machine sees the Pi Zero as a normal
+USB stick — it never knows the difference.
 
-This is completely optional and can be added at any time after Phase 1 is running.
+**Hardware cost: ~3,700 THB** — see Hardware Quote document.
+
+---
+
+## Recommendation
+
+Start with **Option A** — no hardware cost, running in one session. Once
+you are comfortable with how it works, upgrade to Option B for the full
+hands-free experience.
+
+Both options use identical software. Moving from A to B requires only
+plugging in two small computers and changing one configuration value.
+
+---
+
+## Phase 2 — Coil inventory sensor (optional, either option)
+
+A weight sensor under the coil spool displays remaining material in metres
+on the Job Dashboard. An alert fires before the coil runs out mid-job —
+preventing scrap members and a full restart.
+
+**Hardware cost: ~680 THB additional** — see Hardware Quote document.
 
 ---
 
 ## Phase 3 — Additional machines
 
-If you have other roll-forming machines in the factory, the same system can
-be extended to them. We discuss scope and hardware per machine when the time comes.
+The same system can be extended to other roll-forming machines in the factory.
+Scope and hardware discussed per machine when the time comes.
 
 ---
 
@@ -82,27 +119,28 @@ be extended to them. We discuss scope and hardware per machine when the time com
 
 Ubuntu Software is building a platform for connected factory machines. Having
 a real installation running against real equipment and real processes is
-enormously valuable for testing and development. In exchange, you get a working
-system and ongoing support at no cost.
+enormously valuable for development. In exchange, you get a working system
+and ongoing support at no cost.
 
 ---
 
 ## What this means in practice
 
-- **For the operator:** nothing changes. The machine runs as it always has.
-- **For you:** jobs can be sent remotely from the browser the moment a design is ready.
+- **For the operator:** the dashboard replaces the USB walk. Everything else is identical.
+- **For you:** jobs can be sent from any browser on the factory network the moment a design is ready.
 - **For maintenance:** Gerard manages everything remotely. No site visits needed.
-- **For updates:** software updates itself every hour. No action required.
+- **For updates:** software updates automatically. No action required.
 
 ---
 
 ## How to proceed
 
-1. Review the Hardware Quote document and place the order at raspberrypithailand.com
-2. Contact Gerard Webb to schedule the setup session
+**Option A (no hardware):**
+Contact Gerard Webb to schedule a setup session. Takes one hour on a remote call.
 
-Gerard handles everything from there. Setup takes one remote session after
-the hardware arrives.
+**Option B (with hardware):**
+1. Review the Hardware Quote document and place the order at raspberrypithailand.com
+2. Contact Gerard Webb to schedule the setup session after hardware arrives
 
 ---
 
