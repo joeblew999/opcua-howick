@@ -31,7 +31,7 @@ Steel members come out
 
 ## Hardware
 
-See [bom.md](bom.md) for full BOM and where to order in Thailand.
+See [customer/03-bom.md](customer/03-bom.md) for full BOM and where to order in Thailand.
 
 | Item | Cost | Notes |
 |------|------|-------|

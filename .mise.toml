@@ -469,7 +469,7 @@ ssh ${PI5_HOST:-pi@howick-pi5.local} '
 description = "Export customer setup guide to PDF (01)"
 run         = """
 mkdir -p docs/dist
-pandoc docs/customer/setup.md \
+pandoc docs/customer/01-setup.md \
   --pdf-engine=typst \
   --template=docs/templates/howick.typ \
   --metadata title="Howick FRAMA — Automated Job Delivery" \
@@ -481,7 +481,7 @@ echo "PDF: docs/dist/01-setup.pdf"
 description = "Export customer provisioning guide to PDF (02)"
 run         = """
 mkdir -p docs/dist
-pandoc docs/customer/provisioning.md \
+pandoc docs/customer/02-provisioning.md \
   --pdf-engine=typst \
   --template=docs/templates/howick.typ \
   --metadata title="Howick FRAMA — System Setup Guide" \
@@ -493,7 +493,7 @@ echo "PDF: docs/dist/02-provisioning.pdf"
 description = "Export hardware order list to PDF (03)"
 run         = """
 mkdir -p docs/dist
-pandoc docs/bom.md \
+pandoc docs/customer/03-bom.md \
   --pdf-engine=typst \
   --template=docs/templates/howick.typ \
   --metadata title="Hardware Bill of Materials" \
@@ -505,7 +505,7 @@ echo "PDF: docs/dist/03-bom.pdf"
 description = "Export coil sensor doc to PDF (04)"
 run         = """
 mkdir -p docs/dist
-pandoc docs/coil-sensor.md \
+pandoc docs/customer/04-coil-sensor.md \
   --pdf-engine=typst \
   --template=docs/templates/howick.typ \
   --metadata title="Coil Inventory Sensor — Setup Guide" \

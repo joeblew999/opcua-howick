@@ -36,7 +36,7 @@ Coil spool and FRAMA machine are ~5m apart. The cable runs along the floor or wa
 
 Order all items from Lazada Thailand. ~600 THB total.
 
-See [bom.md](bom.md) Phase 2 section for part numbers and wiring diagram.
+See [03-bom.md](03-bom.md) Phase 2 section for part numbers and wiring diagram.
 
 ---
 

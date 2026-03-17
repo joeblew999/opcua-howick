@@ -96,7 +96,7 @@ async fn main() -> anyhow::Result<()> {
     //
     // TODO Phase 2: add sensor module — load cell + HX711 on GPIO, 5m cable to coil spool.
     // Reads coil weight → converts to metres → pushes to Pi 5 OPC UA Machine/CoilRemaining.
-    // See docs/architecture.md Phase 2 and docs/bom.md Phase 2 for hardware details.
+    // See docs/architecture.md Phase 2 and docs/customer/03-bom.md Phase 2 for hardware details.
     tracing::info!(
         "Running — polling {} every {}s",
         config.plat_trunk.url,
