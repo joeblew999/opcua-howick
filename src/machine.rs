@@ -2,6 +2,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 #[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 pub enum MachineStatus {
     Offline,
     Idle,
@@ -11,6 +12,7 @@ pub enum MachineStatus {
 }
 
 impl MachineStatus {
+    #[allow(dead_code)]
     pub fn as_str(&self) -> &str {
         match self {
             MachineStatus::Offline => "Offline",
@@ -31,6 +33,7 @@ pub struct Job {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct MachineState {
     pub status: MachineStatus,
     pub current_job: Option<String>,

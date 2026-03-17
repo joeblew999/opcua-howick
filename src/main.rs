@@ -1,16 +1,16 @@
 //! # opcua-howick
 //!
-//! OPC UA edge agent for Howick FRAMA roll-forming machines.
-//! Runs on a small compute module (Raspberry Pi / NUC / Mac Mini) on factory LAN.
+//! Full OPC UA edge agent for Howick FRAMA machines.
+//! For Raspberry Pi 5, NUC, Mac Mini, or Windows PC.
+//!
+//! For Raspberry Pi Zero 2W (USB gadget mode), use `howick-agent` instead —
+//! a minimal binary with no OPC UA or HTTP server (~3MB vs ~15MB).
 //!
 //! Four concurrent services:
 //!   - OPC UA server  (port 4840) — machine state for any OPC UA client
 //!   - HTTP server    (port 4841) — JSON API for plat-trunk / Tauri
-//!   - File watcher              — picks up CSV files dropped locally
-//!   - Job poller                — polls plat-trunk API for R2-queued jobs
-//!
-//! Topology-agnostic: plat_trunk.url in config.toml points to CF or localhost.
-//! All topologies use the same HTTP API — the poller just polls a different URL.
+//!   - Job poller                 — polls plat-trunk API for R2-queued jobs
+//!   - File watcher               — picks up CSV files dropped locally
 
 mod config;
 mod http_server;
@@ -59,7 +59,6 @@ async fn main() -> anyhow::Result<()> {
         config.plat_trunk.url,
     );
 
-    // Run all four services concurrently
     tokio::select! {
         r = watcher::run_job_watcher(config.machine.clone(), state.clone()) => {
             if let Err(e) = r { tracing::error!("File watcher: {e}"); }

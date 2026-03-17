@@ -45,33 +45,35 @@ run         = "cross build --release --target aarch64-unknown-linux-gnu"
 description = "Cross-compile for Raspberry Pi 3/4 (armv7)"
 run         = "cross build --release --target armv7-unknown-linux-gnueabihf"
 
-# Pi Zero 2W — arm64 same as Pi 5 (aarch64)
-# The Pi Zero 2W uses USB OTG gadget mode to appear as a USB mass storage
-# device to the Howick machine — replacing the USB stick entirely.
-# See docs/pi-zero-usb-gadget.md for setup guide.
-[tasks."build:pi-zero"]
-description = "Cross-compile for Pi Zero 2W (aarch64 — same binary as Pi 5)"
-run         = "cross build --release --target aarch64-unknown-linux-gnu"
+# Pi Zero 2W — uses howick-agent (minimal binary, no OPC UA, no HTTP)
+# ~3MB binary, ~16MB RAM — fits Pi Zero 2W (512MB)
+# USB gadget mode: appears as USB mass storage to Howick machine
+# See docs/pi-zero-usb-gadget.md for full setup guide
+[tasks."build:agent"]
+description = "Build howick-agent (minimal: Pi Zero 2W, no OPC UA, no HTTP)"
+run         = "cargo build --release --bin howick-agent"
+
+[tasks."build:agent:pi-zero"]
+description = "Cross-compile howick-agent for Pi Zero 2W (aarch64)"
+run         = "cross build --release --bin howick-agent --target aarch64-unknown-linux-gnu"
 
 [tasks."deploy:pi-zero"]
-description = "Build + deploy to Pi Zero 2W (USB gadget mode setup)"
+description = "Build + deploy howick-agent to Pi Zero 2W (USB gadget mode)"
 run         = """
-cross build --release --target aarch64-unknown-linux-gnu
-scp target/aarch64-unknown-linux-gnu/release/opcua-howick ${PI_HOST:-pi@howick-pi.local}:~/opcua-howick.new
+cross build --release --bin howick-agent --target aarch64-unknown-linux-gnu
+scp target/aarch64-unknown-linux-gnu/release/howick-agent ${PI_HOST:-pi@howick-pi.local}:~/howick-agent.new
 scp config.toml ${PI_HOST:-pi@howick-pi.local}:~/config.toml.example
 ssh ${PI_HOST:-pi@howick-pi.local} '
-  mv ~/opcua-howick.new ~/opcua-howick
-  chmod +x ~/opcua-howick
-  sudo systemctl restart opcua-howick 2>/dev/null || echo "Service not installed yet — see docs/pi-zero-usb-gadget.md"
+  mv ~/howick-agent.new ~/howick-agent
+  chmod +x ~/howick-agent
+  sudo systemctl restart howick-agent 2>/dev/null || echo "Service not installed yet — see docs/pi-zero-usb-gadget.md"
   sleep 2
-  echo "--- Status ---"
-  sudo systemctl status opcua-howick --no-pager 2>/dev/null || ./opcua-howick --help
+  sudo systemctl status howick-agent --no-pager 2>/dev/null || echo "Run: ./howick-agent"
 '
 echo ""
-echo "Pi Zero deployed. Edit ~/config.toml on the Pi:"
-echo "  usb_gadget_mode = true"
-echo "  machine_input_dir = /mnt/usb_share"
-echo "See docs/pi-zero-usb-gadget.md for full setup."
+echo "Pi Zero deployed (minimal howick-agent)"
+echo "Edit ~/config.toml: usb_gadget_mode=true, machine_input_dir=/mnt/usb_share"
+echo "See docs/pi-zero-usb-gadget.md for USB gadget setup"
 """
 
 [tasks."build:linux"]

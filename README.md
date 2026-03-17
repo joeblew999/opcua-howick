@@ -59,7 +59,7 @@ factory LAN — or Prin's phone — can see live machine status.
 
 | Option | Hardware | Setup | Best for |
 |--------|----------|-------|----------|
-| Pi Zero 2W (USB gadget) | $23 | 1hr | Permanent install, Phase 1 |
+| Pi Zero 2W + `howick-agent` | $23 | 1hr | Permanent install, USB gadget mode |
 | Raspberry Pi 5 | $80 | 30min | Pi with network share to machine PC |
 | Windows PC (.exe) | $0 | 15min | If machine PC is accessible |
 | Mac Mini | $600 | 20min | Factory office, Topology B/C |
@@ -69,11 +69,14 @@ factory LAN — or Prin's phone — can see live machine status.
 ## Quick Start (Pi Zero 2W)
 
 ```bash
-# 1. Build for Pi Zero 2W
-mise run build:pi-zero
+# 1. Build howick-agent for Pi Zero 2W (minimal — no OPC UA)
+mise run build:agent:pi-zero
 
 # 2. Deploy
 PI_HOST=pi@howick-pi.local mise run deploy:pi-zero
+
+# For Pi 5 / NUC (full agent with OPC UA + HTTP):
+# PI_HOST=pi@factory-pi.local mise run deploy:pi
 
 # 3. Configure on the Pi
 ssh pi@howick-pi.local
@@ -87,7 +90,16 @@ nano ~/config.toml
 
 ---
 
-## Services
+## Two Binaries
+
+| Binary | For | OPC UA | HTTP | RAM | Size |
+|--------|-----|--------|------|-----|------|
+| `howick-agent` | Pi Zero 2W (USB gadget) | ❌ | ❌ | ~16MB | ~3MB |
+| `opcua-howick` | Pi 5, NUC, Mac, Windows | ✅ | ✅ | ~64MB | ~15MB |
+
+The Pi Zero only needs to poll and write. `howick-agent` does exactly that.
+
+## Services (opcua-howick full binary)
 
 Three concurrent services on the Pi:
 

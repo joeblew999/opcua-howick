@@ -7,19 +7,42 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/joeblew999/opcua-howick"
 readme = "README.md"
 
+# ── Binaries ──────────────────────────────────────────────────────────────────
+
+# Full agent: OPC UA server + HTTP status + poller + file watcher
+# For: Raspberry Pi 5, NUC, Mac Mini, Windows PC
+# RAM: ~64MB   Binary: ~15MB
 [[bin]]
 name = "opcua-howick"
 path = "src/main.rs"
 
+# Minimal agent: poller + USB gadget write only — NO OPC UA, NO HTTP server
+# For: Raspberry Pi Zero 2W (512MB RAM, replaces USB stick)
+# RAM: ~16MB   Binary: ~3MB
+[[bin]]
+name = "howick-agent"
+path = "src/agent/main.rs"
+
+# ── Features ──────────────────────────────────────────────────────────────────
+
+[features]
+default = ["full"]
+# full: OPC UA server + HTTP server (opcua-howick binary)
+full = ["dep:async-opcua"]
+
+# ── Dependencies ──────────────────────────────────────────────────────────────
+
 [dependencies]
-async-opcua = { version = "0.18", features = ["server"] }
-tokio = { version = "1", features = ["full"] }
-tracing = "0.1"
+# OPC UA — only compiled when feature=full
+async-opcua = { version = "0.18", features = ["server"], optional = true }
+
+# Always present — used by both binaries
+tokio              = { version = "1", features = ["full"] }
+tracing            = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-thiserror = "2"
-anyhow = "1"
-serde = { version = "1", features = ["derive"] }
-toml = "0.8"
-notify = "6"
-# HTTP client for polling plat-trunk API (R2 job queue)
-reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+thiserror          = "2"
+anyhow             = "1"
+serde              = { version = "1", features = ["derive"] }
+toml               = "0.8"
+notify             = "6"
+reqwest            = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
