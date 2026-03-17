@@ -143,7 +143,13 @@ fn build_server_builder(
     // would register "urn:howick-edge-agent" at index 1 (server URI) AND
     // index 2 (our node manager), and clients would resolve to index 1 where
     // no nodes are registered.
-    let mut builder = ServerBuilder::new_anonymous(app_name)
+    // Always set discovery_urls explicitly so clients connect to 127.0.0.1,
+    // not the bind address (0.0.0.0). On macOS, localhost resolves to [::1]
+    // (IPv6) but the server binds IPv4-only → connection refused.
+    let endpoint_url = discovery_url
+        .unwrap_or_else(|| format!("opc.tcp://127.0.0.1:{port}/"));
+
+    ServerBuilder::new_anonymous(app_name)
         .application_uri("urn:howick-edge-server")
         .product_uri("https://github.com/joeblew999/opcua-howick")
         .host(host.to_owned())
@@ -165,13 +171,8 @@ fn build_server_builder(
             "howick",
         ))
         .trust_client_certs(true)
-        .diagnostics_enabled(false);
-
-    if let Some(url) = discovery_url {
-        builder = builder.discovery_urls(vec![url]);
-    }
-
-    builder
+        .diagnostics_enabled(false)
+        .discovery_urls(vec![endpoint_url])
 }
 
 /// Populate the OPC UA address space with Howick machine nodes and methods.
