@@ -101,3 +101,7 @@ run         = "curl -s http://localhost:4841/status | python3 -m json.tool"
 [tasks."test:health"]
 description = "Check local opcua-howick health"
 run         = "curl -s http://localhost:4841/health"
+
+[tasks."test:poll"]
+description = "Trigger one poll cycle against local plat-trunk (must have RUST_LOG=debug for output)"
+run         = "RUST_LOG=opcua_howick=debug cargo run -- --poll-once 2>&1 | head -30"

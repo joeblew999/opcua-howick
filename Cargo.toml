@@ -21,3 +21,5 @@ anyhow = "1"
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
 notify = "6"
+# HTTP client for polling plat-trunk API (R2 job queue)
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
