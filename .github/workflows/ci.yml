@@ -63,13 +63,20 @@ jobs:
             os: ubuntu-latest
             cross: true
 
-          # Windows x86_64 — for running directly on the Howick control PC
-          # Replaces the USB stick workflow: opcua-howick.exe runs on the
-          # machine's Windows PC and writes CSV directly to the watched folder
-          - name: Windows x86_64 (Howick control PC)
+          # Windows x86_64 — opcua-howick.exe for factory PC
+          - name: Windows x86_64
             target: x86_64-pc-windows-msvc
             os: windows-latest
             cross: false
+            bin: opcua-howick
+
+          # Pi Zero 2W — howick-agent (minimal, no OPC UA)
+          # Plugs into Howick USB port, acts as USB mass storage (fake USB stick)
+          - name: Pi Zero 2W — howick-agent (USB gadget)
+            target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+            bin: howick-agent
 
     steps:
       - uses: actions/checkout@v4
@@ -93,17 +100,22 @@ jobs:
       # Build task defined in mise.toml — CI just calls it
       - name: Build
         run: |
+          BIN="${{ matrix.bin || 'opcua-howick' }}"
           if [ "${{ matrix.cross }}" = "true" ]; then
-            cross build --release --target ${{ matrix.target }}
+            cross build --release --bin "$BIN" --target ${{ matrix.target }}
           else
-            cargo build --release --target ${{ matrix.target }}
+            cargo build --release --bin "$BIN" --target ${{ matrix.target }}
           fi
 
       - name: Stage
         run: |
+          BIN="${{ matrix.bin || 'opcua-howick' }}"
           mkdir -p dist
-          cp target/${{ matrix.target }}/release/opcua-howick \
-             dist/opcua-howick-${{ matrix.target }}
+          # Windows adds .exe extension
+          EXT=""
+          if [[ "${{ matrix.target }}" == *"windows"* ]]; then EXT=".exe"; fi
+          cp "target/${{ matrix.target }}/release/${BIN}${EXT}" \
+             "dist/${BIN}-${{ matrix.target }}${EXT}"
 
       - uses: actions/upload-artifact@v4
         with:

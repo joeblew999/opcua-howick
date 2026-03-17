@@ -111,12 +111,14 @@ sudo chmod +x /etc/rc.local
 ### 4. Install opcua-howick
 
 ```bash
-# Download the arm64 binary from GitHub Releases
-wget https://github.com/joeblew999/opcua-howick/releases/latest/download/opcua-howick-aarch64-unknown-linux-gnu
-chmod +x opcua-howick-aarch64-unknown-linux-gnu
-mv opcua-howick-aarch64-unknown-linux-gnu opcua-howick
+# Download howick-agent (minimal binary — no OPC UA, no HTTP, ~3MB)
+# From GitHub Releases page:
+wget https://github.com/joeblew999/opcua-howick/releases/latest/download/howick-agent-aarch64-unknown-linux-gnu
+chmod +x howick-agent-aarch64-unknown-linux-gnu
+mv howick-agent-aarch64-unknown-linux-gnu howick-agent
 
-# Or use mise run deploy:pi from your MacBook
+# Or deploy from your MacBook:
+mise run deploy:pi-zero
 ```
 
 ### 5. Configure opcua-howick
@@ -152,7 +154,7 @@ EOF
 ### 6. Install as systemd service
 
 ```bash
-sudo tee /etc/systemd/system/opcua-howick.service << 'EOF'
+sudo tee /etc/systemd/system/howick-agent.service << 'EOF'
 [Unit]
 Description=Howick Edge Agent
 After=network-online.target
@@ -163,7 +165,7 @@ Type=simple
 User=pi
 WorkingDirectory=/home/pi
 ExecStartPre=/bin/sleep 5
-ExecStart=/home/pi/opcua-howick
+ExecStart=/home/pi/howick-agent
 Restart=always
 RestartSec=5
 Environment=RUST_LOG=opcua_howick=info
