@@ -9,12 +9,18 @@ RUST_LOG       = "opcua_howick=info"
 # ── Dev ───────────────────────────────────────────────────────────────────────
 
 [tasks.build]
-description = "Build (native dev)"
-run         = "cargo build"
+description = "Build (native dev — incremental)"
+sources  = ["src/**/*.rs", "Cargo.toml", "Cargo.lock"]
+outputs  = ["target/debug/opcua-howick", "target/debug/howick-agent"]
+run      = "cargo build"
 
 [tasks.run]
 description = "Run locally (reads ./config.toml)"
 run         = "cargo run"
+
+[tasks.test]
+description = "Run all Rust tests"
+run         = "cargo test"
 
 [tasks.check]
 description = "Check + clippy -D warnings"
@@ -31,8 +37,8 @@ run         = "cargo fmt --check"
 # ── CI — single source of truth ───────────────────────────────────────────────
 
 [tasks.ci]
-description = "Full CI: check + fmt-check"
-depends     = ["check", "fmt-check"]
+description = "Full CI gate — check + fmt + test"
+depends     = ["check", "fmt-check", "test"]
 
 # ── Cross-compile targets ─────────────────────────────────────────────────────
 # Prerequisites: cargo install cross
