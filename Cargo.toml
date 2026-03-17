@@ -23,6 +23,12 @@ path = "src/main.rs"
 name = "howick-agent"
 path = "src/agent/main.rs"
 
+# Dev-only mock plat-trunk backend — simulates the cloud API locally
+# Run alongside howick-agent to test the full Pi Zero pipeline without hardware
+[[bin]]
+name = "mock-plat-trunk"
+path = "src/bin/mock-plat-trunk.rs"
+
 # ── Features ──────────────────────────────────────────────────────────────────
 
 [features]

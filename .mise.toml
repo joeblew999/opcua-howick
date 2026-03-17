@@ -45,7 +45,7 @@ run         = "RUST_LOG=howick_agent=debug cargo run --bin howick-agent"
 
 [tasks."dev:mock"]
 description = "Start mock plat-trunk backend on :3000 (needed by dev:agent)"
-run         = "python3 dev/mock-plat-trunk.py"
+run         = "cargo run --bin mock-plat-trunk"
 
 [tasks."dev:job"]
 description = "Drop a test CSV into jobs/input/ to exercise the file watcher (use with dev)"
@@ -69,6 +69,30 @@ run         = "curl -s http://localhost:4841/status | python3 -m json.tool"
 [tasks."dev:jobs"]
 description = "List jobs via HTTP API"
 run         = "curl -s http://localhost:4841/jobs | python3 -m json.tool"
+
+[tasks."dev:browse"]
+description = "Show OPC UA endpoint to paste into UaExpert (free GUI browser)"
+run         = """
+echo ""
+echo "OPC UA endpoint:  opc.tcp://localhost:4840/"
+echo ""
+echo "Browse the live address space with UaExpert (free):"
+echo "  Download: https://www.unified-automation.com/downloads/opc-ua-clients.html"
+echo "  1. Connect to: opc.tcp://localhost:4840/"
+echo "  2. Expand: Objects → Howick → Machine"
+echo "  3. Right-click any node → Add to subscription"
+echo "     Values update every 500ms automatically."
+echo ""
+echo "Nodes available:"
+echo "  Machine/Status          (Idle | Running | Error | Offline)"
+echo "  Machine/CurrentJob      (frameset name)"
+echo "  Machine/PiecesProduced  (UInt32)"
+echo "  Machine/CoilRemaining   (Double — metres)"
+echo "  Machine/LastError       (String)"
+echo "  Jobs/QueueDepth         (UInt32)"
+echo "  Jobs/CompletedCount     (UInt32)"
+echo ""
+"""
 
 [tasks.build]
 description = "Build (native dev — incremental)"
