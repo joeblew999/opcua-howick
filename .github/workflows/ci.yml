@@ -45,6 +45,7 @@ jobs:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     needs: ci
+    if: github.event_name == 'release'
     strategy:
       fail-fast: false
       matrix:
@@ -104,7 +105,7 @@ jobs:
 
       - name: Install cross
         if: matrix.cross
-        run: cargo install cross --git https://github.com/cross-rs/cross
+        run: cargo install cross
 
       - name: Build
         shell: bash
