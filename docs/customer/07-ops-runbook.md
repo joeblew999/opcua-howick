@@ -190,4 +190,4 @@ mise run docs:pdf:all   # regenerates docs/dist/01–07.pdf
 
 **Gerard Webb**
 ubuntu Software
-gerard@ubuntu-software.com
+

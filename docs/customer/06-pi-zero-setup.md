@@ -177,4 +177,4 @@ Auto-update runs hourly via systemd timer — see Document 7 (Operations Runbook
 
 **Gerard Webb**
 ubuntu Software
-gerard@ubuntu-software.com
+

@@ -169,4 +169,4 @@ Contact Gerard Webb to schedule a setup session. Takes one hour on a remote call
 
 **Gerard Webb**
 ubuntu Software
-gerard@ubuntu-software.com
+
