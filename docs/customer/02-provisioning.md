@@ -1,78 +1,58 @@
-# Howick FRAMA — System Setup Guide
+# Setup Guide
 
-## What you need
+## What you need to do
 
-Two small computers and a few cables. Everything ships from
-**raspberrypithailand.com** — order once, free shipping, 3-day delivery.
-
-See the Hardware Order document for the full list (~3,700 THB).
+Three steps. We handle everything technical.
 
 ---
 
-## One-time setup (we do this remotely)
+### Step 1 — Order the hardware
 
-### Step 1 — Order and receive hardware
+Order from **raspberrypithailand.com** — one order, free shipping, 3-day delivery.
 
-Order from raspberrypithailand.com. You will receive:
+The full order list is in the **Hardware Order** document (doc 03). Total cost: ~3,700 THB.
 
-- Raspberry Pi Zero 2W (small — about the size of a USB stick)
-- Raspberry Pi 5 (about the size of a deck of cards)
-- Two microSD cards
-- Power supplies
-- One 3m USB cable
+---
 
-### Step 2 — Connect and hand over to us
+### Step 2 — Plug in and send us your WiFi details
 
-Once the hardware arrives:
+When the hardware arrives:
 
 1. Plug both computers into power
 2. Connect them to factory WiFi
-3. Send us the WiFi name and password (we need this only once)
+3. Send us your WiFi network name and password
 
-We then complete the entire setup remotely. You do not need to do anything
-technical. We will:
+That is all you need to do. We take it from there.
 
-- Install all software on both computers
-- Configure the system
-- Plug the Pi Zero 2W into the Howick FRAMA USB port via the 3m cable
-- Verify the system is working end-to-end
+We will remotely:
 
-### Step 3 — Test together
-
-We send a test job from the browser. You confirm the machine receives it and
-the job runs correctly.
-
-The existing USB stick method still works — nothing is removed.
+- Install and configure all software
+- Connect both computers to your factory network
+- Plug the small computer into the Howick FRAMA USB port via the 3m cable
+- Run a test job end-to-end to confirm everything works
 
 ---
 
-## After setup — day to day
+### Step 3 — Confirm the test job runs
 
-**Nothing changes for the operator.** The machine runs exactly as before.
-New jobs appear automatically on the machine. No USB stick needed.
+We send a test job from the browser. You watch the machine and confirm it runs correctly.
 
-SketchUp and FrameBuilderMRD continue to work as normal.
-
----
-
-## Software updates
-
-Updates happen **automatically**. Both computers check for new versions
-every hour and update themselves. No action required from anyone.
+The USB stick method continues to work — nothing is removed or changed.
 
 ---
 
-## If something goes wrong
+## Day to day
 
-We can diagnose and fix issues remotely — no need to visit the factory.
-In most cases problems are resolved within minutes of being reported.
+**The operator does nothing differently.** The machine runs exactly as before.
+New jobs appear on the machine automatically.
+
+Software updates install themselves every hour. No action required.
 
 ---
 
-## Phase 2 — Coil inventory sensor (optional, future)
+## Support
 
-A small weight sensor placed under the coil spool measures how much steel
-material remains. The system shows coil remaining (in metres) on the
-status dashboard, so you know when to order a new coil before running out mid-job.
+If something goes wrong, contact Gerard Webb at ubuntu Software.
 
-Hardware cost: ~600 THB. We install it remotely once the sensor arrives.
+We can see and fix issues remotely — no site visit needed. Most problems are
+resolved within minutes of being reported.

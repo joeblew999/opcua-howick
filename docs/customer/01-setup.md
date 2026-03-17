@@ -1,79 +1,57 @@
 # Howick FRAMA — Automated Job Delivery
 
-## What problem this solves
+## The problem today
 
-Right now, every job requires someone to:
+Every job requires someone to:
 
 1. Save the file on the design computer
 2. Copy it to a USB stick
 3. Walk to the machine and plug it in
 4. Walk back
 
-This takes time on every single job. If the USB stick is missing, or the wrong file is copied, production stops.
+This is time lost on every single job. If the USB stick is missing, or the wrong
+file is copied, production stops. If the machine is mid-run and needs the next
+job, someone has to stop what they are doing and walk over.
 
-**This system eliminates all of that.** Jobs go from the design computer to the machine over WiFi — automatically, in seconds, with no USB stick involved.
+## What this system does
 
-The existing SketchUp and FrameBuilderMRD workflow is **not changed**. Both methods work side-by-side. The operator does not need to do anything differently.
+Jobs go from the design computer to the machine over WiFi — automatically,
+in seconds. No USB stick. No walking. No waiting.
 
----
+The operator does not change how they work. SketchUp and FrameBuilderMRD
+continue exactly as before. The new system runs alongside them and adds a
+second, faster path for jobs.
 
-## Hardware to order
+## What you get
 
-Two small computers. One-time purchase. Everything from one local store.
+| | Before | After |
+|-|--------|-------|
+| Send a job | Copy to USB stick, walk to machine | Click send in browser — done |
+| Job arrives | When someone walks over | Within 5 seconds |
+| Job fails (wrong file) | Production stops | Immediate alert on dashboard |
+| Software update | Manual | Automatic, every hour |
+| Something breaks | Call someone to visit | Fixed remotely, usually within minutes |
 
-Order from **raspberrypithailand.com** — official Raspberry Pi reseller,
-free nationwide shipping, 3-day delivery, full warranty.
+## What it costs
 
-| Item | Est. Cost |
-|------|-----------|
-| Raspberry Pi Zero 2W | ~500 THB |
-| Raspberry Pi 5 4GB | ~2,000 THB |
-| Official Raspberry Pi 27W USB-C power supply | ~400 THB |
-| SanDisk Ultra microSD 32GB × 2 | ~500 THB |
-| USB-A to Micro-USB cable 3m | ~300 THB |
-| **Total** | **~3,700 THB** |
+One-time hardware purchase of ~3,700 THB. No monthly fees. No subscriptions.
 
-This is a one-time cost. No monthly fees. No subscriptions.
+See the **Hardware Order** document (doc 03) for the exact list and where to buy.
 
----
+## How we set it up
 
-## What gets installed
+We set everything up remotely. You only need to:
 
-**Pi Zero 2W** — plugs into the machine's USB port via a 3m cable.
-The machine sees it exactly like a USB stick. Job files appear on it automatically over WiFi.
+- Order the hardware (one website, one order)
+- Plug in the cables when it arrives
+- Give us your WiFi password once
 
-**Pi 5** — sits near the machine on factory WiFi. Provides a status dashboard
-showing machine state and job queue.
+See the **Setup Guide** document (doc 02) for the full process.
 
----
+## Phase 2 — Know when your coil is running low (optional)
 
-## Phase 2 — Coil inventory sensor (optional, future)
+A small sensor under the coil spool measures how much steel material remains.
+The system alerts you before the coil runs out — so you can load a new one
+before a job stops mid-run and scraps partially-formed members.
 
-A small weight sensor placed under the coil spool measures how much steel
-material remains. The system then shows metres remaining on the dashboard —
-so you know when to order a new coil before the current one runs out mid-job.
-
-A coil running out mid-job scraps the partially-formed members and stops production.
-This sensor prevents that.
-
-| Item | Where | Est. Cost |
-|------|-------|-----------|
-| Load cell (50kg) + HX711 board | Lazada | ~450 THB |
-| 5m sensor cable | Lazada | ~150 THB |
-| **Total** | | **~600 THB** |
-
----
-
-## Network requirements
-
-- Factory WiFi (existing) — no changes needed
-- No firewall changes
-- No fixed IP addresses
-
----
-
-## Support and remote access
-
-The system uses **Tailscale** — a secure tunnel that allows us to diagnose
-and fix issues remotely without accessing the factory network directly.
-Software updates are pushed automatically every hour. No action required.
+Hardware cost: ~600 THB. See the **Coil Sensor** document (doc 04) for details.
