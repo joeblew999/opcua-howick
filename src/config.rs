@@ -24,21 +24,16 @@ pub struct OpcUaConfig {
     pub application_name: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum DeliveryMode {
+    #[default]
     /// File watcher writes CSV directly to machine_input_dir.
     /// Use for Topology A (Design PC only) — no Pi Zero.
     Direct,
     /// File watcher holds CSV in queue; howick-agent picks it up via HTTP.
     /// Use for Topology B/C (Pi Zero polls opcua-howick or plat-trunk).
     Queue,
-}
-
-impl Default for DeliveryMode {
-    fn default() -> Self {
-        DeliveryMode::Direct
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -83,7 +78,7 @@ pub struct HttpConfig {
 ///   - Load cell 20kg     × 1
 ///   - HX711 ADC module   × 1
 ///   - 5m ribbon cable    × 1
-///   Cost: ~680 THB from Lazada Thailand.
+///   - Cost: ~680 THB from Lazada Thailand.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SensorConfig {
     /// Set true when Pi Zero has the load cell wired up and calibrated.

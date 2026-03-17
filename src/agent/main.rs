@@ -121,11 +121,9 @@ async fn main() -> anyhow::Result<()> {
                 if let Err(e) = r { tracing::error!("Sensor push failed: {e}"); }
             }
         }
-    } else {
-        if let Err(e) = run_job_transport(config, state, use_opcua).await {
-            tracing::error!("Job transport failed: {e}");
-            std::process::exit(1);
-        }
+    } else if let Err(e) = run_job_transport(config, state, use_opcua).await {
+        tracing::error!("Job transport failed: {e}");
+        std::process::exit(1);
     }
 
     Ok(())

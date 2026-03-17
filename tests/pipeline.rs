@@ -228,6 +228,7 @@ async fn upload_queue_agent_poll_complete() {
         .await
         .unwrap();
     assert_eq!(done.status(), 200);
+    sleep(Duration::from_millis(100)).await; // let server flush state before next read
 
     // 5. Dashboard shows job completed, queue empty
     let jobs: serde_json::Value = client
