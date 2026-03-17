@@ -45,6 +45,35 @@ run         = "cross build --release --target aarch64-unknown-linux-gnu"
 description = "Cross-compile for Raspberry Pi 3/4 (armv7)"
 run         = "cross build --release --target armv7-unknown-linux-gnueabihf"
 
+# Pi Zero 2W — arm64 same as Pi 5 (aarch64)
+# The Pi Zero 2W uses USB OTG gadget mode to appear as a USB mass storage
+# device to the Howick machine — replacing the USB stick entirely.
+# See docs/pi-zero-usb-gadget.md for setup guide.
+[tasks."build:pi-zero"]
+description = "Cross-compile for Pi Zero 2W (aarch64 — same binary as Pi 5)"
+run         = "cross build --release --target aarch64-unknown-linux-gnu"
+
+[tasks."deploy:pi-zero"]
+description = "Build + deploy to Pi Zero 2W (USB gadget mode setup)"
+run         = """
+cross build --release --target aarch64-unknown-linux-gnu
+scp target/aarch64-unknown-linux-gnu/release/opcua-howick ${PI_HOST:-pi@howick-pi.local}:~/opcua-howick.new
+scp config.toml ${PI_HOST:-pi@howick-pi.local}:~/config.toml.example
+ssh ${PI_HOST:-pi@howick-pi.local} '
+  mv ~/opcua-howick.new ~/opcua-howick
+  chmod +x ~/opcua-howick
+  sudo systemctl restart opcua-howick 2>/dev/null || echo "Service not installed yet — see docs/pi-zero-usb-gadget.md"
+  sleep 2
+  echo "--- Status ---"
+  sudo systemctl status opcua-howick --no-pager 2>/dev/null || ./opcua-howick --help
+'
+echo ""
+echo "Pi Zero deployed. Edit ~/config.toml on the Pi:"
+echo "  usb_gadget_mode = true"
+echo "  machine_input_dir = /mnt/usb_share"
+echo "See docs/pi-zero-usb-gadget.md for full setup."
+"""
+
 [tasks."build:linux"]
 description = "Build for Linux x86_64"
 run         = "cargo build --release --target x86_64-unknown-linux-gnu"
