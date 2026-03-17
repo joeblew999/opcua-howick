@@ -39,10 +39,10 @@ Order from **Lazada Thailand** once Phase 1 is running.
 
 ---
 
-## Phase 3 — FRAMECAD
+## Phase 3 — Additional machines
 
-Hardware to be specified once we have the FRAMECAD interface specification.
-We will provide a separate quote at that stage.
+Hardware to be specified per machine. We will provide a separate quote
+for each additional machine once we have its interface specification.
 
 ---
 

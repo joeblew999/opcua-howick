@@ -148,7 +148,7 @@ The exact folder paths are machine-specific — to be confirmed with Prin.
 
 ## Phase 3
 
-- [ ] FRAMECAD Nexa API bridge (second machine)
+- [ ] Additional machine support (interface TBD per machine)
 
 ---
 

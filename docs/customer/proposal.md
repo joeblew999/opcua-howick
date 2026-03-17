@@ -7,16 +7,15 @@ Prepared by: **Gerard Webb, ubuntu Software**
 
 ## The opportunity
 
-Your factory runs two roll-forming machines — a Howick FRAMA and a FRAMECAD.
-Both require jobs to be delivered manually via USB stick. Every job means someone
-stops what they are doing, copies a file, walks to the machine, plugs in the stick,
-and walks back.
+Every job on the Howick FRAMA requires someone to copy a file to a USB stick,
+walk to the machine, plug it in, and walk back. This happens on every single job,
+all day, every day.
 
-This proposal covers automating both machines so that jobs flow from the design
-computer to the machine over WiFi — automatically, in seconds, with no manual steps.
+This proposal covers automating that process so jobs flow from the design computer
+to the machine over WiFi — automatically, in seconds, with no manual steps.
 
 Your existing workflow does not change. SketchUp, FrameBuilderMRD, and your
-operator's process stay exactly as they are today.
+operator's process stay exactly as they are today. The system runs alongside them.
 
 ---
 
@@ -50,14 +49,11 @@ job to restart from zero. This sensor prevents that.
 
 ---
 
-## Phase 3 — FRAMECAD: Automated job delivery
+## Phase 3 — Additional machines
 
-The same automated job delivery applied to the FRAMECAD machine. Jobs go from
-the design computer to the FRAMECAD over WiFi — no USB stick, same experience
-as Phase 1 for the Howick FRAMA.
-
-The FRAMECAD connects via its native API. Hardware cost and timeline to be
-confirmed once we have the machine's interface specification.
+The same system can be extended to other roll-forming machines in the factory.
+Each additional machine requires its own small hardware setup. Cost and timeline
+are confirmed per machine once we have the interface specification.
 
 ---
 
@@ -67,7 +63,7 @@ confirmed once we have the machine's interface specification.
 |-------|-------------|---------------|
 | 1 | Howick FRAMA: automated job delivery + status dashboard | ~3,700 THB |
 | 2 | Howick FRAMA: coil inventory sensor + low-coil alerts | ~680 THB |
-| 3 | FRAMECAD: automated job delivery | TBD |
+| 3 | Additional machines | TBD per machine |
 
 No monthly fees. No subscriptions. No ongoing licence costs.
 
