@@ -95,7 +95,7 @@ async fn connect_client(
     let mut client = ClientBuilder::new()
         .application_name("howick-test-client")
         .application_uri("urn:howick-test-client")
-        .pki_dir(format!("./pki-test-client-{id}"))
+        .pki_dir(format!("target/tmp/pki-test-client-{id}"))
         .create_sample_keypair(true)
         .trust_server_certs(true)
         .session_retry_limit(1)

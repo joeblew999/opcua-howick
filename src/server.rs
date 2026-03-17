@@ -36,6 +36,7 @@ pub async fn run_server(config: &Config, state: SharedState) -> anyhow::Result<(
         &config.opcua.host,
         config.opcua.port,
         None,
+        std::path::PathBuf::from(format!("./pki-server-{}", config.opcua.port)),
     )
     .build()
     .unwrap();
@@ -108,6 +109,7 @@ pub async fn run_server_with(
         "127.0.0.1",
         addr.port(),
         Some(format!("opc.tcp://127.0.0.1:{}/", addr.port())),
+        std::path::PathBuf::from(format!("target/tmp/pki-server-{}", addr.port())),
     )
     .build()
     .unwrap();
@@ -143,11 +145,16 @@ pub async fn run_server_with(
 }
 
 /// Shared server builder configuration.
+///
+/// `pki_dir`: where OPC UA certificates are stored.
+/// - Production: `./pki-server-{port}` (persists across restarts on the Pi)
+/// - Tests: `target/tmp/pki-server-{port}` (gitignored, wiped by `cargo clean`)
 fn build_server_builder(
     app_name: &str,
     host: &str,
     port: u16,
     discovery_url: Option<String>,
+    pki_dir: std::path::PathBuf,
 ) -> ServerBuilder {
     // application_uri must differ from NS_URI — otherwise the namespace table
     // would register "urn:howick-edge-agent" at index 1 (server URI) AND
@@ -163,7 +170,7 @@ fn build_server_builder(
         .product_uri("https://github.com/joeblew999/opcua-howick")
         .host(host.to_owned())
         .port(port)
-        .pki_dir(format!("./pki-server-{port}"))
+        .pki_dir(pki_dir)
         .build_info(BuildInfo {
             product_uri: "https://github.com/joeblew999/opcua-howick".into(),
             manufacturer_name: "Ubuntu Software Pty Ltd".into(),
