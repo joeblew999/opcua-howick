@@ -1,7 +1,23 @@
 # opcua-howick configuration
-# Topology A (Cloud):  plat_trunk.url = CF Worker URL
-# Topology B (LAN):    plat_trunk.url = http://localhost:3000 (Tauri)
-# Topology C (Hybrid): plat_trunk.url = http://localhost:3000, Tauri syncs to cloud
+#
+# DEPLOYMENT OPTIONS for Prin's factory (Si Racha, Thailand):
+#
+# Option A — Pi on LAN, writes to Howick PC via network share:
+#   machine_input_dir = "//howick-pc/howick-jobs/"   (SMB share)
+#
+# Option B — Run opcua-howick.exe directly ON the Howick Windows PC:
+#   machine_input_dir = "C:\\Howick\\Jobs\\"         (local path, TBC with Prin)
+#   This is the simplest path to demo — no USB stick, no Pi needed.
+#   Just drop opcua-howick.exe on the machine PC and configure this file.
+#
+# Current status: machine_input_dir is a placeholder.
+# Ask Prin's operator: "What folder do you copy the USB files into
+# on the Howick machine computer?"
+#
+# Topologies (ADR-0012):
+#   Cloud:  plat_trunk.url = "https://your-worker.workers.dev"
+#   LAN:    plat_trunk.url = "http://localhost:3000"  (Tauri)
+#   Hybrid: LAN primary + Automerge CRDT syncs to cloud
 
 [opcua]
 host             = "0.0.0.0"
@@ -10,15 +26,26 @@ application_name = "Howick Edge Agent - Si Racha Factory"
 
 [http]
 host = "0.0.0.0"
-port = 4841   # CF Worker or Tauri backend calls GET /status on this port
+port = 4841
 
 [machine]
-machine_name       = "Howick FRAMA"
-job_input_dir      = "./jobs/input"
-machine_input_dir  = "./jobs/machine"    # TODO: confirm with Prin
-machine_output_dir = "./jobs/output"     # TODO: confirm with Prin
+machine_name = "Howick FRAMA"
+
+# Job input: plat-trunk drops CSVs here (or operators copy manually)
+job_input_dir = "./jobs/input"
+
+# Machine input: WHERE THE HOWICK SOFTWARE WATCHES FOR CSV FILES
+# TODO: ask Prin's operator for the exact path
+# Option A (Pi → network share): "//howick-pc/howick-jobs/"
+# Option B (Windows, local):     "C:\\Howick\\Jobs\\"
+machine_input_dir = "./jobs/machine"
+
+# Machine output: where completion signals appear (if any)
+machine_output_dir = "./jobs/output"
 
 [plat_trunk]
+# Cloud topology: url = "https://your-worker.workers.dev"
+# LAN topology:   url = "http://localhost:3000"
 url                       = "http://localhost:3000"
 api_key                   = ""
 status_push_interval_secs = 5

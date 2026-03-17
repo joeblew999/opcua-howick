@@ -1,5 +1,6 @@
-[tools]
-rust = "1.93.1"
+# mise.toml — task runner for opcua-howick
+# Rust version is pinned in rust-toolchain.toml (rustup standard).
+# mise respects rust-toolchain.toml automatically — do not add rust here.
 
 [env]
 RUST_BACKTRACE = "1"
@@ -12,54 +13,58 @@ description = "Build (native dev)"
 run         = "cargo build"
 
 [tasks.run]
-description = "Run the edge agent locally (reads ./config.toml)"
+description = "Run locally (reads ./config.toml)"
 run         = "cargo run"
 
 [tasks.check]
-description = "Check + clippy"
+description = "Check + clippy -D warnings"
 run         = "cargo check && cargo clippy -- -D warnings"
 
 [tasks.fmt]
-description = "Format code"
+description = "Format"
 run         = "cargo fmt"
 
-[tasks.fmt-check]
+[tasks."fmt-check"]
 description = "Check formatting (CI)"
 run         = "cargo fmt --check"
 
-# ── CI ────────────────────────────────────────────────────────────────────────
+# ── CI — single source of truth ───────────────────────────────────────────────
 
 [tasks.ci]
-description = "Full CI — check + fmt-check (no tests: binary-only crate)"
+description = "Full CI: check + fmt-check"
 depends     = ["check", "fmt-check"]
 
 # ── Cross-compile targets ─────────────────────────────────────────────────────
-# Prerequisites: cargo install cross  (uses Docker for cross-compilation)
+# Prerequisites: cargo install cross
 
 [tasks."build:pi5"]
-description = "Cross-compile for Raspberry Pi 5 (aarch64, arm64)"
+description = "Cross-compile for Raspberry Pi 5 (aarch64)"
 run         = "cross build --release --target aarch64-unknown-linux-gnu"
 
 [tasks."build:pi4"]
-description = "Cross-compile for Raspberry Pi 3/4 (armv7, arm32)"
+description = "Cross-compile for Raspberry Pi 3/4 (armv7)"
 run         = "cross build --release --target armv7-unknown-linux-gnueabihf"
 
 [tasks."build:linux"]
-description = "Build for Linux x86_64 (NUC, Beelink, server)"
+description = "Build for Linux x86_64"
 run         = "cargo build --release --target x86_64-unknown-linux-gnu"
 
 [tasks."build:mac-arm"]
-description = "Build for macOS Apple Silicon (Mac Mini factory option)"
+description = "Build for macOS Apple Silicon"
 run         = "cargo build --release --target aarch64-apple-darwin"
 
+[tasks."build:windows"]
+description = "Build for Windows x86_64 (Howick control PC — replaces USB stick)"
+run         = "cargo build --release --target x86_64-pc-windows-msvc"
+
 [tasks."build:all"]
-description = "Build all factory targets (requires cross)"
+description = "Build all factory targets"
 depends     = ["build:pi5", "build:pi4", "build:linux"]
 
 # ── Factory deployment ────────────────────────────────────────────────────────
 
 [tasks."deploy:pi"]
-description = "Build for Pi 5 + deploy via SSH + restart systemd service"
+description = "Build for Pi 5 + deploy via SSH + restart service"
 run         = """
 cross build --release --target aarch64-unknown-linux-gnu
 scp target/aarch64-unknown-linux-gnu/release/opcua-howick ${PI_HOST:-pi@factory-pi.local}:~/opcua-howick.new
@@ -72,8 +77,16 @@ ssh ${PI_HOST:-pi@factory-pi.local} '
 '
 """
 
+[tasks."deploy:windows"]
+description = "Copy opcua-howick.exe to Howick Windows PC over network"
+run         = """
+cargo build --release --target x86_64-pc-windows-msvc
+cp target/x86_64-pc-windows-msvc/release/opcua-howick.exe ${WINDOWS_HOST:-//howick-pc/c$/opcua-howick/}/opcua-howick.exe
+echo "Deployed to Windows PC. Edit config.toml then run opcua-howick.exe"
+"""
+
 [tasks."deploy:config"]
-description = "Deploy config.toml to factory Pi (does not restart service)"
+description = "Deploy config.toml to factory Pi"
 run         = "scp config.toml ${PI_HOST:-pi@factory-pi.local}:~/config.toml"
 
 [tasks."logs:pi"]
@@ -81,27 +94,24 @@ description = "Stream live logs from factory Pi"
 run         = "ssh ${PI_HOST:-pi@factory-pi.local} 'journalctl -u opcua-howick -f'"
 
 [tasks."status:pi"]
-description = "Check machine status via HTTP API on factory Pi"
+description = "Check machine status via HTTP API"
 run         = "curl -s http://${PI_ADDR:-factory-pi.local}:4841/status | python3 -m json.tool"
 
 # ── Local test helpers ────────────────────────────────────────────────────────
 
 [tasks."test:submit"]
-description = "Submit a test CSV job to local opcua-howick (must be running)"
+description = "Submit a test CSV job to local opcua-howick"
 run         = """
 curl -s -X POST http://localhost:4841/jobs \
   -H 'Content-Type: application/json' \
-  -d '{"frameset_name":"TEST-W1","csv":"UNIT,MILLIMETRE\nPROFILE,S8908,Standard Profile\nFRAMESET,TEST-W1\nCOMPONENT,TEST-W1-1,LABEL_NRM,1,2400.0,DIMPLE,20.65,DIMPLE,70.65"}' | python3 -m json.tool
+  -d '{"frameset_name":"TEST-W1","csv":"UNIT,MILLIMETRE\nPROFILE,S8908,Standard Profile\nFRAMESET,TEST-W1\nCOMPONENT,TEST-W1-1,LABEL_NRM,1,2400.0,DIMPLE,20.65,DIMPLE,70.65"}' \
+  | python3 -m json.tool
 """
 
 [tasks."test:status"]
-description = "Check local opcua-howick HTTP status"
+description = "Check local HTTP status"
 run         = "curl -s http://localhost:4841/status | python3 -m json.tool"
 
 [tasks."test:health"]
-description = "Check local opcua-howick health"
+description = "Health check"
 run         = "curl -s http://localhost:4841/health"
-
-[tasks."test:poll"]
-description = "Trigger one poll cycle against local plat-trunk (must have RUST_LOG=debug for output)"
-run         = "RUST_LOG=opcua_howick=debug cargo run -- --poll-once 2>&1 | head -30"

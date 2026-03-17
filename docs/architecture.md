@@ -153,3 +153,54 @@ scp target/aarch64-unknown-linux-gnu/release/opcua-howick pi@factory-pi.local:~/
 
 - https://github.com/joeblew999/howick-rs — CSV parser/serialiser
 - https://github.com/FreeOpcUa/async-opcua — OPC UA library used
+
+---
+
+## Deployment Option B — Windows (Recommended for First Demo)
+
+Since Prin's factory currently uses a USB stick to transfer CSV files to the
+Howick machine's Windows control PC, the simplest integration is to run
+`opcua-howick.exe` directly on that Windows PC. No Pi, no network share needed.
+
+```
+opcua-howick.exe (running on Howick Windows PC)
+    ↓ polls plat-trunk every 5s
+    ↓ writes CSV directly to local watched folder
+Howick machine software picks it up automatically
+```
+
+### Setup steps for Prin's factory
+
+1. **Find the folder** — ask the operator: *"What folder do you copy files
+   from the USB stick into?"* (e.g. `C:\Howick\Jobs\`)
+
+2. **Download the Windows binary** from the GitHub Releases page:
+   `opcua-howick-x86_64-pc-windows-msvc.exe`
+
+3. **Edit `config.toml`**:
+   ```toml
+   [machine]
+   machine_input_dir = "C:\\Howick\\Jobs\\"   # the folder from step 1
+
+   [plat_trunk]
+   url = "https://your-worker.workers.dev"    # CF Worker URL
+   ```
+
+4. **Run it**: double-click `opcua-howick.exe` or run from command prompt.
+   It will poll plat-trunk, download pending jobs, and write CSVs to the
+   Howick folder automatically.
+
+5. **In plat-trunk**: Machine tab → design wall → Generate CSV → Send to Machine.
+   Within 5 seconds the CSV appears in the Howick folder and the machine runs it.
+
+### Building for Windows
+
+```bash
+# From your MacBook (cross-compile):
+rustup target add x86_64-pc-windows-msvc
+cargo install cross
+cross build --release --target x86_64-pc-windows-msvc
+
+# Or let CI build it — every push produces a Windows binary artifact
+# GitHub Release → opcua-howick-x86_64-pc-windows-msvc.exe
+```

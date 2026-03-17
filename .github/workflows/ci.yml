@@ -63,6 +63,14 @@ jobs:
             os: ubuntu-latest
             cross: true
 
+          # Windows x86_64 — for running directly on the Howick control PC
+          # Replaces the USB stick workflow: opcua-howick.exe runs on the
+          # machine's Windows PC and writes CSV directly to the watched folder
+          - name: Windows x86_64 (Howick control PC)
+            target: x86_64-pc-windows-msvc
+            os: windows-latest
+            cross: false
+
     steps:
       - uses: actions/checkout@v4
       - uses: jdx/mise-action@v2
