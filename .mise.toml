@@ -143,6 +143,57 @@ run         = "cargo fmt --check"
 description = "Full CI gate — check + fmt + test"
 depends     = ["check", "fmt-check", "test"]
 
+# ── Release ───────────────────────────────────────────────────────────────────
+# Prerequisites: gh CLI installed and authenticated (brew install gh && gh auth login)
+#
+# Usage:
+#   mise run release          # tags + creates GitHub Release from current Cargo.toml version
+#
+# What happens next (automatically in CI):
+#   GitHub Actions builds 6 binaries (linux x86_64, macos arm64, macos x86_64,
+#   pi-5 arm64, pi-zero-2w arm64, windows x86_64) and attaches them to the release.
+#
+# To bump the version first, edit Cargo.toml [package] version then run this task.
+
+[tasks.release]
+description = "Tag + create GitHub Release — CI builds and attaches all binaries automatically"
+run         = """
+set -euo pipefail
+
+# Require clean working tree
+if ! git diff --quiet || ! git diff --staged --quiet; then
+  echo "ERROR: working tree has uncommitted changes — commit or stash first"
+  exit 1
+fi
+
+# Extract version from Cargo.toml
+VERSION=$(cargo metadata --no-deps --format-version 1 \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['packages'][0]['version'])")
+TAG="v${VERSION}"
+
+# Check tag doesn't already exist
+if git tag --list | grep -q "^${TAG}$"; then
+  echo "ERROR: tag ${TAG} already exists — bump version in Cargo.toml first"
+  exit 1
+fi
+
+echo "Releasing ${TAG}..."
+
+# Tag and push
+git tag "${TAG}"
+git push origin "${TAG}"
+
+# Create GitHub Release (CI picks it up, builds binaries, attaches them)
+gh release create "${TAG}" \
+  --title "${TAG}" \
+  --generate-notes
+
+echo ""
+echo "Release ${TAG} created."
+echo "CI is now building binaries for all targets — check GitHub Actions for progress."
+echo "Binaries will appear in the release once CI completes (~10 min)."
+"""
+
 # ── Cross-compile targets ─────────────────────────────────────────────────────
 # Prerequisites: cargo install cross
 
