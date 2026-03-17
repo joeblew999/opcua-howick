@@ -18,7 +18,7 @@
 //!
 //! ## Setup
 //!
-//! See docs/pi-zero-usb-gadget.md for Pi Zero 2W setup guide.
+//! See docs/customer/06-pi-zero-setup.md for Pi Zero 2W setup guide.
 //!
 //! ## Config (config.toml)
 //!
@@ -72,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
         tracing::warn!(
             "usb_gadget_mode = false in config.toml\n\
              Set usb_gadget_mode = true and machine_input_dir = /mnt/usb_share\n\
-             See docs/pi-zero-usb-gadget.md for Pi Zero 2W setup guide"
+             See docs/customer/06-pi-zero-setup.md for Pi Zero 2W setup guide"
         );
     }
 

@@ -4,23 +4,22 @@
 # howick-agent polls the Pi 5 for pending jobs and writes each CSV
 # to /mnt/usb_share — the virtual USB drive presented to the Howick FRAMA.
 #
-# USB gadget setup: see docs/pi-zero-usb-gadget.md
+# USB gadget setup: see docs/customer/06-pi-zero-setup.md
 # The Howick FRAMA sees the Pi Zero as a normal USB stick.
 #
-# (**) Set machine_input_dir to the subfolder the Howick FRAMA looks for.
-#      Ask Prin's operator: is it the root of the USB, or a named folder?
-#      Root:      /mnt/usb_share
-#      Subfolder: /mnt/usb_share/Howick/Jobs    (example — confirm with operator)
+# Root of virtual USB drive — Howick FRAMA reads from here.
+# If the machine expects a subfolder, change to e.g. /mnt/usb_share/Howick/Jobs
+
+# ── Fields unused by howick-agent (but required by shared Config struct) ──────
+# howick-agent is a minimal binary — no OPC UA server, no HTTP server.
+# These sections must be present so the TOML parses correctly; values don't matter.
 
 [opcua]
-# Pi Zero does not run OPC UA server — these values are unused by howick-agent
-# but the config struct requires them.
 host             = "0.0.0.0"
 port             = 4840
 application_name = "Howick Edge Agent - Pi Zero"
 
 [http]
-# Pi Zero does not run HTTP server — howick-agent only polls, never serves
 host = "0.0.0.0"
 port = 4841
 
@@ -30,7 +29,6 @@ machine_name = "Howick FRAMA"
 # Incoming CSVs from Pi 5 land here temporarily before being written to USB
 job_input_dir = "/home/pi/jobs/input"
 
-# (**) WHERE on the virtual USB the Howick FRAMA reads CSVs — confirm with Prin's operator
 machine_input_dir = "/mnt/usb_share"
 
 machine_output_dir = "/home/pi/jobs/output"

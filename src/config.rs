@@ -162,24 +162,26 @@ impl Default for Config {
     }
 }
 
+impl SensorConfig {
+    /// Converts a raw weight reading (kg on load cell) to metres of steel remaining.
+    ///
+    /// Subtracts the empty spool weight then divides by the linear density.
+    /// Returns 0.0 if the calculation is negative (coil exhausted or not fitted).
+    #[allow(dead_code)]
+    pub fn coil_metres(&self, raw_weight_kg: f64) -> f64 {
+        let steel_kg = raw_weight_kg - self.empty_spool_kg;
+        if steel_kg <= 0.0 {
+            return 0.0;
+        }
+        (steel_kg / self.steel_kg_per_m).max(0.0)
+    }
+}
+
 impl Config {
     pub fn load(path: &std::path::Path) -> anyhow::Result<Self> {
         let content = std::fs::read_to_string(path)?;
         let config: Config = toml::from_str(&content)?;
         Ok(config)
-    }
-
-    /// Converts a raw weight reading (kg on load cell) to metres of steel remaining.
-    #[allow(dead_code)]
-    ///
-    /// Subtracts the empty spool weight then divides by the linear density.
-    /// Returns 0.0 if the calculation is negative (coil exhausted or not fitted).
-    pub fn coil_metres(sensor: &SensorConfig, raw_weight_kg: f64) -> f64 {
-        let steel_kg = raw_weight_kg - sensor.empty_spool_kg;
-        if steel_kg <= 0.0 {
-            return 0.0;
-        }
-        (steel_kg / sensor.steel_kg_per_m).max(0.0)
     }
 
     pub fn load_or_default(path: &std::path::Path) -> Self {

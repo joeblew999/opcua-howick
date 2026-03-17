@@ -76,49 +76,41 @@ async fn handle_new_job(
         .to_string();
     let job_id = format!("{}-{}", frameset_name, timestamp_id());
 
-    let job = Job {
-        id: job_id.clone(),
-        frameset_name: frameset_name.clone(),
-        csv_path: csv_path.to_path_buf(),
-        submitted_at: SystemTime::now(),
-    };
-
-    // Add to queue in shared state
-    {
-        let mut s = state.write().await;
-        s.job_queue.push(job);
-        tracing::info!("Job {} queued (queue depth: {})", job_id, s.job_queue.len());
-    }
-
     match config.delivery_mode {
         DeliveryMode::Direct => {
             // Write directly to machine_input_dir — Topology A (Design PC, no Pi Zero)
+            // Skip the queue entirely: file goes straight to completed.
             let csv = tokio::fs::read_to_string(csv_path).await?;
             crate::usb_gadget::write_job(config, filename, &csv).await?;
             tracing::info!(
                 "CSV written to machine input: {}",
                 config.machine_input_dir.join(filename).display()
             );
-            // Move from queue to completed
+            let job = Job {
+                id: job_id.clone(),
+                frameset_name: frameset_name.clone(),
+                csv_path: csv_path.to_path_buf(),
+                submitted_at: SystemTime::now(),
+            };
             let mut s = state.write().await;
-            s.status = MachineStatus::Running;
-            s.current_job = Some(frameset_name.clone());
-            if let Some(pos) = s.job_queue.iter().position(|j| j.id == job_id) {
-                let job = s.job_queue.remove(pos);
-                s.completed_jobs.push(job);
-            }
+            s.completed_jobs.push(job);
             s.status = MachineStatus::Idle;
+            s.current_job = None;
             tracing::info!("Job {} delivered directly to machine", job_id);
         }
         DeliveryMode::Queue => {
-            // Hold in queue — howick-agent (Pi Zero) picks up via HTTP local queue endpoint
+            // Hold in queue — howick-agent (Pi Zero) picks up via HTTP
             // Topology B/C: agent polls /api/jobs/howick/pending and confirms via /complete
-            tracing::info!(
-                "Job {} queued for agent pickup (delivery_mode=queue)",
-                job_id
-            );
+            let job = Job {
+                id: job_id.clone(),
+                frameset_name: frameset_name.clone(),
+                csv_path: csv_path.to_path_buf(),
+                submitted_at: SystemTime::now(),
+            };
             let mut s = state.write().await;
+            s.job_queue.push(job);
             s.status = MachineStatus::Idle;
+            tracing::info!("Job {} queued for agent pickup (depth: {})", job_id, s.job_queue.len());
         }
     }
 

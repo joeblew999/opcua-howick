@@ -153,7 +153,7 @@ run         = "cross build --release --target aarch64-unknown-linux-gnu"
 # Pi Zero 2W — uses howick-agent (minimal binary, no OPC UA, no HTTP)
 # ~3MB binary, ~16MB RAM — fits Pi Zero 2W (512MB)
 # USB gadget mode: appears as USB mass storage to Howick machine
-# See docs/pi-zero-usb-gadget.md for full setup guide
+# See docs/customer/06-pi-zero-setup.md for full setup guide
 [tasks."build:pi-zero:local"]
 description = "Build howick-agent locally (no cross — for local testing only)"
 run         = "cargo build --release --bin howick-agent"
@@ -163,24 +163,25 @@ description = "Cross-compile howick-agent for Pi Zero 2W (aarch64)"
 run         = "cross build --release --bin howick-agent --target aarch64-unknown-linux-gnu"
 
 [tasks."deploy:pi-zero"]
-description = "Build + deploy howick-agent to Pi Zero 2W (USB gadget mode)"
+description = "Build + deploy howick-agent to Pi Zero 2W — copies config.pi-zero.toml on first deploy"
 run         = """
 cross build --release --bin howick-agent --target aarch64-unknown-linux-gnu
 scp target/aarch64-unknown-linux-gnu/release/howick-agent ${ZERO_HOST:-pi@howick-pi-zero.local}:~/howick-agent.new
-scp config.toml ${ZERO_HOST:-pi@howick-pi-zero.local}:~/config.toml.example
 ssh ${ZERO_HOST:-pi@howick-pi-zero.local} '
   mv ~/howick-agent.new ~/howick-agent
   chmod +x ~/howick-agent
-  sudo systemctl restart howick-agent 2>/dev/null || echo "Service not installed yet — see docs/pi-zero-usb-gadget.md"
+  sudo systemctl restart howick-agent 2>/dev/null || echo "Service not installed yet — see docs/customer/06-pi-zero-setup.md"
   sleep 2
   sudo systemctl status howick-agent --no-pager 2>/dev/null || echo "Run: ./howick-agent"
 '
 VERSION=$(cargo metadata --no-deps --format-version 1 | python3 -c "import sys,json; print(json.load(sys.stdin)['packages'][0]['version'])")
 ssh ${ZERO_HOST:-pi@howick-pi-zero.local} "echo 'v${VERSION}' > ~/.howick-agent-version"
+# Copy config on first deploy only — don't overwrite if already customised
+ssh ${ZERO_HOST:-pi@howick-pi-zero.local} '[ -f ~/config.toml ]' \
+  || { echo "First deploy — copying config.pi-zero.toml → ~/config.toml"; \
+       scp config.pi-zero.toml ${ZERO_HOST:-pi@howick-pi-zero.local}:~/config.toml; }
 echo ""
 echo "Pi Zero deployed (howick-agent v${VERSION})"
-echo "Edit ~/config.toml: usb_gadget_mode=true, machine_input_dir=/mnt/usb_share"
-echo "See docs/pi-zero-usb-gadget.md for USB gadget setup"
 """
 
 [tasks."build:linux"]
@@ -415,7 +416,7 @@ REMOTE
 # ZERO_HOST — Tailscale IP or hostname of Pi Zero 2W (e.g. pi@100.x.x.x)
 
 [tasks."deploy:pi5"]
-description = "Build full opcua-howick binary + deploy to Pi 5 via SSH + restart"
+description = "Build + deploy opcua-howick to Pi 5 — copies config.pi5.toml on first deploy"
 run         = """
 cross build --release --target aarch64-unknown-linux-gnu
 VERSION=$(cargo metadata --no-deps --format-version 1 | python3 -c "import sys,json; print(json.load(sys.stdin)['packages'][0]['version'])")
@@ -428,15 +429,12 @@ ssh ${PI5_HOST:-pi@howick-pi5.local} "
   sleep 2
   sudo systemctl status opcua-howick --no-pager
 "
+# Copy config on first deploy only — don't overwrite if already customised
+ssh ${PI5_HOST:-pi@howick-pi5.local} '[ -f ~/config.toml ]' \
+  || { echo "First deploy — copying config.pi5.toml → ~/config.toml"; \
+       scp config.pi5.toml ${PI5_HOST:-pi@howick-pi5.local}:~/config.toml; }
 """
 
-[tasks."deploy:config:pi5"]
-description = "Deploy config.toml to Pi 5"
-run         = "scp config.toml ${PI5_HOST:-pi@howick-pi5.local}:~/config.toml"
-
-[tasks."deploy:config:pi-zero"]
-description = "Deploy config.toml to Pi Zero 2W"
-run         = "scp config.toml ${ZERO_HOST:-pi@howick-pi-zero.local}:~/config.toml"
 
 [tasks."deploy:windows"]
 description = "Copy opcua-howick.exe to Howick Windows PC over network (runs alongside existing SketchUp + FrameBuilderMRD)"
@@ -576,7 +574,7 @@ ssh ${PI5_HOST:-pi@howick-pi5.local} '
 description = "Export proposal to PDF (01)"
 run         = """
 mkdir -p docs/dist
-pandoc docs/customer/proposal.md \
+pandoc docs/customer/01-proposal.md \
   --pdf-engine=typst \
   --template=docs/templates/howick.typ \
   --metadata title="Factory Automation Proposal" \
@@ -588,7 +586,7 @@ echo "PDF: docs/dist/01-proposal.pdf"
 description = "Export system overview / topology to PDF (02)"
 run         = """
 mkdir -p docs/dist
-pandoc docs/customer/system-overview.md \
+pandoc docs/customer/02-system-overview.md \
   --pdf-engine=typst \
   --template=docs/templates/howick.typ \
   --metadata title="System Overview" \
@@ -600,7 +598,7 @@ echo "PDF: docs/dist/02-system-overview.pdf"
 description = "Export hardware quote to PDF (03)"
 run         = """
 mkdir -p docs/dist
-pandoc docs/customer/hardware-quote.md \
+pandoc docs/customer/03-hardware-quote.md \
   --pdf-engine=typst \
   --template=docs/templates/howick.typ \
   --metadata title="Hardware Quote" \
@@ -612,7 +610,7 @@ echo "PDF: docs/dist/03-hardware-quote.pdf"
 description = "Export setup guide to PDF (04)"
 run         = """
 mkdir -p docs/dist
-pandoc docs/customer/setup-guide.md \
+pandoc docs/customer/04-setup-guide.md \
   --pdf-engine=typst \
   --template=docs/templates/howick.typ \
   --metadata title="Setup Guide" \
@@ -624,7 +622,7 @@ echo "PDF: docs/dist/04-setup-guide.pdf"
 description = "Export project roadmap to PDF (05)"
 run         = """
 mkdir -p docs/dist
-pandoc docs/customer/roadmap.md \
+pandoc docs/customer/05-roadmap.md \
   --pdf-engine=typst \
   --template=docs/templates/howick.typ \
   --metadata title="Project Roadmap" \
@@ -636,7 +634,7 @@ echo "PDF: docs/dist/05-roadmap.pdf"
 description = "Export Pi Zero USB gadget setup guide to PDF (06)"
 run         = """
 mkdir -p docs/dist
-pandoc docs/customer/pi-zero-setup.md \
+pandoc docs/customer/06-pi-zero-setup.md \
   --pdf-engine=typst \
   --template=docs/templates/howick.typ \
   --metadata title="Pi Zero 2W Setup Guide" \
@@ -648,7 +646,7 @@ echo "PDF: docs/dist/06-pi-zero-setup.pdf"
 description = "Export operations runbook to PDF (07)"
 run         = """
 mkdir -p docs/dist
-pandoc docs/customer/ops-runbook.md \
+pandoc docs/customer/07-ops-runbook.md \
   --pdf-engine=typst \
   --template=docs/templates/howick.typ \
   --metadata title="Operations Runbook" \

@@ -9,7 +9,7 @@
 # Usage: ./deploy/deploy-pi-zero.sh [user@host]
 #   Default host: pi@howick-pi-zero.local
 #
-# See docs/pi-zero-usb-gadget.md for first-time setup (USB gadget mode, Tailscale, etc.)
+# See docs/customer/06-pi-zero-setup.md for first-time setup (USB gadget mode, Tailscale, etc.)
 
 set -euo pipefail
 

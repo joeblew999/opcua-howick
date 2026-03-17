@@ -23,7 +23,7 @@ a browser dashboard and arrive at the machine automatically.
 
 From the machine's perspective: nothing changed. It still reads from USB.
 
-See [docs/customer/system-overview.md](docs/customer/system-overview.md) for full
+See [docs/customer/02-system-overview.md](docs/customer/02-system-overview.md) for full
 topology diagrams.
 
 ---
@@ -54,13 +54,13 @@ All documentation lives in [docs/customer/](docs/customer/).
 
 | Doc | Purpose |
 |-----|---------|
-| [proposal.md](docs/customer/proposal.md) | What the system is, what it costs, recommendation |
-| [system-overview.md](docs/customer/system-overview.md) | Topology diagrams, where things run, OPC UA |
-| [hardware-quote.md](docs/customer/hardware-quote.md) | What to order and where in Thailand |
-| [setup-guide.md](docs/customer/setup-guide.md) | What Prin does vs what Gerard does |
-| [roadmap.md](docs/customer/roadmap.md) | Phases 1–4 with status and open questions |
-| [pi-zero-setup.md](docs/customer/pi-zero-setup.md) | Pi Zero 2W USB gadget provisioning (Gerard) |
-| [ops-runbook.md](docs/customer/ops-runbook.md) | Full lifecycle: deploy, update, secrets (Gerard) |
+| [proposal.md](docs/customer/01-proposal.md) | What the system is, what it costs, recommendation |
+| [system-overview.md](docs/customer/02-system-overview.md) | Topology diagrams, where things run, OPC UA |
+| [hardware-quote.md](docs/customer/03-hardware-quote.md) | What to order and where in Thailand |
+| [setup-guide.md](docs/customer/04-setup-guide.md) | What Prin does vs what Gerard does |
+| [roadmap.md](docs/customer/05-roadmap.md) | Phases 1–4 with status and open questions |
+| [pi-zero-setup.md](docs/customer/06-pi-zero-setup.md) | Pi Zero 2W USB gadget provisioning (Gerard) |
+| [ops-runbook.md](docs/customer/07-ops-runbook.md) | Full lifecycle: deploy, update, secrets (Gerard) |
 
 PDFs in [docs/dist/](docs/dist/) — rebuild with `mise run docs:pdf:all`.
 
@@ -68,13 +68,13 @@ PDFs in [docs/dist/](docs/dist/) — rebuild with `mise run docs:pdf:all`.
 
 ## Config files
 
-Ready-to-deploy configs for each option:
+One config per machine — deploy tasks copy it automatically on first deploy:
 
-| File | For |
-|------|-----|
-| [config.option-a.toml](config.option-a.toml) | Design PC (Windows), direct mode |
-| [config.option-b-pi5.toml](config.option-b-pi5.toml) | Pi 5 server, queue mode |
-| [config.pi-zero.toml](config.pi-zero.toml) | Pi Zero 2W, USB gadget + sensor |
+| File | Machine |
+|------|---------|
+| [config.windows.toml](config.windows.toml) | Windows Design PC |
+| [config.pi5.toml](config.pi5.toml) | Pi 5 |
+| [config.pi-zero.toml](config.pi-zero.toml) | Pi Zero 2W |
 
 ---
 

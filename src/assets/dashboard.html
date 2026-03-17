@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Howick Pipeline</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; padding: 1.5rem 1rem 3rem; }
+h1 { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.2rem; }
+.subtitle { color: #64748b; font-size: 0.8rem; margin-bottom: 2rem; }
+
+/* Pipeline */
+.pipeline { display: flex; align-items: stretch; gap: 0; margin-bottom: 2rem; flex-wrap: wrap; gap: 0.5rem; }
+.node { flex: 1; min-width: 140px; background: #1e293b; border-radius: 0.75rem; padding: 1rem; border: 2px solid #334155; position: relative; transition: border-color 0.3s; }
+.node.ok     { border-color: #22c55e33; }
+.node.warn   { border-color: #f59e0b33; }
+.node.error  { border-color: #ef444433; }
+.node-icon   { font-size: 1.6rem; margin-bottom: 0.4rem; }
+.node-name   { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; margin-bottom: 0.2rem; }
+.node-status { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
+.node-detail { font-size: 0.78rem; color: #94a3b8; line-height: 1.5; }
+.node-error  { font-size: 0.75rem; color: #f87171; margin-top: 0.4rem; background: #7f1d1d33; padding: 0.3rem 0.5rem; border-radius: 0.3rem; word-break: break-word; }
+.arrow { display: flex; align-items: center; font-size: 1.4rem; color: #334155; padding: 0 0.25rem; flex-shrink: 0; align-self: center; }
+
+/* Jobs */
+.section { margin-bottom: 1.5rem; }
+.section h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; margin-bottom: 0.75rem; }
+.job-list { display: flex; flex-direction: column; gap: 0.4rem; }
+.job-row { display: flex; align-items: center; gap: 0.75rem; background: #1e293b; border-radius: 0.5rem; padding: 0.6rem 0.85rem; font-size: 0.85rem; }
+.job-badge { font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 999px; font-weight: 600; }
+.badge-queued    { background: #1d4ed8; color: #bfdbfe; }
+.badge-done      { background: #14532d; color: #86efac; }
+.empty-state { color: #475569; font-size: 0.85rem; padding: 0.5rem 0; }
+
+/* Upload */
+.upload-section { margin-top: 2rem; }
+.drop-zone { border: 2px dashed #334155; border-radius: 1rem; padding: 2.5rem 2rem; text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s; background: #1e293b; }
+.drop-zone.drag-over { border-color: #3b82f6; background: #1e3a5f; }
+.drop-zone.success   { border-color: #22c55e; background: #14532d22; }
+.drop-zone.errstate  { border-color: #ef4444; background: #7f1d1d22; }
+.drop-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+.drop-text { color: #94a3b8; font-size: 0.9rem; line-height: 1.6; }
+.drop-text strong { color: #e2e8f0; }
+#file-input { display: none; }
+.pick-btn { display: inline-block; margin-top: 1rem; padding: 0.55rem 1.4rem; background: #3b82f6; color: white; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 600; cursor: pointer; border: none; }
+.pick-btn:hover { background: #2563eb; }
+#upload-msg { margin-top: 1rem; font-size: 0.9rem; min-height: 1.4rem; text-align: center; color: #94a3b8; }
+#upload-msg.ok  { color: #22c55e; }
+#upload-msg.err { color: #ef4444; }
+
+.refresh-note { text-align: right; font-size: 0.7rem; color: #334155; margin-bottom: 0.5rem; }
+</style>
+</head>
+<body>
+
+<h1>Howick Pipeline</h1>
+<p class="subtitle">ubuntu Software — live job delivery status</p>
+
+<p class="refresh-note" id="refresh-note">Connecting…</p>
+
+<div class="pipeline" id="pipeline">
+  <!-- rendered by JS -->
+</div>
+
+<div class="section">
+  <h2>Job Queue</h2>
+  <div class="job-list" id="queued-list"><p class="empty-state">Loading…</p></div>
+</div>
+
+<div class="section">
+  <h2>Recent Completions</h2>
+  <div class="job-list" id="completed-list"><p class="empty-state">Loading…</p></div>
+</div>
+
+<div class="upload-section">
+  <div class="section"><h2>Upload Job</h2></div>
+  <div class="drop-zone" id="drop-zone">
+    <div class="drop-icon">📂</div>
+    <p class="drop-text"><strong>Drag CSV here</strong><br>or click to pick from FrameBuilderMRD</p>
+    <button class="pick-btn" onclick="document.getElementById('file-input').click()">Choose CSV file</button>
+    <input type="file" id="file-input" accept=".csv,text/csv,text/plain">
+  </div>
+  <div id="upload-msg"></div>
+</div>
+
+<script>
+// ── Pipeline rendering ─────────────────────────────────────────────────────
+
+function nodeClass(status) {
+  if (!status || status === 'Offline' || status === 'Never seen') return '';
+  if (status === 'Online' || status === 'Idle' || status === 'Running') return 'ok';
+  if (status === 'Warn' || status === 'Stale') return 'warn';
+  return 'error';
+}
+
+function colour(status) {
+  const map = {
+    'Online': '#22c55e', 'Idle': '#3b82f6', 'Running': '#22c55e',
+    'Stale': '#f59e0b', 'Offline': '#ef4444', 'Never seen': '#6b7280',
+    'Error': '#ef4444',
+  };
+  return map[status] || '#94a3b8';
+}
+
+function agentStatus(secsAgo) {
+  if (secsAgo === null) return 'Never seen';
+  if (secsAgo < 30)   return 'Online';
+  if (secsAgo < 120)  return 'Stale';
+  return 'Offline';
+}
+
+function ago(secs) {
+  if (secs === null) return '—';
+  if (secs < 60)  return secs + 's ago';
+  if (secs < 3600) return Math.floor(secs / 60) + 'm ago';
+  return Math.floor(secs / 3600) + 'h ago';
+}
+
+function renderNode(icon, name, status, details, error) {
+  const cls = nodeClass(status);
+  const col = colour(status);
+  const errHtml = error ? `<div class="node-error">⚠ ${error}</div>` : '';
+  const detailHtml = details.map(d => `<div>${d}</div>`).join('');
+  return `<div class="node ${cls}">
+    <div class="node-icon">${icon}</div>
+    <div class="node-name">${name}</div>
+    <div class="node-status" style="color:${col}">${status}</div>
+    <div class="node-detail">${detailHtml}</div>
+    ${errHtml}
+  </div>`;
+}
+
+function coilLabel(metres, lowAlert) {
+  if (metres === 0 || metres === null) return '— (no sensor)';
+  const m = metres.toFixed(0);
+  return lowAlert ? `⚠ ${m} m (LOW)` : `${m} m`;
+}
+
+function renderPipeline(s, jobs) {
+  const uploadAgo  = ago(s.last_upload_secs_ago);
+  const agentSt    = agentStatus(s.agent_last_seen_secs_ago);
+  const agentAgo   = ago(s.agent_last_seen_secs_ago);
+  const sensorAgo  = ago(s.sensor_last_read_secs_ago);
+  const lastDone   = jobs.completed.length > 0 ? jobs.completed[0].frameset_name : '—';
+  const coilStr    = coilLabel(s.coil_remaining, s.coil_low_alert);
+  const coilErr    = s.coil_low_alert ? `Low coil — check before starting job` : '';
+
+  const nodes = [
+    renderNode('💻', 'Design PC', s.last_upload_secs_ago !== null ? 'Online' : 'Waiting',
+      [`Last upload: ${uploadAgo}`], ''),
+    '<div class="arrow">→</div>',
+    renderNode('🖥️', 'opcua-howick', s.status,
+      [`Queue: ${s.queue_depth} job${s.queue_depth !== 1 ? 's' : ''}`,
+       `Done: ${s.completed_count}`],
+      s.last_error || ''),
+    '<div class="arrow">→</div>',
+    renderNode('🔌', 'Pi Zero / USB', agentSt,
+      [`Last seen: ${agentAgo}`,
+       `Coil: ${coilStr}`,
+       s.sensor_last_read_secs_ago !== null ? `Sensor: ${sensorAgo}` : 'Sensor: not fitted'],
+      (s.agent_last_error || '') + (coilErr ? (s.agent_last_error ? ' | ' : '') + coilErr : '')),
+    '<div class="arrow">→</div>',
+    renderNode('🏭', 'Howick FRAMA', lastDone !== '—' ? 'Active' : 'Waiting',
+      [`Last job: ${lastDone}`,
+       s.current_job ? `Running: ${s.current_job}` : 'Idle'],
+      ''),
+  ];
+
+  document.getElementById('pipeline').innerHTML = nodes.join('');
+}
+
+function renderJobs(jobs) {
+  const ql = document.getElementById('queued-list');
+  const cl = document.getElementById('completed-list');
+
+  if (jobs.queued.length === 0) {
+    ql.innerHTML = '<p class="empty-state">No jobs queued</p>';
+  } else {
+    ql.innerHTML = jobs.queued.map(j =>
+      `<div class="job-row"><span class="job-badge badge-queued">Queued</span>${j.frameset_name} <span style="color:#475569;font-size:0.75rem">${j.id}</span></div>`
+    ).join('');
+  }
+
+  if (jobs.completed.length === 0) {
+    cl.innerHTML = '<p class="empty-state">No completed jobs yet</p>';
+  } else {
+    cl.innerHTML = jobs.completed.map(j =>
+      `<div class="job-row"><span class="job-badge badge-done">Done</span>${j.frameset_name} <span style="color:#475569;font-size:0.75rem">${j.id}</span></div>`
+    ).join('');
+  }
+}
+
+async function refresh() {
+  try {
+    const [statusRes, jobsRes] = await Promise.all([
+      fetch('/status'),
+      fetch('/jobs'),
+    ]);
+    const s    = await statusRes.json();
+    const jobs = await jobsRes.json();
+    renderPipeline(s, jobs);
+    renderJobs(jobs);
+    const now = new Date().toLocaleTimeString();
+    document.getElementById('refresh-note').textContent = 'Updated ' + now;
+  } catch (e) {
+    document.getElementById('refresh-note').textContent = 'Connection error — retrying…';
+  }
+}
+
+refresh();
+setInterval(refresh, 2000);
+
+// ── Upload ─────────────────────────────────────────────────────────────────
+
+const zone  = document.getElementById('drop-zone');
+const input = document.getElementById('file-input');
+const msg   = document.getElementById('upload-msg');
+
+zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', ()  => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => {
+  e.preventDefault();
+  zone.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) upload(e.dataTransfer.files[0]);
+});
+input.addEventListener('change', () => { if (input.files[0]) upload(input.files[0]); });
+
+async function upload(file) {
+  msg.className = '';
+  msg.textContent = 'Uploading ' + file.name + '…';
+  zone.className = 'drop-zone';
+  try {
+    const text = await file.text();
+    const res  = await fetch('/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain', 'X-Filename': file.name },
+      body: text,
+    });
+    const json = await res.json();
+    if (json.ok) {
+      zone.classList.add('success');
+      msg.className = 'ok';
+      msg.textContent = '✓ ' + file.name + ' queued — the machine will pick it up shortly.';
+      refresh();
+    } else {
+      zone.classList.add('errstate');
+      msg.className = 'err';
+      msg.textContent = '✗ ' + (json.error || 'Upload failed');
+    }
+  } catch (e) {
+    zone.classList.add('errstate');
+    msg.className = 'err';
+    msg.textContent = '✗ Network error: ' + e.message;
+  }
+  input.value = '';
+}
+</script>
+</body>
+</html>

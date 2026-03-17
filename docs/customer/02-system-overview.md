@@ -34,7 +34,7 @@ copying files.
 └─────────────────────────────────────────────────────┘
 ```
 
-Key config (see `config.option-a.toml`):
+Key config (see `config.windows.toml`):
 ```toml
 delivery_mode     = "direct"
 usb_gadget_mode   = false
@@ -80,7 +80,7 @@ USB port and replaces the USB stick. Operator uses a browser on any device.
 └─────────────────────────────────────────────────────┘
 ```
 
-Key config (see `config.option-b-pi5.toml` and `config.pi-zero.toml`):
+Key config (see `config.pi5.toml` and `config.pi-zero.toml`):
 ```toml
 # Pi 5
 delivery_mode   = "queue"

@@ -17,7 +17,7 @@
 ///
 /// # Weight → metres conversion
 ///
-/// Done server-side in opcua-howick (config.rs: Config::coil_metres()).
+/// Done server-side in opcua-howick (config.rs: SensorConfig::coil_metres()).
 /// Pi Zero only reads and pushes raw kg — no calibration needed on this side.
 ///
 /// # Dev / test without hardware
@@ -58,7 +58,7 @@ pub fn read_weight_kg() -> Option<f64> {
 
     // 2. File written by HX711 userspace helper script
     //    A small Python script on the Pi Zero reads HX711 and writes /tmp/coil_weight_kg.
-    //    See docs/pi-zero-usb-gadget.md — Phase 2 setup.
+    //    See docs/customer/06-pi-zero-setup.md — Phase 2 setup.
     if let Ok(contents) = std::fs::read_to_string("/tmp/coil_weight_kg") {
         if let Ok(kg) = contents.trim().parse::<f64>() {
             tracing::debug!(weight_kg = kg, "Coil weight from /tmp/coil_weight_kg");

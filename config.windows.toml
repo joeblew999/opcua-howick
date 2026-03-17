@@ -1,12 +1,13 @@
-# config.option-a.toml — Option A: Design PC only (Windows)
+# config.windows.toml — Option A: Design PC only (Windows)
 #
 # Copy to config.toml on the Design PC.
 # opcua-howick.exe runs alongside SketchUp + FrameBuilderMRD.
 # Operator drags CSV into browser at http://localhost:4841/dashboard
 # then carries USB stick to Howick FRAMA as before.
 #
-# (**) Set machine_input_dir to the USB stick path confirmed by Prin's operator.
-#      Likely C:\Howick\Jobs\ or C:\Jobs\ — ask the operator.
+# machine_input_dir is the USB stick root on the Design PC.
+# Windows assigns USB sticks a drive letter — D:\ is the default here.
+# Change to E:\ or F:\ if D: is already taken by another drive.
 
 [opcua]
 host             = "0.0.0.0"
@@ -23,8 +24,8 @@ machine_name = "Howick FRAMA"
 # Incoming uploads land here first (watcher picks them up)
 job_input_dir = "C:\\opcua-howick\\jobs\\input"
 
-# (**) WHERE on the USB the Howick FRAMA reads CSVs — confirm with Prin's operator
-machine_input_dir = "C:\\Howick\\Jobs\\"
+# Root of USB stick — Windows assigns D:\ by default for the first USB drive
+machine_input_dir = "D:\\"
 
 machine_output_dir = "C:\\opcua-howick\\jobs\\output"
 

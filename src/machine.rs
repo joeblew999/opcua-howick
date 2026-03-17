@@ -53,8 +53,6 @@ pub struct MachineState {
     // ── Phase 2: coil sensor ──────────────────────────────────────────────────
     /// When Pi Zero last pushed a coil weight reading (None = sensor not fitted)
     pub sensor_last_read_at: Option<std::time::SystemTime>,
-    /// True when coil_remaining_m < sensor.low_alert_m
-    pub coil_low_alert: bool,
 }
 
 impl MachineState {
@@ -71,7 +69,6 @@ impl MachineState {
             agent_last_seen_at: None,
             agent_last_error: String::new(),
             sensor_last_read_at: None,
-            coil_low_alert: false,
         }
     }
 }

@@ -77,12 +77,10 @@ machine_name = "Howick FRAMA"
 # Where uploaded CSVs land before being processed by the file watcher
 job_input_dir = "./jobs/input"
 
-# (**) WHERE on the USB / local path the Howick FRAMA reads CSVs from
-#
-# Topology A (Design PC, Windows):  "C:\\Howick\\Jobs\\"     ← TBC with Prin
-# Topology B (Pi 5 → Pi Zero USB):  "/mnt/usb_share"         ← root, or subfolder
-# Topology C (Design PC → Pi Zero): N/A — Pi Zero writes direct to USB
-# Local dev:                         "./jobs/machine"
+# WHERE the Howick FRAMA reads CSVs from:
+#   Topology A (Design PC, Windows): "D:\\"           (USB stick root)
+#   Topology B (Pi 5 → Pi Zero USB): "/mnt/usb_share" (USB gadget root)
+#   Local dev:                        "./jobs/machine"
 machine_input_dir = "./jobs/machine"
 
 machine_output_dir = "./jobs/output"
