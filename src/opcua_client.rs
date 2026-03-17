@@ -193,19 +193,11 @@ pub async fn run_opcua_agent(config: Config, state: SharedState) -> anyhow::Resu
             "CSV written to machine input via OPC UA"
         );
 
-        // Update local state
+        // Mark Running while job is in flight
         {
             let mut s = state.write().await;
             s.status = MachineStatus::Running;
             s.current_job = Some(frameset_name.clone());
-            s.completed_jobs.push(Job {
-                id: job_id.clone(),
-                frameset_name,
-                csv_path: dest,
-                submitted_at: std::time::SystemTime::now(),
-            });
-            s.status = MachineStatus::Idle;
-            s.current_job = None;
         }
 
         // Call Jobs/CompleteJob(job_id) on the Pi 5 — moves job from queue to completed.
@@ -220,6 +212,19 @@ pub async fn run_opcua_agent(config: Config, state: SharedState) -> anyhow::Resu
         {
             Ok(_) => tracing::info!(job_id = %job_id, "OPC UA CompleteJob ✓"),
             Err(e) => tracing::warn!(job_id = %job_id, "OPC UA CompleteJob failed: {e:?}"),
+        }
+
+        // Mark Idle and record in history
+        {
+            let mut s = state.write().await;
+            s.status = MachineStatus::Idle;
+            s.current_job = None;
+            s.completed_jobs.push(Job {
+                id: job_id.clone(),
+                frameset_name,
+                csv_path: dest,
+                submitted_at: std::time::SystemTime::now(),
+            });
         }
     }
 }

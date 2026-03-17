@@ -74,7 +74,7 @@ async fn main() -> anyhow::Result<()> {
         machine_dir    = %config.machine.machine_input_dir.display(),
         usb_gadget     = config.machine.usb_gadget_mode,
         poll_interval  = config.plat_trunk.status_push_interval_secs,
-        "Configuration loaded — polling for jobs"
+        "Configuration loaded — ready to receive jobs"
     );
 
     // Shared machine state (lightweight — tracks job history only)
