@@ -47,7 +47,12 @@ pub async fn run_server(config: &Config, state: SharedState) -> anyhow::Result<(
     let ns = handle.get_namespace_index(NS_URI).unwrap();
     let subscriptions = handle.subscriptions().clone();
 
-    build_address_space(ns, &node_manager, &config.machine.machine_name, completions.clone());
+    build_address_space(
+        ns,
+        &node_manager,
+        &config.machine.machine_name,
+        completions.clone(),
+    );
 
     let state_clone = state.clone();
     let nm_clone = node_manager.clone();
@@ -114,7 +119,12 @@ pub async fn run_server_with(
     let ns = handle.get_namespace_index(NS_URI).unwrap();
     let subscriptions = handle.subscriptions().clone();
 
-    build_address_space(ns, &node_manager, &config.machine.machine_name, completions.clone());
+    build_address_space(
+        ns,
+        &node_manager,
+        &config.machine.machine_name,
+        completions.clone(),
+    );
 
     let state_clone = state.clone();
     let nm_clone = node_manager.clone();
@@ -146,8 +156,7 @@ fn build_server_builder(
     // Always set discovery_urls explicitly so clients connect to 127.0.0.1,
     // not the bind address (0.0.0.0). On macOS, localhost resolves to [::1]
     // (IPv6) but the server binds IPv4-only → connection refused.
-    let endpoint_url = discovery_url
-        .unwrap_or_else(|| format!("opc.tcp://127.0.0.1:{port}/"));
+    let endpoint_url = discovery_url.unwrap_or_else(|| format!("opc.tcp://127.0.0.1:{port}/"));
 
     ServerBuilder::new_anonymous(app_name)
         .application_uri("urn:howick-edge-server")
@@ -306,20 +315,24 @@ fn build_address_space(
         .insert(&mut *address_space);
 
     // Method callback: queue job_id for async processing by sync_state_to_nodes
-    manager.inner().add_method_callback(method_node, move |args| {
-        let Some(Variant::String(s)) = args.first() else {
-            return Err(StatusCode::BadTypeMismatch);
-        };
-        let job_id = s.value().clone().unwrap_or_default();
-        if job_id.is_empty() {
-            return Err(StatusCode::BadInvalidArgument);
-        }
-        tracing::info!(job_id = %job_id, "OPC UA CompleteJob called");
-        completions.lock().unwrap().push(job_id);
-        Ok(Vec::new())
-    });
+    manager
+        .inner()
+        .add_method_callback(method_node, move |args| {
+            let Some(Variant::String(s)) = args.first() else {
+                return Err(StatusCode::BadTypeMismatch);
+            };
+            let job_id = s.value().clone().unwrap_or_default();
+            if job_id.is_empty() {
+                return Err(StatusCode::BadInvalidArgument);
+            }
+            tracing::info!(job_id = %job_id, "OPC UA CompleteJob called");
+            completions.lock().unwrap().push(job_id);
+            Ok(Vec::new())
+        });
 
-    tracing::info!("OPC UA address space built — Howick/Machine + Howick/Jobs + CompleteJob method");
+    tracing::info!(
+        "OPC UA address space built — Howick/Machine + Howick/Jobs + CompleteJob method"
+    );
 }
 
 /// Snapshot of machine state for the sync task (avoids holding lock during async I/O).
@@ -371,15 +384,15 @@ async fn sync_state_to_nodes(
                 last_error: s.last_error.clone(),
                 queue_depth: s.job_queue.len() as u32,
                 completed_count: s.completed_jobs.len() as u32,
-                pending: s.job_queue.first().map(|j| {
-                    (j.id.clone(), j.frameset_name.clone(), j.csv_path.clone())
-                }),
+                pending: s
+                    .job_queue
+                    .first()
+                    .map(|j| (j.id.clone(), j.frameset_name.clone(), j.csv_path.clone())),
             }
         }; // async lock dropped here — safe to do file I/O
 
         // Read pending job CSV from disk (outside the state lock)
-        let (pending_id, pending_name, pending_csv) = if let Some((id, name, path)) = snap.pending
-        {
+        let (pending_id, pending_name, pending_csv) = if let Some((id, name, path)) = snap.pending {
             let csv = tokio::fs::read_to_string(&path).await.unwrap_or_default();
             (id, name, csv)
         } else {

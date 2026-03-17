@@ -110,7 +110,11 @@ async fn handle_new_job(
             let mut s = state.write().await;
             s.job_queue.push(job);
             s.status = MachineStatus::Idle;
-            tracing::info!("Job {} queued for agent pickup (depth: {})", job_id, s.job_queue.len());
+            tracing::info!(
+                "Job {} queued for agent pickup (depth: {})",
+                job_id,
+                s.job_queue.len()
+            );
         }
     }
 

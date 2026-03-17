@@ -54,7 +54,10 @@ fn make_config(port: u16) -> Config {
             usb_gadget_mode: false,
             delivery_mode: DeliveryMode::Queue,
         },
-        http: HttpConfig { host: "127.0.0.1".into(), port: 0 },
+        http: HttpConfig {
+            host: "127.0.0.1".into(),
+            port: 0,
+        },
         plat_trunk: PlatTrunkConfig {
             url: "http://localhost:3000".into(),
             api_key: String::new(),
@@ -261,7 +264,10 @@ async fn opcua_subscribe_pending_job_id() {
         .create_monitored_items(
             sub_id,
             TimestampsToReturn::Both,
-            vec![MonitoredItemCreateRequest::from(NodeId::new(ns, "Jobs/PendingJobId"))],
+            vec![MonitoredItemCreateRequest::from(NodeId::new(
+                ns,
+                "Jobs/PendingJobId",
+            ))],
         )
         .await
         .unwrap();
@@ -279,10 +285,7 @@ async fn opcua_subscribe_pending_job_id() {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-async fn get_namespace_index(
-    session: &opcua::client::Session,
-    uri: &str,
-) -> Option<u16> {
+async fn get_namespace_index(session: &opcua::client::Session, uri: &str) -> Option<u16> {
     use opcua::types::VariableId;
 
     let results = session

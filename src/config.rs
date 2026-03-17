@@ -103,18 +103,26 @@ pub struct SensorConfig {
     pub poll_interval_secs: u64,
 }
 
-fn default_empty_spool_kg() -> f64 { 18.0 }
-fn default_steel_kg_per_m()  -> f64 { 0.74 }   // S8908 profile: ~740g/m
-fn default_low_alert_m()     -> f64 { 50.0 }
-fn default_sensor_poll_secs() -> u64 { 30 }
+fn default_empty_spool_kg() -> f64 {
+    18.0
+}
+fn default_steel_kg_per_m() -> f64 {
+    0.74
+} // S8908 profile: ~740g/m
+fn default_low_alert_m() -> f64 {
+    50.0
+}
+fn default_sensor_poll_secs() -> u64 {
+    30
+}
 
 impl Default for SensorConfig {
     fn default() -> Self {
         Self {
-            enabled:           false,
-            empty_spool_kg:    default_empty_spool_kg(),
-            steel_kg_per_m:    default_steel_kg_per_m(),
-            low_alert_m:       default_low_alert_m(),
+            enabled: false,
+            empty_spool_kg: default_empty_spool_kg(),
+            steel_kg_per_m: default_steel_kg_per_m(),
+            low_alert_m: default_low_alert_m(),
             poll_interval_secs: default_sensor_poll_secs(),
         }
     }
@@ -205,9 +213,9 @@ impl Config {
         }
         if let Ok(mode) = std::env::var("DELIVERY_MODE") {
             config.machine.delivery_mode = match mode.to_lowercase().as_str() {
-                "queue"  => DeliveryMode::Queue,
+                "queue" => DeliveryMode::Queue,
                 "direct" => DeliveryMode::Direct,
-                _        => config.machine.delivery_mode,
+                _ => config.machine.delivery_mode,
             };
             tracing::info!("DELIVERY_MODE override: {mode}");
         }

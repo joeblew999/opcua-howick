@@ -28,7 +28,6 @@
 ///   COIL_WEIGHT_KG=23.5 mise run dev:agent:local
 ///
 /// A reading of 0.0 is sent when neither source is available (sensor not fitted).
-
 use tokio::time::{sleep, Duration};
 
 /// GPIO pin numbers (BCM) for HX711 on Pi Zero 2W.
@@ -101,8 +100,8 @@ fn read_hx711_linux() -> Option<f64> {
             // CALIBRATION: weigh a known mass (e.g. 1kg) and adjust SCALE.
             // OFFSET: tare value — reading with empty scale.
             // These can be made configurable via SensorConfig in a later iteration.
-            const SCALE: f64 = 420.0;    // ADC counts per gram — calibrate on site
-            const OFFSET: i32 = 0;       // tare offset — zero with empty spool
+            const SCALE: f64 = 420.0; // ADC counts per gram — calibrate on site
+            const OFFSET: i32 = 0; // tare offset — zero with empty spool
 
             let grams = (raw - OFFSET) as f64 / SCALE;
             let kg = grams / 1000.0;
@@ -204,7 +203,10 @@ pub async fn run_sensor_push(server_url: String, poll_interval_secs: u64) -> any
 
     loop {
         // Read weight in a blocking thread (GPIO bit-bang is blocking)
-        let weight = tokio::task::spawn_blocking(read_weight_kg).await.ok().flatten();
+        let weight = tokio::task::spawn_blocking(read_weight_kg)
+            .await
+            .ok()
+            .flatten();
 
         match weight {
             Some(kg) => {

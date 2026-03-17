@@ -15,7 +15,6 @@
 ///
 ///   — Phase 2: coil sensor (called by howick-agent sensor push loop) —
 ///   POST /api/sensor/coil               → Pi Zero pushes raw weight; server converts to metres
-
 use std::time::SystemTime;
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -89,9 +88,11 @@ async fn handle_connection(
         // ── Dashboard (full pipeline view) ────────────────────────────────────
         ("GET", "/") => ("301", "text/plain", String::new()),
 
-        ("GET", "/dashboard") | ("GET", "/upload") => {
-            ("200", "text/html; charset=utf-8", dashboard_page().to_string())
-        }
+        ("GET", "/dashboard") | ("GET", "/upload") => (
+            "200",
+            "text/html; charset=utf-8",
+            dashboard_page().to_string(),
+        ),
 
         // ── CSV upload from browser ────────────────────────────────────────────
         // Processes jobs inline — no file-watcher dependency.
@@ -164,7 +165,8 @@ async fn handle_connection(
                     }
                 }
 
-                let body = format!(r#"{{"ok":true,"frameset_name":"{frameset_name}","queued":true}}"#);
+                let body =
+                    format!(r#"{{"ok":true,"frameset_name":"{frameset_name}","queued":true}}"#);
                 ("200", "application/json", body)
             }
         }
@@ -173,10 +175,10 @@ async fn handle_connection(
         ("GET", "/status") | ("GET", "/status?") => {
             let s = state.read().await;
             let upload_secs = ago_secs(s.last_upload_at);
-            let agent_secs  = ago_secs(s.agent_last_seen_at);
+            let agent_secs = ago_secs(s.agent_last_seen_at);
             let sensor_secs = ago_secs(s.sensor_last_read_at);
-            let low_alert   = s.coil_remaining_m > 0.0
-                && s.coil_remaining_m < sensor_config.low_alert_m;
+            let low_alert =
+                s.coil_remaining_m > 0.0 && s.coil_remaining_m < sensor_config.low_alert_m;
             let body = format!(
                 concat!(
                     r#"{{"status":"{status}","current_job":{current_job},"#,
@@ -187,20 +189,22 @@ async fn handle_connection(
                     r#""agent_last_seen_secs_ago":{agent},"agent_last_error":"{agent_err}","#,
                     r#""sensor_last_read_secs_ago":{sensor}}}"#,
                 ),
-                status      = s.status.as_str(),
-                current_job = s.current_job.as_deref()
+                status = s.status.as_str(),
+                current_job = s
+                    .current_job
+                    .as_deref()
                     .map(|j| format!("\"{j}\""))
                     .unwrap_or("null".into()),
-                pieces     = s.pieces_produced,
-                queue      = s.job_queue.len(),
-                coil       = s.coil_remaining_m,
-                low_alert  = low_alert,
-                error      = s.last_error,
-                upload     = upload_secs.map(|v| v.to_string()).unwrap_or("null".into()),
-                completed  = s.completed_jobs.len(),
-                agent      = agent_secs.map(|v| v.to_string()).unwrap_or("null".into()),
-                agent_err  = s.agent_last_error,
-                sensor     = sensor_secs.map(|v| v.to_string()).unwrap_or("null".into()),
+                pieces = s.pieces_produced,
+                queue = s.job_queue.len(),
+                coil = s.coil_remaining_m,
+                low_alert = low_alert,
+                error = s.last_error,
+                upload = upload_secs.map(|v| v.to_string()).unwrap_or("null".into()),
+                completed = s.completed_jobs.len(),
+                agent = agent_secs.map(|v| v.to_string()).unwrap_or("null".into()),
+                agent_err = s.agent_last_error,
+                sensor = sensor_secs.map(|v| v.to_string()).unwrap_or("null".into()),
             );
             ("200", "application/json", body)
         }
@@ -266,7 +270,11 @@ async fn handle_connection(
                     }
                     Err(e) => {
                         tracing::error!("Could not read CSV for job {id}: {e}");
-                        ("500", "application/json", r#"{"error":"csv read failed"}"#.into())
+                        (
+                            "500",
+                            "application/json",
+                            r#"{"error":"csv read failed"}"#.into(),
+                        )
                     }
                 }
             } else {
@@ -285,7 +293,11 @@ async fn handle_connection(
             s.agent_last_seen_at = Some(SystemTime::now());
             if let Some(pos) = s.job_queue.iter().position(|j| j.id == job_id) {
                 let job = s.job_queue.remove(pos);
-                tracing::info!("Agent confirmed delivery: {} ({})", job_id, job.frameset_name);
+                tracing::info!(
+                    "Agent confirmed delivery: {} ({})",
+                    job_id,
+                    job.frameset_name
+                );
                 s.completed_jobs.push(job);
                 s.status = crate::machine::MachineStatus::Idle;
                 s.current_job = None;
@@ -295,7 +307,10 @@ async fn handle_connection(
         }
 
         ("POST", p) if p.starts_with("/api/jobs/howick/") && p.ends_with("/error") => {
-            let err = std::str::from_utf8(body_bytes).unwrap_or("unknown").trim().to_string();
+            let err = std::str::from_utf8(body_bytes)
+                .unwrap_or("unknown")
+                .trim()
+                .to_string();
             let mut s = state.write().await;
             s.agent_last_seen_at = Some(SystemTime::now());
             s.agent_last_error = err.clone();
@@ -377,7 +392,6 @@ fn sanitise_filename(raw: &str) -> String {
         .collect()
 }
 
-
 fn dashboard_page() -> &'static str {
     include_str!("assets/dashboard.html")
 }
@@ -402,4 +416,3 @@ fn extract_json_string(json: &str, key: &str) -> Option<String> {
     let end = rest.find('"')?;
     Some(rest[..end].to_string())
 }
-

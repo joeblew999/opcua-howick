@@ -99,7 +99,10 @@ async fn handle(
             if q.next >= JOBS.len() || q.pending {
                 if q.pending {
                     let job = &JOBS[q.next];
-                    println!("  [mock] GET pending → re-serving {} (not yet acknowledged)", job.id);
+                    println!(
+                        "  [mock] GET pending → re-serving {} (not yet acknowledged)",
+                        job.id
+                    );
                     // Re-serve the same job
                     match serve_job(job).await {
                         Ok(body) => (200, body),
@@ -109,12 +112,18 @@ async fn handle(
                         }
                     }
                 } else {
-                    println!("  [mock] GET pending → empty (all {} jobs completed)", JOBS.len());
+                    println!(
+                        "  [mock] GET pending → empty (all {} jobs completed)",
+                        JOBS.len()
+                    );
                     (200, r#"{"jobs":[]}"#.to_string())
                 }
             } else {
                 let job = &JOBS[q.next];
-                println!("  [mock] GET pending → serving {} ({})", job.id, job.frameset);
+                println!(
+                    "  [mock] GET pending → serving {} ({})",
+                    job.id, job.frameset
+                );
                 match serve_job(job).await {
                     Ok(body) => {
                         q.pending = true;

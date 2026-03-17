@@ -122,7 +122,10 @@ pub async fn run_opcua_agent(config: Config, state: SharedState) -> anyhow::Resu
         .create_monitored_items(
             sub_id,
             TimestampsToReturn::Both,
-            vec![MonitoredItemCreateRequest::from(NodeId::new(ns, "Jobs/PendingJobId"))],
+            vec![MonitoredItemCreateRequest::from(NodeId::new(
+                ns,
+                "Jobs/PendingJobId",
+            ))],
         )
         .await
         .map_err(|e| anyhow::anyhow!("create_monitored_items: {e:?}"))?;
@@ -232,10 +235,7 @@ pub async fn run_opcua_agent(config: Config, state: SharedState) -> anyhow::Resu
 /// Read the server's namespace array and find the index for `uri`.
 /// Returns `None` if not found; caller should fall back to 2 (the typical
 /// index for the first custom namespace after OPC UA and server namespaces).
-async fn get_namespace_index(
-    session: &opcua::client::Session,
-    uri: &str,
-) -> Option<u16> {
+async fn get_namespace_index(session: &opcua::client::Session, uri: &str) -> Option<u16> {
     let results = session
         .read(
             &[ReadValueId {

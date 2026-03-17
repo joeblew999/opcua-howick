@@ -54,7 +54,10 @@ fn make_config(
             usb_gadget_mode: false,
             delivery_mode,
         },
-        http: HttpConfig { host: "127.0.0.1".into(), port: 0 },
+        http: HttpConfig {
+            host: "127.0.0.1".into(),
+            port: 0,
+        },
         plat_trunk: PlatTrunkConfig {
             url: "http://localhost:3000".into(),
             api_key: String::new(),
@@ -66,22 +69,32 @@ fn make_config(
 
 /// Start HTTP server + file watcher on a random port. Returns the bound address.
 async fn start(config: Config) -> std::net::SocketAddr {
-    tokio::fs::create_dir_all(&config.machine.job_input_dir).await.unwrap();
-    tokio::fs::create_dir_all(&config.machine.machine_input_dir).await.unwrap();
+    tokio::fs::create_dir_all(&config.machine.job_input_dir)
+        .await
+        .unwrap();
+    tokio::fs::create_dir_all(&config.machine.machine_input_dir)
+        .await
+        .unwrap();
 
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
 
     let state = new_shared_state();
-    { state.write().await.status = MachineStatus::Idle; }
+    {
+        state.write().await.status = MachineStatus::Idle;
+    }
 
     let cfg = config.clone();
     let st = state.clone();
-    tokio::spawn(async move { run_http_server(listener, &cfg, st).await.ok(); });
+    tokio::spawn(async move {
+        run_http_server(listener, &cfg, st).await.ok();
+    });
 
     let cfg = config.clone();
     let st = state.clone();
-    tokio::spawn(async move { run_job_watcher(cfg.machine, st).await.ok(); });
+    tokio::spawn(async move {
+        run_job_watcher(cfg.machine, st).await.ok();
+    });
 
     sleep(Duration::from_millis(200)).await; // let server and watcher start
     addr
@@ -121,7 +134,9 @@ async fn dashboard_serves_html() {
     let (input, machine) = test_dirs();
     let addr = start(make_config(DeliveryMode::Queue, input, machine)).await;
 
-    let resp = reqwest::get(format!("http://{addr}/dashboard")).await.unwrap();
+    let resp = reqwest::get(format!("http://{addr}/dashboard"))
+        .await
+        .unwrap();
     assert_eq!(resp.status(), 200);
     let body = resp.text().await.unwrap();
     assert!(body.contains("Howick Pipeline"));
@@ -180,16 +195,27 @@ async fn upload_queue_agent_poll_complete() {
     // 2. Dashboard shows job queued
     let jobs: serde_json::Value = client
         .get(format!("http://{addr}/jobs"))
-        .send().await.unwrap()
-        .json().await.unwrap();
-    assert!(!jobs["queued"].as_array().unwrap().is_empty(), "job should be queued");
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert!(
+        !jobs["queued"].as_array().unwrap().is_empty(),
+        "job should be queued"
+    );
     assert!(jobs["completed"].as_array().unwrap().is_empty());
 
     // 3. howick-agent polls for pending jobs
     let pending: serde_json::Value = client
         .get(format!("http://{addr}/api/jobs/howick/pending"))
-        .send().await.unwrap()
-        .json().await.unwrap();
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
     let job_list = pending["jobs"].as_array().unwrap();
     assert!(!job_list.is_empty(), "agent should see a pending job");
     assert_eq!(job_list[0]["frameset_name"], "T1");
@@ -198,16 +224,28 @@ async fn upload_queue_agent_poll_complete() {
     let job_id = job_list[0]["job_id"].as_str().unwrap();
     let done = client
         .post(format!("http://{addr}/api/jobs/howick/{job_id}/complete"))
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
     assert_eq!(done.status(), 200);
 
     // 5. Dashboard shows job completed, queue empty
     let jobs: serde_json::Value = client
         .get(format!("http://{addr}/jobs"))
-        .send().await.unwrap()
-        .json().await.unwrap();
-    assert!(jobs["queued"].as_array().unwrap().is_empty(), "queue should be empty");
-    assert!(!jobs["completed"].as_array().unwrap().is_empty(), "job should be completed");
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert!(
+        jobs["queued"].as_array().unwrap().is_empty(),
+        "queue should be empty"
+    );
+    assert!(
+        !jobs["completed"].as_array().unwrap().is_empty(),
+        "job should be completed"
+    );
     assert_eq!(jobs["completed"][0]["frameset_name"], "T1");
 }
 
@@ -232,10 +270,20 @@ async fn sensor_push_updates_coil_status() {
     // Dashboard status shows coil reading
     let status: serde_json::Value = client
         .get(format!("http://{addr}/status"))
-        .send().await.unwrap()
-        .json().await.unwrap();
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
 
     let coil = status["coil_remaining"].as_f64().unwrap();
-    assert!((coil - 7.43).abs() < 0.1, "coil_remaining ≈ 7.4m, got {coil}");
-    assert_eq!(status["coil_low_alert"], true, "7.4m < 50m threshold → low alert");
+    assert!(
+        (coil - 7.43).abs() < 0.1,
+        "coil_remaining ≈ 7.4m, got {coil}"
+    );
+    assert_eq!(
+        status["coil_low_alert"], true,
+        "7.4m < 50m threshold → low alert"
+    );
 }
