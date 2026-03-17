@@ -17,6 +17,7 @@ mod http_server;
 mod machine;
 mod poller;
 mod server;
+mod usb_gadget;
 mod watcher;
 
 use std::path::PathBuf;

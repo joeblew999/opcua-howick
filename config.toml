@@ -49,3 +49,12 @@ machine_output_dir = "./jobs/output"
 url                       = "http://localhost:3000"
 api_key                   = ""
 status_push_interval_secs = 5
+
+# ── Pi Zero 2W USB gadget mode ────────────────────────────────────────────────
+# Set usb_gadget_mode = true when running on Pi Zero 2W acting as USB mass storage.
+# machine_input_dir must point to the mounted USB image (e.g. /mnt/usb_share).
+# See docs/pi-zero-usb-gadget.md for full setup guide.
+#
+# [machine]
+# usb_gadget_mode   = true
+# machine_input_dir = "/mnt/usb_share"

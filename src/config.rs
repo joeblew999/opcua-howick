@@ -28,6 +28,11 @@ pub struct MachineConfig {
     pub job_input_dir:      PathBuf,
     pub machine_input_dir:  PathBuf,
     pub machine_output_dir: PathBuf,
+    /// USB gadget mode — set true when running on Pi Zero 2W acting as USB mass storage.
+    /// When true, after each CSV write the USB storage is re-presented to the host machine.
+    /// Set false for all other deployments (Pi 5, NUC, Windows, Mac).
+    #[serde(default)]
+    pub usb_gadget_mode: bool,
 }
 
 /// HTTP status server — the CF Worker / Tauri backend calls this to get
@@ -68,6 +73,7 @@ impl Default for Config {
                 job_input_dir:      PathBuf::from("./jobs/input"),
                 machine_input_dir:  PathBuf::from("./jobs/machine"),
                 machine_output_dir: PathBuf::from("./jobs/output"),
+                usb_gadget_mode: false,
             },
             http: HttpConfig {
                 host: "0.0.0.0".to_string(),

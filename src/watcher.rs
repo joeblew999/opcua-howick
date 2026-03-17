@@ -87,10 +87,10 @@ async fn handle_new_job(
         tracing::info!("Job {} queued (queue depth: {})", job_id, s.job_queue.len());
     }
 
-    // Copy CSV to machine input directory
-    let dest = config.machine_input_dir.join(filename);
-    tokio::fs::copy(csv_path, &dest).await?;
-    tracing::info!("CSV copied to machine input: {}", dest.display());
+    // Write to machine input directory (handles USB gadget refresh if configured)
+    let csv = tokio::fs::read_to_string(csv_path).await?;
+    crate::usb_gadget::write_job(&config, filename, &csv).await?;
+    tracing::info!("CSV written to machine input: {}", config.machine_input_dir.join(filename).display());
 
     // Update state to running
     {

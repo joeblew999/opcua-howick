@@ -126,11 +126,11 @@ async fn process_job(
     mc_config: &MachineConfig,
     state:     &SharedState,
 ) -> anyhow::Result<()> {
-    // Write CSV to machine input directory
-    tokio::fs::create_dir_all(&mc_config.machine_input_dir).await?;
-    let dest = mc_config.machine_input_dir.join(format!("{}.csv", job.frameset_name));
-    tokio::fs::write(&dest, &job.csv).await?;
+    // Write CSV to machine input directory (handles USB gadget refresh if configured)
+    let filename = format!("{}.csv", job.frameset_name);
+    crate::usb_gadget::write_job(mc_config, &filename, &job.csv).await?;
 
+    let dest = mc_config.machine_input_dir.join(&filename);
     tracing::info!(
         job_id        = %job.job_id,
         frameset_name = %job.frameset_name,
