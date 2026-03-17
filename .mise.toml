@@ -458,64 +458,51 @@ ssh ${PI5_HOST:-pi@howick-pi5.local} '
 
 # ── Docs → PDF (pandoc + typst, no LaTeX needed) ─────────────────────────────
 # Prerequisites: mise install (installs pandoc + typst from [tools] above)
+#
+# Three customer documents:
+#   proposal        — full pitch: both machines, all phases, investment summary
+#   hardware-quote  — clean order sheet (send when Prin says yes)
+#   setup-guide     — provisioning steps (what Prin does vs what we do)
 
-# Numbered for reading order:
-#   01 — why and what to order (setup)
-#   02 — how to set it up    (provisioning)
-#   03 — full hardware BOM   (bom)
-#   04 — coil sensor Phase 2 (coil-sensor)
-
-[tasks."docs:pdf:setup"]
-description = "Export customer setup guide to PDF (01)"
+[tasks."docs:pdf:proposal"]
+description = "Export proposal to PDF"
 run         = """
 mkdir -p docs/dist
-pandoc docs/customer/01-setup.md \
+pandoc docs/customer/proposal.md \
   --pdf-engine=typst \
   --template=docs/templates/howick.typ \
-  --metadata title="Howick FRAMA — Automated Job Delivery" \
-  -o docs/dist/01-setup.pdf
-echo "PDF: docs/dist/01-setup.pdf"
+  --metadata title="Factory Automation Proposal" \
+  -o docs/dist/proposal.pdf
+echo "PDF: docs/dist/proposal.pdf"
 """
 
-[tasks."docs:pdf:provisioning"]
-description = "Export customer provisioning guide to PDF (02)"
+[tasks."docs:pdf:hardware-quote"]
+description = "Export hardware quote to PDF"
 run         = """
 mkdir -p docs/dist
-pandoc docs/customer/02-provisioning.md \
+pandoc docs/customer/hardware-quote.md \
   --pdf-engine=typst \
   --template=docs/templates/howick.typ \
-  --metadata title="Howick FRAMA — System Setup Guide" \
-  -o docs/dist/02-provisioning.pdf
-echo "PDF: docs/dist/02-provisioning.pdf"
+  --metadata title="Hardware Quote" \
+  -o docs/dist/hardware-quote.pdf
+echo "PDF: docs/dist/hardware-quote.pdf"
 """
 
-[tasks."docs:pdf:bom"]
-description = "Export hardware order list to PDF (03)"
+[tasks."docs:pdf:setup-guide"]
+description = "Export setup guide to PDF"
 run         = """
 mkdir -p docs/dist
-pandoc docs/customer/03-bom.md \
+pandoc docs/customer/setup-guide.md \
   --pdf-engine=typst \
   --template=docs/templates/howick.typ \
-  --metadata title="Hardware Bill of Materials" \
-  -o docs/dist/03-bom.pdf
-echo "PDF: docs/dist/03-bom.pdf"
-"""
-
-[tasks."docs:pdf:coil-sensor"]
-description = "Export coil sensor doc to PDF (04)"
-run         = """
-mkdir -p docs/dist
-pandoc docs/customer/04-coil-sensor.md \
-  --pdf-engine=typst \
-  --template=docs/templates/howick.typ \
-  --metadata title="Coil Inventory Sensor — Setup Guide" \
-  -o docs/dist/04-coil-sensor.pdf
-echo "PDF: docs/dist/04-coil-sensor.pdf"
+  --metadata title="Setup Guide" \
+  -o docs/dist/setup-guide.pdf
+echo "PDF: docs/dist/setup-guide.pdf"
 """
 
 [tasks."docs:pdf:all"]
-description = "Export all docs to PDF into docs/dist/ (numbered 01–04)"
-depends     = ["docs:pdf:setup", "docs:pdf:provisioning", "docs:pdf:bom", "docs:pdf:coil-sensor"]
+description = "Export all customer docs to PDF into docs/dist/"
+depends     = ["docs:pdf:proposal", "docs:pdf:hardware-quote", "docs:pdf:setup-guide"]
 run         = "ls -lh docs/dist/"
 
 # ── Local test helpers ────────────────────────────────────────────────────────
