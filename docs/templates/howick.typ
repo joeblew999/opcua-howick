@@ -11,8 +11,8 @@
       #set text(size: 8pt, fill: rgb("#999999"))
       #grid(
         columns: (1fr, 1fr),
-        align(left)[Howick FRAMA — Automated Job Delivery],
-        align(right)[opcua-howick],
+        align(left)[#title],
+        align(right)[#context datetime.today().display("[day] [month repr:long] [year]")],
       )
       #line(length: 100%, stroke: 0.5pt + rgb("#eeeeee"))
     ],
