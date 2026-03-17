@@ -1,11 +1,8 @@
 name: CI
 
-# Gate logic lives in mise.toml ci task:
-#   check → cargo check + clippy -D warnings
-#   fmt-check → cargo fmt --check
-#
-# Binary builds run on every push past the gate.
-# Release: binaries auto-attached to GitHub Releases.
+# Rust version pinned in rust-toolchain.toml.
+# dtolnay/rust-toolchain installs rust — mise runs tasks only.
+# Gate logic: mise.toml ci task (check + fmt-check)
 
 on:
   push:
@@ -16,13 +13,18 @@ on:
     types: [created]
 
 jobs:
-  # ── Gate — mise is source of truth ───────────────────────────────────────
+  # ── Gate ─────────────────────────────────────────────────────────────────
   ci:
     name: CI
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: jdx/mise-action@v2
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.93.0"
+          components: rustfmt,clippy
+
       - uses: actions/cache@v4
         with:
           path: |
@@ -31,9 +33,14 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
+
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
+
       - run: mise run ci
 
-  # ── Binary builds — all factory targets ──────────────────────────────────
+  # ── Binary builds ─────────────────────────────────────────────────────────
   build:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -46,61 +53,69 @@ jobs:
             target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
             cross: false
+            bin: opcua-howick
+
           - name: macOS Apple Silicon
             target: aarch64-apple-darwin
             os: macos-latest
             cross: false
+            bin: opcua-howick
+
           - name: macOS Intel
             target: x86_64-apple-darwin
             os: macos-latest
             cross: false
+            bin: opcua-howick
+
           - name: Raspberry Pi 5 (arm64)
             target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
             cross: true
+            bin: opcua-howick
+
           - name: Raspberry Pi 3/4 (arm32)
             target: armv7-unknown-linux-gnueabihf
             os: ubuntu-latest
             cross: true
-
-          # Windows x86_64 — opcua-howick.exe for factory PC
-          - name: Windows x86_64
-            target: x86_64-pc-windows-msvc
-            os: windows-latest
-            cross: false
             bin: opcua-howick
 
-          # Pi Zero 2W — howick-agent (minimal, no OPC UA)
-          # Plugs into Howick USB port, acts as USB mass storage (fake USB stick)
           - name: Pi Zero 2W — howick-agent (USB gadget)
             target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
             cross: true
             bin: howick-agent
 
+          - name: Windows x86_64
+            target: x86_64-pc-windows-msvc
+            os: windows-latest
+            cross: false
+            bin: opcua-howick
+
     steps:
       - uses: actions/checkout@v4
-      - uses: jdx/mise-action@v2
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.93.0"
+          targets: ${{ matrix.target }}
+
       - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-${{ matrix.target }}-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-${{ matrix.target }}-${{ matrix.bin }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: ${{ runner.os }}-${{ matrix.target }}-
-
-      - name: Add target
-        run: rustup target add ${{ matrix.target }}
 
       - name: Install cross
         if: matrix.cross
         run: cargo install cross --git https://github.com/cross-rs/cross
 
-      # Build task defined in mise.toml — CI just calls it
       - name: Build
+        shell: bash
         run: |
-          BIN="${{ matrix.bin || 'opcua-howick' }}"
+          BIN="${{ matrix.bin }}"
           if [ "${{ matrix.cross }}" = "true" ]; then
             cross build --release --bin "$BIN" --target ${{ matrix.target }}
           else
@@ -108,10 +123,10 @@ jobs:
           fi
 
       - name: Stage
+        shell: bash
         run: |
-          BIN="${{ matrix.bin || 'opcua-howick' }}"
+          BIN="${{ matrix.bin }}"
           mkdir -p dist
-          # Windows adds .exe extension
           EXT=""
           if [[ "${{ matrix.target }}" == *"windows"* ]]; then EXT=".exe"; fi
           cp "target/${{ matrix.target }}/release/${BIN}${EXT}" \
@@ -119,10 +134,10 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: opcua-howick-${{ matrix.target }}
+          name: ${{ matrix.bin }}-${{ matrix.target }}
           path: dist/
 
-  # ── Attach to GitHub Release ──────────────────────────────────────────────
+  # ── Release ───────────────────────────────────────────────────────────────
   release:
     name: Release
     runs-on: ubuntu-latest
