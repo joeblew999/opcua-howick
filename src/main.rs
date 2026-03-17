@@ -12,7 +12,7 @@
 //!   - Job poller                 — polls plat-trunk API for R2-queued jobs
 //!   - File watcher               — picks up CSV files dropped locally
 
-use opcua_howick::{config, http_server, machine, poller, server, watcher};
+use opcua_howick::{config, http_server, machine, poller, server, watcher, VERSION};
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -20,13 +20,18 @@ use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    if std::env::args().any(|a| a == "--version" || a == "-V") {
+        println!("opcua-howick {VERSION}");
+        return Ok(());
+    }
+
     tracing_subscriber::fmt()
         .with_env_filter(
             EnvFilter::from_default_env().add_directive("opcua_howick=info".parse().unwrap()),
         )
         .init();
 
-    tracing::info!(version = env!("CARGO_PKG_VERSION"), "opcua-howick starting");
+    tracing::info!(version = VERSION, "opcua-howick starting");
 
     let config_path = PathBuf::from("config.toml");
     let config = config::Config::load_or_default(&config_path);

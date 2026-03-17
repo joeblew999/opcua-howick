@@ -35,13 +35,18 @@
 //! status_push_interval_secs = 5
 //! ```
 
-use opcua_howick::{config, machine, opcua_client, poller, sensor};
+use opcua_howick::{config, machine, opcua_client, poller, sensor, VERSION};
 
 use std::path::PathBuf;
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    if std::env::args().any(|a| a == "--version" || a == "-V") {
+        println!("howick-agent {VERSION}");
+        return Ok(());
+    }
+
     tracing_subscriber::fmt()
         .with_env_filter(
             EnvFilter::from_default_env()
@@ -52,7 +57,7 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     tracing::info!(
-        version = env!("CARGO_PKG_VERSION"),
+        version = VERSION,
         "howick-agent starting (Pi Zero 2W minimal mode)"
     );
 

@@ -181,7 +181,7 @@ async fn handle_connection(
                 s.coil_remaining_m > 0.0 && s.coil_remaining_m < sensor_config.low_alert_m;
             let body = format!(
                 concat!(
-                    r#"{{"status":"{status}","current_job":{current_job},"#,
+                    r#"{{"version":"{version}","status":"{status}","current_job":{current_job},"#,
                     r#""pieces_produced":{pieces},"queue_depth":{queue},"#,
                     r#""coil_remaining":{coil},"coil_low_alert":{low_alert},"#,
                     r#""last_error":"{error}","#,
@@ -189,6 +189,7 @@ async fn handle_connection(
                     r#""agent_last_seen_secs_ago":{agent},"agent_last_error":"{agent_err}","#,
                     r#""sensor_last_read_secs_ago":{sensor}}}"#,
                 ),
+                version = crate::VERSION,
                 status = s.status.as_str(),
                 current_job = s
                     .current_job
