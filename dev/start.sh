@@ -13,11 +13,10 @@
 
 set -e
 
+# Binaries already built by mise depends=[build] — just start them.
 lsof -ti:4840,4841 | xargs kill -9 2>/dev/null || true
 sleep 0.3
 mkdir -p jobs/input jobs/machine jobs/output
-
-cargo build --bin opcua-howick --bin howick-agent 2>&1 | grep -E "^error|Compiling|Finished"
 
 RUST_LOG=opcua_howick=info cargo run --bin opcua-howick &
 SERVER_PID=$!

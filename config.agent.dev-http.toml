@@ -1,0 +1,38 @@
+# config.agent.dev-http.toml — howick-agent polling local opcua-howick HTTP API
+#
+# Use when you want to test the HTTP polling path without mock-plat-trunk.
+# howick-agent polls opcua-howick's job queue via HTTP instead of OPC UA.
+#
+# Requires: mise run dev   (opcua-howick running on :4841)
+# Run with: mise run dev:agent:local
+#
+# Differs from config.agent.toml only in plat_trunk.url:
+#   opc.tcp://127.0.0.1:4840/  →  http://127.0.0.1:4841
+
+[opcua]
+host             = "0.0.0.0"
+port             = 4840
+application_name = "Howick Edge Agent - Pi Zero"
+
+[http]
+host = "0.0.0.0"
+port = 4841
+
+[machine]
+machine_name      = "Howick FRAMA"
+job_input_dir     = "./jobs/input"
+machine_input_dir = "./jobs/machine"
+machine_output_dir = "./jobs/output"
+usb_gadget_mode   = false
+
+[plat_trunk]
+url                       = "http://127.0.0.1:4841"   # HTTP polling against local opcua-howick
+api_key                   = ""
+status_push_interval_secs = 5
+
+[sensor]
+enabled            = false
+empty_spool_kg     = 18.0
+steel_kg_per_m     = 0.74
+low_alert_m        = 50.0
+poll_interval_secs = 30

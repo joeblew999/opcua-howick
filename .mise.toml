@@ -15,20 +15,30 @@ RUST_LOG       = "opcua_howick=info"
 # ── Dev ───────────────────────────────────────────────────────────────────────
 # Full local dev loop — no hardware required.
 #
-# Two independent pipelines, each needs its own terminal:
+# Quickstart (both binaries, one command):
+#   mise run dev:all      # builds, then starts opcua-howick + howick-agent (OPC UA)
+#   mise run dev:job      # in another terminal — drops test CSV into jobs/input/
+#   mise run dev:status   # check machine state via HTTP
 #
-#   Pipeline A — opcua-howick (Pi 5 role): OPC UA server + file watcher
-#     terminal 1:  mise run dev          # starts opcua-howick
-#     terminal 2:  mise run dev:job      # drops a test CSV into jobs/input/
-#                  mise run dev:status   # check machine state via HTTP
+# Individual terminals (choose your agent mode):
+#   terminal 1:  mise run dev              # opcua-howick — OPC UA :4840, HTTP :4841
 #
-#   Pipeline B — howick-agent (Pi Zero role): polls plat-trunk, writes CSV
-#     terminal 1:  mise run dev:mock     # starts fake plat-trunk on :3000
-#     terminal 2:  mise run dev:agent    # starts howick-agent, polls :3000
-#                  Check ./jobs/machine/ for written CSVs
+#   terminal 2 option A — OPC UA (production-identical):
+#                mise run dev:agent        # howick-agent subscribes via OPC UA
+#
+#   terminal 2 option B — HTTP polling against opcua-howick:
+#                mise run dev:agent:local  # howick-agent polls http://localhost:4841
+#
+#   terminal 2 option C — HTTP polling against mock-plat-trunk:
+#                mise run dev:mock         # start mock-plat-trunk on :3000
+#                mise run dev:agent:mock   # howick-agent polls :3000
+#
+# Auto-rebuild on save:
+#   mise run dev:watch    # requires cargo-watch (cargo install cargo-watch)
 
 [tasks."dev:all"]
-description = "Start full dev stack — opcua-howick (OPC UA server + HTTP) + howick-agent (OPC UA client) — Ctrl-C stops both"
+description = "Start full dev stack — build, then opcua-howick + howick-agent (OPC UA) — Ctrl-C stops both"
+depends     = ["dev:setup", "build"]
 run         = "bash dev/start.sh"
 
 [tasks."dev:setup"]
@@ -45,19 +55,24 @@ depends     = ["dev:setup"]
 run         = "RUST_LOG=opcua_howick=debug cargo run --bin opcua-howick"
 
 [tasks."dev:agent"]
-description = "Run howick-agent in HTTP polling mode — polls mock-plat-trunk on :3000 (requires mise run dev:mock in another terminal)"
+description = "Run howick-agent via OPC UA subscription (primary mode) — requires mise run dev in another terminal"
 depends     = ["dev:setup"]
 run         = "RUST_LOG=howick_agent=debug cargo run --bin howick-agent -- --config config.agent.toml"
 
-[tasks."dev:agent:opcua"]
-description = "Run howick-agent in OPC UA subscription mode — subscribes to opcua-howick on :4840 (requires mise run dev in another terminal)"
+[tasks."dev:agent:mock"]
+description = "Run howick-agent polling mock-plat-trunk on :3000 — requires mise run dev:mock in another terminal"
 depends     = ["dev:setup"]
-run         = "RUST_LOG=howick_agent=debug cargo run --bin howick-agent -- --config config.agent.toml"
+run         = "RUST_LOG=howick_agent=debug cargo run --bin howick-agent -- --config config.toml"
 
 [tasks."dev:agent:local"]
-description = "Run howick-agent in HTTP polling mode against local opcua-howick queue (edit config.agent.toml: set url = http://localhost:4841)"
+description = "Run howick-agent polling local opcua-howick HTTP API on :4841 — requires mise run dev in another terminal"
 depends     = ["dev:setup"]
-run         = "RUST_LOG=howick_agent=debug cargo run --bin howick-agent -- --config config.agent.toml"
+run         = "RUST_LOG=howick_agent=debug cargo run --bin howick-agent -- --config config.agent.dev-http.toml"
+
+[tasks."dev:watch"]
+description = "Auto-rebuild on source changes (requires cargo-watch: cargo install cargo-watch)"
+run         = "cargo watch -x 'build --bin opcua-howick --bin howick-agent'"
+
 
 [tasks."dev:mock"]
 description = "Start mock plat-trunk backend on :3000 (Path 2 — simulates plat-trunk serving T1+W1 fixture jobs)"
