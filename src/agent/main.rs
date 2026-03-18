@@ -14,7 +14,7 @@
 //! No HTTP server. No file watcher.
 //! Binary size: ~3MB. RAM: ~16MB. Fits comfortably on Pi Zero 2W (512MB).
 //!
-//! For the full OPC UA server + HTTP dashboard, use opcua-howick on a Pi 5,
+//! For the full OPC UA server + HTTP dashboard, use opcua-server on a Pi 5,
 //! NUC, or Mac Mini.
 //!
 //! ## Setup

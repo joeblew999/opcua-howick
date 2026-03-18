@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-/// Configuration loaded from `<binary>.<env>.toml` (e.g. `opcua-howick.dev.toml`).
+/// Configuration loaded from `<binary>.<env>.toml` (e.g. `opcua-server.dev.toml`).
 ///
 /// Supports all three deployment topologies:
 /// - Cloud:  plat_trunk_url = "https://your-worker.workers.dev"
@@ -60,8 +60,8 @@ pub struct HttpConfig {
 /// Coil weight sensor — Phase 2.
 ///
 /// A load cell + HX711 ADC sits under the coil spool on the Pi Zero GPIO.
-/// The Pi Zero pushes raw weight readings to opcua-howick via POST /api/sensor/coil.
-/// opcua-howick converts kg → metres remaining and updates the dashboard +
+/// The Pi Zero pushes raw weight readings to opcua-server via POST /api/sensor/coil.
+/// opcua-server converts kg → metres remaining and updates the dashboard +
 /// OPC UA Machine/CoilRemaining node.
 ///
 /// Hardware (see docs/customer/hardware-quote.md — Phase 2):

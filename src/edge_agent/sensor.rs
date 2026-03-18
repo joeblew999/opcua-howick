@@ -2,7 +2,7 @@
 ///
 /// This module runs on the Pi Zero 2W inside howick-frama.
 /// It reads the raw coil weight from the load cell + HX711 ADC and pushes it
-/// to opcua-howick (Pi 5) via POST /api/sensor/coil every poll_interval_secs.
+/// to opcua-server (Pi 5) via POST /api/sensor/coil every poll_interval_secs.
 ///
 /// # Hardware wiring (Pi Zero 2W GPIO)
 ///
@@ -17,7 +17,7 @@
 ///
 /// # Weight → metres conversion
 ///
-/// Done server-side in opcua-howick (config.rs: SensorConfig::coil_metres()).
+/// Done server-side in opcua-server (config.rs: SensorConfig::coil_metres()).
 /// Pi Zero only reads and pushes raw kg — no calibration needed on this side.
 ///
 /// # Dev / test without hardware

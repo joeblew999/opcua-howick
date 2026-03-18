@@ -25,7 +25,7 @@ use tracing_subscriber::EnvFilter;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     if std::env::args().any(|a| a == "--version" || a == "-V") {
-        println!("opcua-howick {VERSION}");
+        println!("opcua-server {VERSION}");
         return Ok(());
     }
 
@@ -35,7 +35,7 @@ async fn main() -> anyhow::Result<()> {
         )
         .init();
 
-    tracing::info!(version = VERSION, "opcua-howick starting");
+    tracing::info!(version = VERSION, "opcua-server starting");
 
     // Background self-update check — runs once on startup.
     // On update: exit(0) so systemd restarts the new binary automatically.
@@ -44,7 +44,7 @@ async fn main() -> anyhow::Result<()> {
         let client = reqwest::Client::new();
         match updater::check_and_update(
             &client,
-            "opcua-howick",
+            "opcua-server",
             VERSION,
             "https://api.github.com",
             None,
@@ -109,6 +109,6 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    tracing::info!("opcua-howick stopped");
+    tracing::info!("opcua-server stopped");
     Ok(())
 }

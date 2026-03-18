@@ -174,7 +174,7 @@ depends     = ["check", "fmt-check", "test"]
 
 [tasks."build:pi5"]
 description = "Cross-compile opcua-howick for Raspberry Pi 5 (aarch64)"
-run         = "mise run build:bin -- opcua-howick aarch64-unknown-linux-gnu true"
+run         = "mise run build:bin -- opcua-server aarch64-unknown-linux-gnu true"
 
 # Pi Zero 2W — uses howick-frama (minimal binary, no OPC UA, no HTTP)
 # ~3MB binary, ~16MB RAM — fits Pi Zero 2W (512MB)
@@ -242,16 +242,16 @@ fi
 
 [tasks."build:linux"]
 description = "Build opcua-howick for Linux x86_64"
-run         = "mise run build:bin -- opcua-howick x86_64-unknown-linux-gnu"
+run         = "mise run build:bin -- opcua-server x86_64-unknown-linux-gnu"
 
 [tasks."build:mac-arm"]
 description = "Build opcua-howick for macOS Apple Silicon"
-run         = "mise run build:bin -- opcua-howick aarch64-apple-darwin"
+run         = "mise run build:bin -- opcua-server aarch64-apple-darwin"
 
 [tasks."build:windows"]
 description = "Build both binaries for Windows x86_64"
 run         = """
-mise run build:bin -- opcua-howick x86_64-pc-windows-msvc
+mise run build:bin -- opcua-server x86_64-pc-windows-msvc
 mise run build:bin -- howick-frama x86_64-pc-windows-msvc
 """
 

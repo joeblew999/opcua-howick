@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Full dev stack — mirrors production hardware:
 #
-#   opcua-howick  reads opcua-server.dev.toml        (same as opcua-server.pi5.toml on Pi 5)
+#   opcua-server  reads opcua-server.dev.toml        (same as opcua-server.pi5.toml on Pi 5)
 #   howick-frama  reads howick-frama.dev.toml  (same as howick-frama.pi-zero.toml on Pi Zero)
 #
 # Each binary has its own config file — no env var overrides needed.
@@ -27,8 +27,8 @@ AGENT_PID=$!
 
 echo ""
 echo "Pipeline running:"
-echo "  opcua-howick  PID $SERVER_PID  →  opc.tcp://localhost:4840/"
-echo "  opcua-howick  PID $SERVER_PID  →  http://localhost:4841/dashboard"
+echo "  opcua-server  PID $SERVER_PID  →  opc.tcp://localhost:4840/"
+echo "  opcua-server  PID $SERVER_PID  →  http://localhost:4841/dashboard"
 echo "  howick-frama  PID $AGENT_PID  →  subscribed via OPC UA (no polling)"
 echo ""
 echo "Open dashboard: http://localhost:4841/dashboard"

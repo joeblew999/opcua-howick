@@ -1,6 +1,6 @@
 /// USB gadget support for Pi Zero 2W deployment.
 ///
-/// When opcua-howick runs on a Pi Zero 2W acting as USB mass storage,
+/// When opcua-server runs on a Pi Zero 2W acting as USB mass storage,
 /// writing a file to the mounted image is not enough — the host machine
 /// (Howick FRAMA) needs to be notified that the storage has changed.
 ///
