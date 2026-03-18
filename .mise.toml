@@ -47,17 +47,17 @@ run         = "RUST_LOG=opcua_howick=debug cargo run --bin opcua-howick"
 [tasks."dev:agent"]
 description = "Run howick-agent in HTTP polling mode — polls mock-plat-trunk on :3000 (requires mise run dev:mock in another terminal)"
 depends     = ["dev:setup"]
-run         = "RUST_LOG=howick_agent=debug cargo run --bin howick-agent"
+run         = "RUST_LOG=howick_agent=debug cargo run --bin howick-agent -- --config config.agent.toml"
 
 [tasks."dev:agent:opcua"]
 description = "Run howick-agent in OPC UA subscription mode — subscribes to opcua-howick on :4840 (requires mise run dev in another terminal)"
 depends     = ["dev:setup"]
-run         = "DELIVERY_MODE=queue PLAT_TRUNK_URL=opc.tcp://127.0.0.1:4840/ RUST_LOG=howick_agent=debug cargo run --bin howick-agent"
+run         = "RUST_LOG=howick_agent=debug cargo run --bin howick-agent -- --config config.agent.toml"
 
 [tasks."dev:agent:local"]
-description = "Run howick-agent in HTTP polling mode against local opcua-howick queue"
+description = "Run howick-agent in HTTP polling mode against local opcua-howick queue (edit config.agent.toml: set url = http://localhost:4841)"
 depends     = ["dev:setup"]
-run         = "PLAT_TRUNK_URL=http://localhost:4841 RUST_LOG=howick_agent=debug cargo run --bin howick-agent"
+run         = "RUST_LOG=howick_agent=debug cargo run --bin howick-agent -- --config config.agent.toml"
 
 [tasks."dev:mock"]
 description = "Start mock plat-trunk backend on :3000 (Path 2 — simulates plat-trunk serving T1+W1 fixture jobs)"
@@ -158,8 +158,8 @@ depends     = ["check", "fmt-check", "test"]
 # Prerequisites: cargo install cross
 
 [tasks."build:pi5"]
-description = "Cross-compile for Raspberry Pi 5 (aarch64)"
-run         = "cross build --release --target aarch64-unknown-linux-gnu"
+description = "Cross-compile opcua-howick for Raspberry Pi 5 (aarch64)"
+run         = "mise run build:bin -- opcua-howick aarch64-unknown-linux-gnu true"
 
 # Pi Zero 2W — uses howick-agent (minimal binary, no OPC UA, no HTTP)
 # ~3MB binary, ~16MB RAM — fits Pi Zero 2W (512MB)
@@ -171,12 +171,12 @@ run         = "cargo build --release --bin howick-agent"
 
 [tasks."build:agent:pi-zero"]
 description = "Cross-compile howick-agent for Pi Zero 2W (aarch64)"
-run         = "cross build --release --bin howick-agent --target aarch64-unknown-linux-gnu"
+run         = "mise run build:bin -- howick-agent aarch64-unknown-linux-gnu true"
 
 [tasks."deploy:pi-zero"]
-description = "Build + deploy howick-agent to Pi Zero 2W — installs service + copies config.agent.pi-zero.toml → ~/config.toml on first deploy"
+description = "Deploy howick-agent to Pi Zero 2W — installs service + copies config.agent.pi-zero.toml → ~/config.toml on first deploy"
+depends     = ["build:agent:pi-zero"]
 run         = """
-cross build --release --bin howick-agent --target aarch64-unknown-linux-gnu
 VERSION=$(cargo pkgid --quiet | cut -d@ -f2)
 scp target/aarch64-unknown-linux-gnu/release/howick-agent ${ZERO_HOST:-pi@howick-pi-zero.local}:~/howick-agent.new
 scp deploy/howick-agent.service ${ZERO_HOST:-pi@howick-pi-zero.local}:~/howick-agent.service
@@ -271,12 +271,12 @@ echo "  ZERO_HOST=pi@<tailscale-ip> mise run setup:post-reboot:pi-zero"
 """
 
 [tasks."setup:post-reboot:pi-zero"]
-description = "Pi Zero 2W post-reboot — Doppler + deploy binary + auto-update timer"
+description = "Pi Zero 2W post-reboot — Doppler + deploy binary"
 run         = """
-echo "Step 1/3: Doppler secrets..."
+echo "Step 1/2: Doppler secrets..."
 mise run doppler:setup:pi-zero
 echo ""
-echo "Step 2/3: Deploy howick-agent binary..."
+echo "Step 2/2: Deploy howick-agent binary..."
 mise run deploy:pi-zero
 echo ""
 echo "Pi Zero 2W fully provisioned."
@@ -285,7 +285,7 @@ echo "Status: mise run status:pi-zero"
 """
 
 [tasks."setup:first-boot:pi5"]
-description = "Pi 5 first boot — Tailscale + dirs + Doppler + deploy + auto-update"
+description = "Pi 5 first boot — Tailscale + dirs + Doppler + deploy"
 run         = """
 echo "Step 1/4: Installing Tailscale..."
 mise run tailscale:install:pi5
@@ -296,7 +296,7 @@ echo ""
 echo "Step 3/4: Doppler secrets..."
 mise run doppler:setup:pi5
 echo ""
-echo "Step 3/3: Deploy binary..."
+echo "Step 4/4: Deploy binary..."
 mise run deploy:pi5
 echo ""
 echo "Pi 5 fully provisioned."
@@ -384,9 +384,9 @@ REMOTE
 # ZERO_HOST — Tailscale IP or hostname of Pi Zero 2W (e.g. pi@100.x.x.x)
 
 [tasks."deploy:pi5"]
-description = "Build + deploy opcua-howick to Pi 5 — installs service + copies config.pi5.toml → ~/config.toml on first deploy"
+description = "Deploy opcua-howick to Pi 5 — installs service + copies config.pi5.toml → ~/config.toml on first deploy"
+depends     = ["build:pi5"]
 run         = """
-cross build --release --target aarch64-unknown-linux-gnu
 VERSION=$(cargo pkgid --quiet | cut -d@ -f2)
 scp target/aarch64-unknown-linux-gnu/release/opcua-howick ${PI5_HOST:-pi@howick-pi5.local}:~/opcua-howick.new
 scp deploy/opcua-howick.service ${PI5_HOST:-pi@howick-pi5.local}:~/opcua-howick.service
@@ -414,9 +414,9 @@ ssh ${PI5_HOST:-pi@howick-pi5.local} '[ -f ~/config.toml ]' \
 
 
 [tasks."deploy:windows"]
-description = "Build + copy both binaries + configs to Windows Design PC (\\\\howick-pc or set WINDOWS_HOST)"
+description = "Copy both binaries + configs to Windows Design PC (\\\\howick-pc or set WINDOWS_HOST)"
+depends     = ["build:windows"]
 run         = """
-cargo build --release --target x86_64-pc-windows-msvc
 DEST=${WINDOWS_HOST:-//howick-pc/c$/opcua-howick}
 mkdir -p "$DEST"
 cp target/x86_64-pc-windows-msvc/release/opcua-howick.exe "$DEST"/opcua-howick.exe
