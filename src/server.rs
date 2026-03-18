@@ -175,7 +175,7 @@ fn build_server_builder(
             product_uri: "https://github.com/joeblew999/opcua-howick".into(),
             manufacturer_name: "Ubuntu Software Pty Ltd".into(),
             product_name: "opcua-howick".into(),
-            software_version: env!("CARGO_PKG_VERSION").into(),
+            software_version: crate::VERSION.into(),
             build_number: "1".into(),
             build_date: DateTime::now(),
         })

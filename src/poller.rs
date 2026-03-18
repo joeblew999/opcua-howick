@@ -144,20 +144,25 @@ async fn process_job(
         "CSV written to machine input"
     );
 
-    // Update shared state
+    // Mark Running while job is in flight
     {
         let mut s = state.write().await;
         s.status = MachineStatus::Running;
         s.current_job = Some(job.frameset_name.clone());
+    }
+
+    // Mark Idle and record in history — real completion tracking needs machine output
+    // monitoring (Phase 2); for now we assume delivery = done
+    {
+        let mut s = state.write().await;
+        s.status = MachineStatus::Idle;
+        s.current_job = None;
         s.completed_jobs.push(Job {
             id: job.job_id.clone(),
             frameset_name: job.frameset_name.clone(),
             csv_path: dest,
             submitted_at: std::time::SystemTime::now(),
         });
-        // Reset to idle — real status tracking needs machine output monitoring (Phase 2)
-        s.status = MachineStatus::Idle;
-        s.current_job = None;
     }
 
     Ok(())
@@ -166,7 +171,7 @@ async fn process_job(
 fn build_client(_config: &PlatTrunkConfig) -> anyhow::Result<reqwest::Client> {
     let mut builder = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
-        .user_agent(concat!("opcua-howick/", env!("CARGO_PKG_VERSION")));
+        .user_agent(crate::VERSION);
 
     // Use rustls (no OpenSSL dep) — important for clean cross-compilation to Pi
     builder = builder.use_rustls_tls();

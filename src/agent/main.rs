@@ -7,14 +7,15 @@
 //! using Linux USB gadget mode (g_mass_storage kernel module).
 //!
 //! This binary does exactly two things:
-//!   1. Poll plat-trunk for pending CSV jobs (HTTP GET every 5s)
+//!   1. Subscribe to the Pi 5 OPC UA server for pending CSV jobs (push, no polling)
+//!      — or fall back to HTTP polling if `plat_trunk.url` is an HTTP endpoint
 //!   2. Write CSV to the USB gadget mount point + refresh USB presentation
 //!
-//! No OPC UA. No HTTP server. No file watcher.
+//! No HTTP server. No file watcher.
 //! Binary size: ~3MB. RAM: ~16MB. Fits comfortably on Pi Zero 2W (512MB).
 //!
-//! For the full agent with OPC UA + HTTP status server, use opcua-howick
-//! on a Pi 5, NUC, or Mac Mini.
+//! For the full OPC UA server + HTTP dashboard, use opcua-howick on a Pi 5,
+//! NUC, or Mac Mini.
 //!
 //! ## Setup
 //!
