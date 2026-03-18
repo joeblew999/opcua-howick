@@ -14,6 +14,17 @@ Then read:
 - `/private/tmp/async-opcua/samples/simple-client/src/main.rs` — subscription pattern
 - `/private/tmp/async-opcua/samples/demo-server/src/methods.rs` — OPC UA method callbacks
 
+Web references (use if the clone is unavailable):
+- https://github.com/FreeOpcUa/async-opcua — source + all samples
+- https://docs.rs/async-opcua/latest/opcua — full API docs
+- https://github.com/FreeOpcUa/async-opcua/blob/master/docs/client.md — client guide
+- https://github.com/FreeOpcUa/async-opcua/blob/master/docs/server.md — server guide
+- https://github.com/FreeOpcUa/async-opcua/tree/master/samples — all sample code
+
+Related projects:
+- https://github.com/joeblew999/opcua-howick — this repo
+- https://github.com/joeblew999/howick-rs — Howick CSV parser (frameset format)
+
 **Never reinvent what is already in async-opcua.** If you are about to write something OPC UA related from scratch, stop and check the samples first.
 
 ---
