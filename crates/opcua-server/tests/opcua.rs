@@ -26,8 +26,8 @@ use tokio::time::sleep;
 use opcua_howick::config::{
     Config, HttpConfig, MachineConfig, OpcUaConfig, PlatTrunkConfig, SensorConfig,
 };
-use opcua_server::job_server::opcua_server::run_server_with;
 use opcua_howick::machine::{new_shared_state, MachineStatus};
+use opcua_server::job_server::opcua_server::run_server_with;
 
 // ── Counter for unique test PKI dirs ───────────────────────────────────────────
 

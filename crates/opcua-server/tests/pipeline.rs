@@ -16,9 +16,9 @@ use tokio::time::sleep;
 use opcua_howick::config::{
     Config, HttpConfig, MachineConfig, OpcUaConfig, PlatTrunkConfig, SensorConfig,
 };
+use opcua_howick::machine::{new_shared_state, MachineStatus};
 use opcua_server::job_server::http::run_http_server;
 use opcua_server::job_server::watcher::run_job_watcher;
-use opcua_howick::machine::{new_shared_state, MachineStatus};
 
 // ── Fixture CSV ────────────────────────────────────────────────────────────────
 

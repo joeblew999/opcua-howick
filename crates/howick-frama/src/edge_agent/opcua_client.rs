@@ -82,7 +82,9 @@ pub async fn run_opcua_agent(config: Config, state: SharedState) -> anyhow::Resu
     tracing::info!("OPC UA connected to Pi 5 ✓");
 
     // Resolve our namespace index from the server's namespace array
-    let ns = get_namespace_index(&session, &config.opcua.namespace_uri).await.unwrap_or(2);
+    let ns = get_namespace_index(&session, &config.opcua.namespace_uri)
+        .await
+        .unwrap_or(2);
     tracing::info!(ns, "Namespace index resolved");
 
     // Shared signal: DataChangeCallback (sync) → main task (async)
@@ -181,8 +183,7 @@ pub async fn run_opcua_agent(config: Config, state: SharedState) -> anyhow::Resu
 
         // Write CSV to machine input directory (triggers USB gadget refresh if configured)
         let filename = format!("{frameset_name}.csv");
-        if let Err(e) =
-            opcua_howick::usb_gadget::write_job(&config.machine, &filename, &csv).await
+        if let Err(e) = opcua_howick::usb_gadget::write_job(&config.machine, &filename, &csv).await
         {
             tracing::error!(job_id = %job_id, "USB write failed: {e}");
             continue;

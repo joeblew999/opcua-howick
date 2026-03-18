@@ -44,7 +44,9 @@ pub async fn run_server(config: &Config, state: SharedState) -> anyhow::Result<(
         .node_managers()
         .get_of_type::<SimpleNodeManager>()
         .unwrap();
-    let ns = handle.get_namespace_index(&config.opcua.namespace_uri).unwrap();
+    let ns = handle
+        .get_namespace_index(&config.opcua.namespace_uri)
+        .unwrap();
     let subscriptions = handle.subscriptions().clone();
 
     build_address_space(
@@ -118,7 +120,9 @@ pub async fn run_server_with(
         .node_managers()
         .get_of_type::<SimpleNodeManager>()
         .unwrap();
-    let ns = handle.get_namespace_index(&config.opcua.namespace_uri).unwrap();
+    let ns = handle
+        .get_namespace_index(&config.opcua.namespace_uri)
+        .unwrap();
     let subscriptions = handle.subscriptions().clone();
 
     build_address_space(
