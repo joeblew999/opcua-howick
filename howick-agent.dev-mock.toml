@@ -1,0 +1,33 @@
+# howick-agent.dev-mock.toml — howick-agent polling mock-plat-trunk
+#
+# Use when testing the HTTP polling path against the local mock server.
+# Requires: mise run dev:mock  (mock-plat-trunk on :3000)
+# Run with: mise run dev:agent:mock
+
+[opcua]
+host             = "0.0.0.0"
+port             = 4840
+application_name = "Howick Edge Agent - Dev Mock"
+
+[http]
+host = "0.0.0.0"
+port = 4841
+
+[machine]
+machine_name      = "Howick FRAMA"
+job_input_dir     = "./jobs/input"
+machine_input_dir = "./jobs/machine"
+machine_output_dir = "./jobs/output"
+usb_gadget_mode   = false
+
+[plat_trunk]
+url                       = "http://localhost:3000"   # mock-plat-trunk
+api_key                   = ""
+status_push_interval_secs = 5
+
+[sensor]
+enabled            = false
+empty_spool_kg     = 18.0
+steel_kg_per_m     = 0.74
+low_alert_m        = 50.0
+poll_interval_secs = 30

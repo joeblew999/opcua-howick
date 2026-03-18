@@ -1,12 +1,12 @@
-# config.agent.toml — local dev howick-agent config
+# howick-agent.dev.toml — local dev howick-agent config
 #
-# Mirrors config.agent.pi-zero.toml for localhost.
+# Mirrors howick-agent.pi-zero.toml for localhost.
 # howick-agent subscribes to the local opcua-howick instance via OPC UA.
 #
-# On Pi Zero hardware, howick-agent reads ~/config.toml (config.agent.pi-zero.toml).
-# In dev, it reads this file: mise run dev:all passes --config config.agent.toml.
+# On Pi Zero hardware, howick-agent reads ~/config.toml (howick-agent.pi-zero.toml).
+# In dev, it reads this file: mise run dev:all passes --config howick-agent.dev.toml.
 #
-# The only meaningful differences from config.agent.pi-zero.toml:
+# The only meaningful differences from howick-agent.pi-zero.toml:
 #   plat_trunk.url  = opc.tcp://127.0.0.1:4840/   (localhost instead of pi5.local)
 #   usb_gadget_mode = false                         (no USB gadget on a laptop)
 #   machine_input_dir = ./jobs/machine              (local dir instead of /mnt/usb_share)

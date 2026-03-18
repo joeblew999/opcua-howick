@@ -16,20 +16,20 @@
 #    Run: mise run dev:all
 #
 #  Hardware — Pi 5 + Pi Zero 2W (production):
-#    Pi 5 runs opcua-howick (config: config.pi5.toml)
-#    Pi Zero runs howick-agent (config: config.agent.pi-zero.toml)
+#    Pi 5 runs opcua-howick (config: opcua-howick.pi5.toml)
+#    Pi Zero runs howick-agent (config: howick-agent.pi-zero.toml)
 #    Dashboard: http://howick-pi5.local:4841/dashboard
 #    howick-agent polls Pi 5 via OPC UA subscription, writes to /mnt/usb_share
 #
 #  Windows Design PC:
-#    Both binaries run on the Design PC (config: config.windows.toml)
+#    Both binaries run on the Design PC (config: opcua-howick.windows.toml)
 #    Dashboard: http://localhost:4841/dashboard
 #    howick-agent writes to USB stick drive letter (e.g. D:\)
 #    Operator still walks USB stick to machine — but copying is automatic.
 #
 # ── Key unknown ────────────────────────────────────────────────────────────────
 #  What folder on the USB does the Howick FRAMA look for CSVs?
-#  Ask Prin's operator. Sets machine_input_dir in config.agent.pi-zero.toml.
+#  Ask Prin's operator. Sets machine_input_dir in howick-agent.pi-zero.toml.
 
 [opcua]
 host             = "0.0.0.0"

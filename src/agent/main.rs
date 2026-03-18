@@ -21,7 +21,7 @@
 //!
 //! See docs/customer/06-pi-zero-setup.md for Pi Zero 2W setup guide.
 //!
-//! ## Config (config.toml)
+//! ## Config (howick-agent.dev.toml)
 //!
 //! ```toml
 //! [machine]
@@ -93,7 +93,7 @@ async fn main() -> anyhow::Result<()> {
         .skip_while(|a| a != "--config")
         .nth(1)
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("config.toml"));
+        .unwrap_or_else(|| PathBuf::from("howick-agent.dev.toml"));
     let config = config::Config::load_or_default(&config_path);
 
     // On Linux (Pi Zero) warn if USB gadget mode is not configured — it's required.

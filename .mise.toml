@@ -57,17 +57,17 @@ run         = "RUST_LOG=opcua_howick=debug cargo run --bin opcua-howick"
 [tasks."dev:agent"]
 description = "Run howick-agent via OPC UA subscription (primary mode) — requires mise run dev in another terminal"
 depends     = ["dev:setup"]
-run         = "RUST_LOG=howick_agent=debug cargo run --bin howick-agent -- --config config.agent.toml"
+run         = "RUST_LOG=howick_agent=debug cargo run --bin howick-agent -- --config howick-agent.dev.toml"
 
 [tasks."dev:agent:mock"]
 description = "Run howick-agent polling mock-plat-trunk on :3000 — requires mise run dev:mock in another terminal"
 depends     = ["dev:setup"]
-run         = "RUST_LOG=howick_agent=debug cargo run --bin howick-agent -- --config config.toml"
+run         = "RUST_LOG=howick_agent=debug cargo run --bin howick-agent -- --config howick-agent.dev-mock.toml"
 
 [tasks."dev:agent:local"]
 description = "Run howick-agent polling local opcua-howick HTTP API on :4841 — requires mise run dev in another terminal"
 depends     = ["dev:setup"]
-run         = "RUST_LOG=howick_agent=debug cargo run --bin howick-agent -- --config config.agent.dev-http.toml"
+run         = "RUST_LOG=howick_agent=debug cargo run --bin howick-agent -- --config howick-agent.dev-http.toml"
 
 [tasks."dev:watch"]
 description = "Auto-rebuild on source changes (requires cargo-watch: cargo install cargo-watch)"
@@ -134,7 +134,7 @@ outputs  = ["target/debug/opcua-howick", "target/debug/howick-agent"]
 run      = "cargo build"
 
 [tasks.run]
-description = "Run opcua-howick locally (reads ./config.toml) — alias for dev"
+description = "Run opcua-howick locally (reads ./opcua-howick.dev.toml) — alias for dev"
 run         = "cargo run"
 
 [tasks.test]
@@ -189,7 +189,7 @@ description = "Cross-compile howick-agent for Pi Zero 2W (aarch64)"
 run         = "mise run build:bin -- howick-agent aarch64-unknown-linux-gnu true"
 
 [tasks."deploy:pi-zero"]
-description = "Deploy howick-agent to Pi Zero 2W — installs service + copies config.agent.pi-zero.toml → ~/config.toml on first deploy"
+description = "Deploy howick-agent to Pi Zero 2W — installs service + copies howick-agent.pi-zero.toml on first deploy"
 depends     = ["build:agent:pi-zero"]
 run         = """
 VERSION=$(cargo pkgid --quiet | cut -d@ -f2)
@@ -212,9 +212,9 @@ ssh ${ZERO_HOST:-pi@howick-pi-zero.local} '
 '
 ssh ${ZERO_HOST:-pi@howick-pi-zero.local} "echo 'v${VERSION}' > ~/.howick-agent-version"
 # Copy config on first deploy only — don't overwrite if already customised
-ssh ${ZERO_HOST:-pi@howick-pi-zero.local} '[ -f ~/config.toml ]' \
-  || { echo "First deploy — copying config.agent.pi-zero.toml → ~/config.toml"; \
-       scp config.agent.pi-zero.toml ${ZERO_HOST:-pi@howick-pi-zero.local}:~/config.toml; }
+ssh ${ZERO_HOST:-pi@howick-pi-zero.local} '[ -f ~/howick-agent.pi-zero.toml ]' \
+  || { echo "First deploy — copying howick-agent.pi-zero.toml"; \
+       scp howick-agent.pi-zero.toml ${ZERO_HOST:-pi@howick-pi-zero.local}:~/howick-agent.pi-zero.toml; }
 echo ""
 echo "Pi Zero deployed (howick-agent v${VERSION})"
 """
@@ -399,7 +399,7 @@ REMOTE
 # ZERO_HOST — Tailscale IP or hostname of Pi Zero 2W (e.g. pi@100.x.x.x)
 
 [tasks."deploy:pi5"]
-description = "Deploy opcua-howick to Pi 5 — installs service + copies config.pi5.toml → ~/config.toml on first deploy"
+description = "Deploy opcua-howick to Pi 5 — installs service + copies opcua-howick.pi5.toml on first deploy"
 depends     = ["build:pi5"]
 run         = """
 VERSION=$(cargo pkgid --quiet | cut -d@ -f2)
@@ -422,9 +422,9 @@ ssh ${PI5_HOST:-pi@howick-pi5.local} "
   sudo systemctl status opcua-howick --no-pager
 "
 # Copy config on first deploy only — don't overwrite if already customised
-ssh ${PI5_HOST:-pi@howick-pi5.local} '[ -f ~/config.toml ]' \
-  || { echo "First deploy — copying config.pi5.toml → ~/config.toml"; \
-       scp config.pi5.toml ${PI5_HOST:-pi@howick-pi5.local}:~/config.toml; }
+ssh ${PI5_HOST:-pi@howick-pi5.local} '[ -f ~/opcua-howick.pi5.toml ]' \
+  || { echo "First deploy — copying opcua-howick.pi5.toml"; \
+       scp opcua-howick.pi5.toml ${PI5_HOST:-pi@howick-pi5.local}:~/opcua-howick.pi5.toml; }
 """
 
 
@@ -437,12 +437,12 @@ mkdir -p "$DEST"
 cp target/x86_64-pc-windows-msvc/release/opcua-howick.exe "$DEST"/opcua-howick.exe
 cp target/x86_64-pc-windows-msvc/release/howick-agent.exe "$DEST"/howick-agent.exe
 # Copy configs on first deploy only
-[ -f "$DEST/config.toml"       ] || cp config.windows.toml       "$DEST"/config.toml
-[ -f "$DEST/config.agent.toml" ] || cp config.agent.windows.toml "$DEST"/config.agent.toml
+[ -f "$DEST/opcua-howick.windows.toml" ] || cp opcua-howick.windows.toml "$DEST"/opcua-howick.windows.toml
+[ -f "$DEST/howick-agent.windows.toml" ] || cp howick-agent.windows.toml "$DEST"/howick-agent.windows.toml
 echo "Deployed to Windows PC ($DEST)"
-echo "  opcua-howick.exe  reads config.toml"
-echo "  howick-agent.exe  reads config.agent.toml (--config config.agent.toml)"
-echo "Edit both configs, then start both .exe files."
+echo "  opcua-howick.exe --config opcua-howick.windows.toml"
+echo "  howick-agent.exe --config howick-agent.windows.toml"
+echo "Edit both configs before starting."
 """
 
 # ── SSH shortcuts ──────────────────────────────────────────────────────────────

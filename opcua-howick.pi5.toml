@@ -1,4 +1,4 @@
-# config.pi5.toml — Pi 5 server config (Option B hardware)
+# opcua-howick.pi5.toml — Pi 5 server config (Option B hardware)
 #
 # Copy to ~/config.toml on the Pi 5.
 # Pi 5 runs opcua-howick: dashboard (:4841), OPC UA server (:4840), job queue.

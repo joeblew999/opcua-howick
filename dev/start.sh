@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Full dev stack — mirrors production hardware:
 #
-#   opcua-howick  reads config.toml        (same as config.pi5.toml on Pi 5)
-#   howick-agent  reads config.agent.toml  (same as config.agent.pi-zero.toml on Pi Zero)
+#   opcua-howick  reads opcua-howick.dev.toml        (same as opcua-howick.pi5.toml on Pi 5)
+#   howick-agent  reads howick-agent.dev.toml  (same as howick-agent.pi-zero.toml on Pi Zero)
 #
 # Each binary has its own config file — no env var overrides needed.
 # This is the same pattern used on hardware, just with localhost addresses.
@@ -22,7 +22,7 @@ RUST_LOG=opcua_howick=info cargo run --bin opcua-howick &
 SERVER_PID=$!
 sleep 2
 
-RUST_LOG=howick_agent=info cargo run --bin howick-agent -- --config config.agent.toml &
+RUST_LOG=howick_agent=info cargo run --bin howick-agent -- --config howick-agent.dev.toml &
 AGENT_PID=$!
 
 echo ""

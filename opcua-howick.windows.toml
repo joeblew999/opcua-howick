@@ -1,4 +1,4 @@
-# config.windows.toml — Option A: Windows Design PC
+# opcua-howick.windows.toml — Option A: Windows Design PC
 #
 # Both binaries run on the Design PC alongside SketchUp + FrameBuilderMRD.
 #   opcua-howick.exe — dashboard + job queue (http://localhost:4841/dashboard)

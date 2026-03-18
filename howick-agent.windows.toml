@@ -1,10 +1,10 @@
-# config.agent.windows.toml — Windows Design PC howick-agent config
+# howick-agent.windows.toml — Windows Design PC howick-agent config
 #
-# Deployed alongside config.windows.toml by: mise run deploy:windows
+# Deployed alongside opcua-howick.windows.toml by: mise run deploy:windows
 # howick-agent polls the local opcua-howick HTTP queue and writes jobs to the USB stick.
 #
 # machine_input_dir = USB stick root. Change D:\ to E:\ or F:\ if needed.
-# howick-agent is started with: howick-agent.exe --config config.agent.toml
+# howick-agent is started with: howick-agent.exe --config howick-agent.dev.toml
 
 [opcua]
 host             = "0.0.0.0"

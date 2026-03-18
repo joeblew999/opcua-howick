@@ -100,16 +100,18 @@ Free browser: **UaExpert** (Windows/Mac/Linux) from unified-automation.com.
 
 ## Config files
 
-`config.*.toml` = opcua-howick — `config.agent.*.toml` = howick-agent
+Naming: `<binary>.<env>.toml` — binary name first, environment second.
 
 | File | Binary | Where used |
 |------|--------|------------|
-| `config.toml` | opcua-howick | Local dev |
-| `config.agent.toml` | howick-agent | Local dev (`--config config.agent.toml`) |
-| `config.pi5.toml` | opcua-howick | Pi 5 → deployed as `~/config.toml` |
-| `config.agent.pi-zero.toml` | howick-agent | Pi Zero → deployed as `~/config.toml` |
-| `config.windows.toml` | opcua-howick | Windows Design PC |
-| `config.agent.windows.toml` | howick-agent | Windows Design PC (`--config config.agent.toml`) |
+| `opcua-howick.dev.toml` | opcua-howick | Dev laptop (default) |
+| `opcua-howick.pi5.toml` | opcua-howick | Pi 5 production |
+| `opcua-howick.windows.toml` | opcua-howick | Windows Design PC |
+| `howick-agent.dev.toml` | howick-agent | Dev laptop, OPC UA mode (default) |
+| `howick-agent.dev-mock.toml` | howick-agent | Dev laptop, mock-plat-trunk HTTP mode |
+| `howick-agent.dev-http.toml` | howick-agent | Dev laptop, local opcua-howick HTTP mode |
+| `howick-agent.pi-zero.toml` | howick-agent | Pi Zero 2W production |
+| `howick-agent.windows.toml` | howick-agent | Windows Design PC |
 
 ---
 

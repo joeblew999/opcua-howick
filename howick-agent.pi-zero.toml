@@ -1,4 +1,4 @@
-# config.agent.pi-zero.toml — Pi Zero 2W howick-agent config
+# howick-agent.pi-zero.toml — Pi Zero 2W howick-agent config
 #
 # Deployed to ~/config.toml on the Pi Zero 2W by: mise run deploy:pi-zero
 # howick-agent subscribes to Pi 5 OPC UA server and writes jobs to virtual USB.

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-/// Configuration loaded from config.toml.
+/// Configuration loaded from `<binary>.<env>.toml` (e.g. `opcua-howick.dev.toml`).
 ///
 /// Supports all three deployment topologies:
 /// - Cloud:  plat_trunk_url = "https://your-worker.workers.dev"

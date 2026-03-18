@@ -42,7 +42,7 @@ BINARY_PATH="target/$TARGET/release/$BINARY"
 echo "Deploying to $ZERO_HOST..."
 scp "$BINARY_PATH" "$ZERO_HOST:~/$BINARY.new"
 scp deploy/howick-agent.service "$ZERO_HOST:~/howick-agent.service"
-scp config.agent.pi-zero.toml "$ZERO_HOST:~/config.toml.example"
+scp howick-agent.pi-zero.toml "$ZERO_HOST:~/howick-agent.pi-zero.toml"
 
 ssh "$ZERO_HOST" << 'REMOTE'
   set -e
@@ -54,9 +54,8 @@ ssh "$ZERO_HOST" << 'REMOTE'
     sudo systemctl enable howick-agent
     echo "Service installed and enabled"
   fi
-  if [ ! -f ~/config.toml ]; then
-    cp ~/config.toml.example ~/config.toml
-    echo "config.toml created from example — edit before restarting"
+  if [ ! -f ~/howick-agent.pi-zero.toml ]; then
+    echo "howick-agent.pi-zero.toml missing — edit it before restarting"
     echo "Set: machine_input_dir = /mnt/usb_share"
   fi
   sudo systemctl restart howick-agent

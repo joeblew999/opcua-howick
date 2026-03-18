@@ -40,7 +40,7 @@ BINARY_PATH="target/$TARGET/release/$BINARY"
 echo "Deploying to $PI5_HOST..."
 scp "$BINARY_PATH" "$PI5_HOST:~/$BINARY.new"
 scp deploy/opcua-howick.service "$PI5_HOST:~/opcua-howick.service"
-scp config.toml "$PI5_HOST:~/config.toml.example"
+scp opcua-howick.pi5.toml "$PI5_HOST:~/opcua-howick.pi5.toml"
 
 ssh "$PI5_HOST" << 'REMOTE'
   set -e
@@ -52,9 +52,8 @@ ssh "$PI5_HOST" << 'REMOTE'
     sudo systemctl enable opcua-howick
     echo "Service installed and enabled"
   fi
-  if [ ! -f ~/config.toml ]; then
-    cp ~/config.toml.example ~/config.toml
-    echo "config.toml created from example — edit before restarting"
+  if [ ! -f ~/opcua-howick.pi5.toml ]; then
+    echo "opcua-howick.pi5.toml missing — edit it before restarting"
   fi
   sudo systemctl restart opcua-howick
   sleep 2

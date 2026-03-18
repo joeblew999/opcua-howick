@@ -35,7 +35,7 @@ the file copying is automatic — drag into the browser, the USB stick has it.
 └─────────────────────────────────────────────────────┘
 ```
 
-Key config (see `config.windows.toml`):
+Key config (see `opcua-howick.windows.toml`):
 ```toml
 usb_gadget_mode   = false
 machine_input_dir = "D:\\"   # USB stick drive letter — TBC with Prin's operator
@@ -80,7 +80,7 @@ USB port and replaces the USB stick. Operator uses a browser on any device.
 └─────────────────────────────────────────────────────┘
 ```
 
-Key config (see `config.pi5.toml` and `config.agent.pi-zero.toml`):
+Key config (see `opcua-howick.pi5.toml` and `howick-agent.pi-zero.toml`):
 ```toml
 # Pi 5
 usb_gadget_mode = false
@@ -245,7 +245,7 @@ Reference jobs from Prin's machine used to develop and test this system:
 ## Key unknown
 
 **What folder on the USB does the Howick FRAMA look for CSV files?**
-One question for Prin's operator. Sets `machine_input_dir` in `config.agent.pi-zero.toml`.
+One question for Prin's operator. Sets `machine_input_dir` in `howick-agent.pi-zero.toml`.
 
 ---
 

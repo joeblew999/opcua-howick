@@ -70,7 +70,7 @@ The CSV is the only interface that matters.
   temporary workaround. It is the primary entry point for Workflow 1.
 - The job poller (`src/poller.rs`) handles Workflow 2 — polling plat-trunk
   for pending jobs. Both paths write to the same job queue and file watcher.
-- Configuration (`config.toml`) must support both paths without code changes.
+- Configuration (`opcua-howick.dev.toml`) must support both paths without code changes.
 
 ### For howick-agent
 
