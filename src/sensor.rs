@@ -122,8 +122,6 @@ fn read_hx711_linux() -> Option<f64> {
 /// One additional CLK pulse sets gain = 128 (channel A).
 #[cfg(target_os = "linux")]
 fn hx711_read_raw(dat_pin: u8, clk_pin: u8) -> anyhow::Result<i32> {
-    use std::io::Write;
-
     // Export pins via sysfs (idempotent)
     let _ = std::fs::write("/sys/class/gpio/export", dat_pin.to_string());
     let _ = std::fs::write("/sys/class/gpio/export", clk_pin.to_string());
