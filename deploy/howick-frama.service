@@ -17,7 +17,7 @@ StandardError=journal
 SyslogIdentifier=howick-frama
 
 # Environment
-Environment=RUST_LOG=howick_agent=info
+Environment=RUST_LOG=howick_frama=info,opcua_howick=info
 Environment=RUST_BACKTRACE=1
 
 # Security hardening

@@ -10,7 +10,7 @@
 ## How it works
 
 The Raspberry Pi Zero 2W plugs permanently into the Howick FRAMA's USB port via
-a 3m cable. It runs `howick-agent` — polls the Pi 5 for pending jobs and writes
+a 3m cable. It runs `howick-frama` — polls the Pi 5 for pending jobs and writes
 each CSV to a virtual USB drive. The FRAMA sees a normal USB stick. Nothing on
 the machine side changes.
 
@@ -33,7 +33,7 @@ the machine side changes.
 The Pi Zero 2W's USB port operates in device mode — it presents itself as USB
 mass storage to whatever it is plugged into. The Linux `g_mass_storage` kernel
 module exposes a 512MB FAT32 disk image (`/piusb.bin`) as USB storage.
-`howick-agent` writes CSVs into that image, then signals the kernel to
+`howick-frama` writes CSVs into that image, then signals the kernel to
 re-present the storage — same effect as ejecting and reinserting a USB stick.
 
 ---
@@ -99,10 +99,10 @@ Does in one shot:
 mise run doppler:setup:pi-zero
 ```
 
-Links to `opcua-howick / pi-zero` config. Set `PLAT_TRUNK_API_KEY` and
+Links to `opcua-server / pi-zero` config. Set `PLAT_TRUNK_API_KEY` and
 `PLAT_TRUNK_URL` in the Doppler dashboard. Secrets are never written to disk.
 
-### Step 5 — Deploy howick-agent
+### Step 5 — Deploy howick-frama
 
 ```bash
 mise run deploy:pi-zero
@@ -121,7 +121,7 @@ mise run logs:pi-zero      # stream live logs
 
 ## Config on Pi Zero
 
-Copy `howick-agent.pi-zero.toml` to `~/config.toml`. Key values:
+Copy `howick-frama.pi-zero.toml` to `~/config.toml`. Key values:
 
 ```toml
 [machine]

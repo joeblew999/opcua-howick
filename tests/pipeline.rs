@@ -2,7 +2,7 @@
 ///
 /// These tests exercise the same HTTP endpoints that:
 ///   - the dashboard calls (GET /status, GET /jobs, POST /upload)
-///   - howick-agent calls (GET /api/jobs/howick/pending, POST /api/jobs/howick/:id/complete)
+///   - howick-frama calls (GET /api/jobs/howick/pending, POST /api/jobs/howick/:id/complete)
 ///   - the coil sensor calls (POST /api/sensor/coil)
 ///
 /// Each test starts a real HTTP server + file watcher on a temp directory,
@@ -139,7 +139,7 @@ async fn dashboard_serves_html() {
 }
 
 /// Full pipeline:
-/// User uploads → job queued → howick-agent polls → agent completes → job in completed list
+/// User uploads → job queued → howick-frama polls → agent completes → job in completed list
 #[tokio::test]
 async fn upload_queue_agent_poll_complete() {
     let (input, machine) = test_dirs();
@@ -174,7 +174,7 @@ async fn upload_queue_agent_poll_complete() {
     );
     assert!(jobs["completed"].as_array().unwrap().is_empty());
 
-    // 3. howick-agent polls for pending jobs
+    // 3. howick-frama polls for pending jobs
     let pending: serde_json::Value = client
         .get(format!("http://{addr}/api/jobs/howick/pending"))
         .send()
@@ -187,7 +187,7 @@ async fn upload_queue_agent_poll_complete() {
     assert!(!job_list.is_empty(), "agent should see a pending job");
     assert_eq!(job_list[0]["frameset_name"], "T1");
 
-    // 4. howick-agent confirms delivery
+    // 4. howick-frama confirms delivery
     let job_id = job_list[0]["job_id"].as_str().unwrap();
     let done = client
         .post(format!("http://{addr}/api/jobs/howick/{job_id}/complete"))

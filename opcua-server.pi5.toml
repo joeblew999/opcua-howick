@@ -2,7 +2,7 @@
 #
 # Copy to ~/config.toml on the Pi 5.
 # Pi 5 runs opcua-server: dashboard (:4841), OPC UA server (:4840), job queue.
-# Pi Zero (howick-agent) subscribes via OPC UA and writes jobs to its virtual USB.
+# Pi Zero (howick-frama) subscribes via OPC UA and writes jobs to its virtual USB.
 #
 # Dashboard: http://howick-pi5.local:4841/dashboard — any browser on factory WiFi
 
@@ -22,7 +22,7 @@ machine_name = "Howick FRAMA"
 # Incoming uploads from dashboard land here
 job_input_dir = "/home/pi/jobs/input"
 
-# Pi 5 does not write to machine_input_dir — Pi Zero (howick-agent) does.
+# Pi 5 does not write to machine_input_dir — Pi Zero (howick-frama) does.
 machine_input_dir = "/home/pi/jobs/machine"
 
 machine_output_dir = "/home/pi/jobs/output"
@@ -33,7 +33,7 @@ usb_gadget_mode = false
 
 [plat_trunk]
 # Pi Zero polls THIS machine's HTTP server, not plat-trunk (no plat-trunk needed yet)
-# howick-agent on Pi Zero: set PLAT_TRUNK_URL=http://howick-pi5.local:4841
+# howick-frama on Pi Zero: set PLAT_TRUNK_URL=http://howick-pi5.local:4841
 url                       = "http://localhost:3000"
 api_key                   = ""
 status_push_interval_secs = 5

@@ -237,7 +237,7 @@ async fn opcua_subscribe_pending_job_id() {
         .await
         .unwrap_or(2);
 
-    // Set up subscription — same as howick-agent does in production
+    // Set up subscription — same as howick-frama does in production
     let received: std::sync::Arc<std::sync::Mutex<Vec<String>>> =
         std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
     let received_clone = received.clone();

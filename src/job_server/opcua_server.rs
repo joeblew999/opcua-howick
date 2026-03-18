@@ -209,7 +209,7 @@ fn build_server_builder(
 ///     CompletedCount   UInt32
 ///     PendingJobId     String  — job_id of next pending job ("" = none)
 ///     PendingJobName   String  — frameset name of pending job
-///     PendingJobCsv    String  — full CSV content (howick-agent reads this)
+///     PendingJobCsv    String  — full CSV content (howick-frama reads this)
 ///     CompleteJob      Method  — call with job_id to mark delivered
 /// ```
 fn build_address_space(
@@ -288,7 +288,7 @@ fn build_address_space(
                 "Completed Count",
                 0u32,
             ),
-            // M2M job delivery nodes — howick-agent reads these via OPC UA subscription
+            // M2M job delivery nodes — howick-frama reads these via OPC UA subscription
             Variable::new(
                 &node(ns, "Jobs/PendingJobId"),
                 "PendingJobId",
@@ -311,7 +311,7 @@ fn build_address_space(
         &jobs_folder,
     );
 
-    // CompleteJob method — howick-agent calls this after writing CSV to USB
+    // CompleteJob method — howick-frama calls this after writing CSV to USB
     // Signature: CompleteJob(job_id: String) -> ()
     let method_node = node(ns, "Jobs/CompleteJob");
     MethodBuilder::new(&method_node, "CompleteJob", "CompleteJob")

@@ -41,7 +41,7 @@ FrameBuilderMRD. No extra hardware required.
 ```
 Design PC
 ├── SketchUp + FrameBuilderMRD   generates job file as normal
-├── opcua-howick (this software)  dashboard + job queue
+├── opcua-server (this software)  dashboard + job queue
 └── Browser                       open http://localhost:4841/dashboard
       drag job file in
             │
@@ -70,11 +70,11 @@ Design PC
             │ WiFi
             ▼
       Pi 5 (credit-card sized computer on factory WiFi)
-      └── opcua-howick   dashboard, job queue, OPC UA server
+      └── opcua-server   dashboard, job queue, OPC UA server
             │ WiFi
             ▼
       Pi Zero (smaller than a USB stick, plugged into FRAMA permanently)
-      └── howick-agent   receives job over WiFi, writes to virtual USB
+      └── howick-frama   receives job over WiFi, writes to virtual USB
             │ USB cable 3m
             ▼
       Howick FRAMA reads CSV — no changes to machine

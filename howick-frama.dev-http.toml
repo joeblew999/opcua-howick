@@ -1,12 +1,12 @@
-# howick-agent.dev-http.toml — howick-agent polling local opcua-howick HTTP API
+# howick-frama.dev-http.toml — howick-frama polling local opcua-howick HTTP API
 #
 # Use when you want to test the HTTP polling path without mock-plat-trunk.
-# howick-agent polls opcua-howick's job queue via HTTP instead of OPC UA.
+# howick-frama polls opcua-howick's job queue via HTTP instead of OPC UA.
 #
 # Requires: mise run dev   (opcua-howick running on :4841)
 # Run with: mise run dev:agent:local
 #
-# Differs from howick-agent.dev.toml only in plat_trunk.url:
+# Differs from howick-frama.dev.toml only in plat_trunk.url:
 #   opc.tcp://127.0.0.1:4840/  →  http://127.0.0.1:4841
 
 [opcua]

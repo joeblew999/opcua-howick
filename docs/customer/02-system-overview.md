@@ -19,7 +19,7 @@ the file copying is automatic — drag into the browser, the USB stick has it.
 │                                                     │
 │  SketchUp + FrameBuilderMRD  — generates CSV        │
 │  opcua-server.exe            — dashboard + job queue│
-│  howick-agent.exe            — picks up queued jobs │
+│  howick-frama.exe            — picks up queued jobs │
 │                                writes to USB stick  │
 │  Browser                     — Job Dashboard        │
 │                                http://localhost:4841│
@@ -60,7 +60,7 @@ USB port and replaces the USB stick. Operator uses a browser on any device.
 ┌──────────────────────▼──────────────────────────────┐
 │  Pi 5                                               │
 │                                                     │
-│  opcua-howick   — Job Dashboard  (:4841)            │
+│  opcua-server   — Job Dashboard  (:4841)            │
 │                   OPC UA server  (:4840)            │
 │                   job queue                         │
 └──────────────────────┬──────────────────────────────┘
@@ -68,7 +68,7 @@ USB port and replaces the USB stick. Operator uses a browser on any device.
 ┌──────────────────────▼──────────────────────────────┐
 │  Pi Zero                                            │
 │                                                     │
-│  howick-agent   — polls Pi 5 for pending jobs       │
+│  howick-frama   — polls Pi 5 for pending jobs       │
 │                   writes CSV to virtual USB         │
 │                   (Phase 2) reads coil weight       │
 └──────────────────────┬──────────────────────────────┘
@@ -80,7 +80,7 @@ USB port and replaces the USB stick. Operator uses a browser on any device.
 └─────────────────────────────────────────────────────┘
 ```
 
-Key config (see `opcua-server.pi5.toml` and `howick-agent.pi-zero.toml`):
+Key config (see `opcua-server.pi5.toml` and `howick-frama.pi-zero.toml`):
 ```toml
 # Pi 5
 usb_gadget_mode = false
@@ -112,7 +112,7 @@ workflow continues unchanged alongside it.
 ┌──────────────────────▼──────────────────────────────┐
 │  Pi Zero (same hardware as Option B)                │
 │                                                     │
-│  howick-agent   — polls plat-trunk (not Pi 5)       │
+│  howick-frama   — polls plat-trunk (not Pi 5)       │
 │                   writes CSV to virtual USB         │
 └──────────────────────┬──────────────────────────────┘
                        │ USB cable 3m
@@ -129,8 +129,8 @@ workflow continues unchanged alongside it.
 |----------|---------|------|
 | SketchUp | Design PC | Prin's 3D design tool |
 | FrameBuilderMRD | Design PC | Howick's CSV generator |
-| opcua-howick | Design PC (Option A) or Pi 5 (Option B) | Dashboard, job queue, OPC UA server |
-| howick-agent | Design PC (Option A) or Pi Zero 2W (Option B) | Polls for jobs, writes CSV to USB |
+| opcua-server | Design PC (Option A) or Pi 5 (Option B) | Dashboard, job queue, OPC UA server |
+| howick-frama | Design PC (Option A) or Pi Zero 2W (Option B) | Polls for jobs, writes CSV to USB |
 | plat-trunk | Cloud / LAN (Phase 3 — future) | ubuntu Software's STEP CAD platform |
 
 ---
@@ -168,7 +168,7 @@ communication — used by Siemens, ABB, Fanuc, and every major SCADA and MES ven
 worldwide. It is the same protocol used to monitor CNC machines, PLCs, and robots
 in large factories.
 
-opcua-howick runs a full, standards-compliant OPC UA server on the Pi 5. This is
+opcua-server runs a full, standards-compliant OPC UA server on the Pi 5. This is
 not a cut-down version — it is the same `async-opcua` library used in production
 industrial systems, exposing a proper address space with live subscriptions.
 
@@ -207,7 +207,7 @@ worldwide:
 ### Why this matters
 
 Any factory monitoring system, SCADA, or MES that speaks OPC UA can connect to the
-Pi 5 and read machine state — with no changes to opcua-howick. This is the same
+Pi 5 and read machine state — with no changes to opcua-server. This is the same
 integration path used to connect Siemens S7 PLCs, Fanuc CNCs, and Beckhoff controllers
 to factory dashboards. You are getting that capability on a Pi 5 for free.
 
@@ -245,7 +245,7 @@ Reference jobs from Prin's machine used to develop and test this system:
 ## Key unknown
 
 **What folder on the USB does the Howick FRAMA look for CSV files?**
-One question for Prin's operator. Sets `machine_input_dir` in `howick-agent.pi-zero.toml`.
+One question for Prin's operator. Sets `machine_input_dir` in `howick-frama.pi-zero.toml`.
 
 ---
 

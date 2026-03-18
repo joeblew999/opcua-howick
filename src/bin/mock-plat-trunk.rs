@@ -1,6 +1,6 @@
 //! Mock plat-trunk backend for local development.
 //!
-//! Simulates the two HTTP endpoints that howick-agent polls:
+//! Simulates the two HTTP endpoints that howick-frama polls:
 //!
 //!   GET  /api/jobs/howick/pending          → serves real fixture CSVs in order, then empty
 //!   POST /api/jobs/howick/{id}/complete    → acknowledges completion, advances queue
@@ -12,7 +12,7 @@
 //! Usage (two terminals):
 //!
 //!   terminal 1:  mise run dev:mock    # this binary — listens on :3000
-//!   terminal 2:  mise run dev:agent   # howick-agent polls :3000
+//!   terminal 2:  mise run dev:agent   # howick-frama polls :3000
 //!
 //! Then watch ./jobs/machine/ for the written CSVs.
 

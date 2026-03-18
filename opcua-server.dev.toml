@@ -5,31 +5,31 @@
 # Two binaries always run together:
 #
 #   opcua-server   — Dashboard (:4841), OPC UA server (:4840), job queue, file watcher
-#   howick-agent   — Polls opcua-server, writes CSV to machine_input_dir (USB gadget)
+#   howick-frama   — Polls opcua-server, writes CSV to machine_input_dir (USB gadget)
 #
 # ── Deployment options ────────────────────────────────────────────────────────
 #
 #  Laptop demo (this config):
 #    Both binaries run on the same machine.
 #    Dashboard: http://localhost:4841/dashboard
-#    howick-agent polls http://localhost:4841 and writes to ./jobs/machine/
+#    howick-frama polls http://localhost:4841 and writes to ./jobs/machine/
 #    Run: mise run dev:all
 #
 #  Hardware — Pi 5 + Pi Zero 2W (production):
 #    Pi 5 runs opcua-server (config: opcua-server.pi5.toml)
-#    Pi Zero runs howick-agent (config: howick-agent.pi-zero.toml)
+#    Pi Zero runs howick-frama (config: howick-frama.pi-zero.toml)
 #    Dashboard: http://howick-pi5.local:4841/dashboard
-#    howick-agent polls Pi 5 via OPC UA subscription, writes to /mnt/usb_share
+#    howick-frama polls Pi 5 via OPC UA subscription, writes to /mnt/usb_share
 #
 #  Windows Design PC:
 #    Both binaries run on the Design PC (config: opcua-server.windows.toml)
 #    Dashboard: http://localhost:4841/dashboard
-#    howick-agent writes to USB stick drive letter (e.g. D:\)
+#    howick-frama writes to USB stick drive letter (e.g. D:\)
 #    Operator still walks USB stick to machine — but copying is automatic.
 #
 # ── Key unknown ────────────────────────────────────────────────────────────────
 #  What folder on the USB does the Howick FRAMA look for CSVs?
-#  Ask Prin's operator. Sets machine_input_dir in howick-agent.pi-zero.toml.
+#  Ask Prin's operator. Sets machine_input_dir in howick-frama.pi-zero.toml.
 
 [opcua]
 host             = "0.0.0.0"
@@ -47,7 +47,7 @@ machine_name = "Howick FRAMA"
 # Where uploaded CSVs land before the file watcher picks them up
 job_input_dir = "./jobs/input"
 
-# Where howick-agent writes CSVs so the Howick FRAMA can read them:
+# Where howick-frama writes CSVs so the Howick FRAMA can read them:
 #   Laptop dev:       "./jobs/machine"
 #   Pi Zero hardware: "/mnt/usb_share"  (virtual USB — TBC with Prin's operator)
 #   Windows USB:      "D:\\"            (USB stick drive letter)
@@ -59,7 +59,7 @@ machine_output_dir = "./jobs/output"
 usb_gadget_mode = false
 
 [plat_trunk]
-# howick-agent polls this URL for pending jobs.
+# howick-frama polls this URL for pending jobs.
 # Laptop dev: http://localhost:4841  (point at local opcua-server)
 # Pi Zero:    opc.tcp://howick-pi5.local:4840/  (OPC UA subscription, no polling)
 url                       = "http://localhost:3000"

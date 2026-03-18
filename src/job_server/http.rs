@@ -1,5 +1,5 @@
 /// HTTP server — pipeline dashboard, operator upload UI, JSON API, and
-/// plat-trunk job endpoints for howick-agent (Pi Zero).
+/// plat-trunk job endpoints for howick-frama (Pi Zero).
 ///
 /// Endpoints:
 ///   GET  /                              → redirect to /dashboard
@@ -9,11 +9,11 @@
 ///   GET  /jobs                          → queued + completed jobs JSON
 ///   GET  /health                        → health check
 ///
-///   — plat-trunk API (called by howick-agent on Pi Zero) —
+///   — plat-trunk API (called by howick-frama on Pi Zero) —
 ///   GET  /api/jobs/howick/pending       → next queued job for the agent
 ///   POST /api/jobs/howick/:id/complete  → agent marks job delivered to USB
 ///
-///   — Phase 2: coil sensor (called by howick-agent sensor push loop) —
+///   — Phase 2: coil sensor (called by howick-frama sensor push loop) —
 ///   POST /api/sensor/coil               → Pi Zero pushes raw weight; server converts to metres
 use std::time::SystemTime;
 
@@ -224,8 +224,8 @@ async fn handle_connection(
             ("200", "application/json", body)
         }
 
-        // ── Local job queue — howick-agent (Pi Zero) polls these ─────────────
-        // Same API shape as plat-trunk so howick-agent works against both.
+        // ── Local job queue — howick-frama (Pi Zero) polls these ─────────────
+        // Same API shape as plat-trunk so howick-frama works against both.
         ("GET", "/api/jobs/howick/pending") => {
             let mut s = state.write().await;
             s.agent_last_seen_at = Some(SystemTime::now());

@@ -1,7 +1,7 @@
-# howick-agent.pi-zero.toml — Pi Zero 2W howick-agent config
+# howick-frama.pi-zero.toml — Pi Zero 2W howick-frama config
 #
 # Deployed to ~/config.toml on the Pi Zero 2W by: mise run deploy:pi-zero
-# howick-agent subscribes to Pi 5 OPC UA server and writes jobs to virtual USB.
+# howick-frama subscribes to Pi 5 OPC UA server and writes jobs to virtual USB.
 #
 # USB gadget setup: see docs/customer/06-pi-zero-setup.md
 # The Howick FRAMA sees the Pi Zero as a normal USB stick.
@@ -9,8 +9,8 @@
 # Root of virtual USB drive — Howick FRAMA reads from here.
 # If the machine expects a subfolder, change to e.g. /mnt/usb_share/Howick/Jobs
 
-# ── Fields unused by howick-agent (but required by shared Config struct) ──────
-# howick-agent is a minimal binary — no OPC UA server, no HTTP server.
+# ── Fields unused by howick-frama (but required by shared Config struct) ──────
+# howick-frama is a minimal binary — no OPC UA server, no HTTP server.
 # These sections must be present so the TOML parses correctly; values don't matter.
 
 [opcua]

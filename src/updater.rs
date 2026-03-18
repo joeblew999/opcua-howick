@@ -81,7 +81,7 @@ struct LatestRelease {
 ///
 /// # Arguments
 /// - `client`          — shared `reqwest::Client`
-/// - `bin_name`        — binary name, e.g. `"howick-agent"` or `"opcua-howick"`
+/// - `bin_name`        — binary name, e.g. `"howick-frama"` or `"opcua-howick"`
 /// - `current_version` — currently running version string, e.g. `"0.1.0 (abc1234)"`
 /// - `api_base`        — GitHub API base URL; `"https://api.github.com"` in production
 /// - `install_path`    — `None` replaces the running executable; `Some(p)` writes to `p` (tests)

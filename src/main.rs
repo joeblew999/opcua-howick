@@ -3,7 +3,7 @@
 //! Full OPC UA edge agent for Howick FRAMA machines.
 //! For Raspberry Pi 5, NUC, Mac Mini, or Windows PC.
 //!
-//! For Raspberry Pi Zero 2W (USB gadget mode), use `howick-agent` instead —
+//! For Raspberry Pi Zero 2W (USB gadget mode), use `howick-frama` instead —
 //! a minimal binary with no OPC UA or HTTP server (~3MB vs ~15MB).
 //!
 //! Four concurrent services:

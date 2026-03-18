@@ -2,7 +2,7 @@
 #
 # Both binaries run on the Design PC alongside SketchUp + FrameBuilderMRD.
 #   opcua-server.exe — dashboard + job queue (http://localhost:4841/dashboard)
-#   howick-agent.exe — picks up queued jobs, writes to USB stick automatically
+#   howick-frama.exe — picks up queued jobs, writes to USB stick automatically
 #
 # Operator drags CSV into the browser. USB stick gets the file automatically.
 # Operator still walks the stick to the Howick FRAMA — but copying is automatic.

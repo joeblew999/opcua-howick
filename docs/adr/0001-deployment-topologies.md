@@ -2,7 +2,7 @@
 
 **Status:** Accepted  
 **Date:** March 2026  
-**Context:** plat-trunk + opcua-howick factory integration
+**Context:** plat-trunk + opcua-server factory integration
 
 ---
 
@@ -31,7 +31,7 @@ Cloudflare Worker (Hono + WASM)
     │
     ├── D1 (SQLite) — metadata
     ├── R2 — Automerge doc bytes, CSV jobs
-    └── opcua-howick (edge, on factory LAN)
+    └── opcua-server (edge, on factory LAN)
             │
             │ OPC UA / CSV file drop
             ▼
@@ -54,7 +54,7 @@ Tauri v2 app (desktop)
     ├── Hono (same code, running in Tauri sidecar)
     ├── SQLite (local D1 equivalent)
     ├── Local filesystem (local R2 equivalent)
-    └── opcua-howick (sidecar or separate LAN machine)
+    └── opcua-server (sidecar or separate LAN machine)
             │
             │ OPC UA / CSV file drop
             ▼
@@ -76,7 +76,7 @@ Designer (browser)
 Tauri v2 (local)              ←──── syncs when online ────→  Cloudflare
     │                                  (Automerge CRDT)
     ├── Local Hono + SQLite + FS
-    └── opcua-howick sidecar
+    └── opcua-server sidecar
             │
             ▼
         Howick Machine
@@ -113,9 +113,9 @@ Tauri v2 is already in plat-trunk. In Topology B/C it does two things:
 The browser never knows the difference. It makes the same HTTP calls —
 they just resolve to localhost instead of workers.example.com.
 
-### opcua-howick placement
+### opcua-server placement
 
-| Topology | opcua-howick runs on |
+| Topology | opcua-server runs on |
 |----------|---------------------|
 | A (Cloud) | Separate Pi/NUC on factory LAN, connects to CF |
 | B (LAN) | Same machine as Tauri, or Pi on same LAN |
@@ -125,12 +125,12 @@ they just resolve to localhost instead of workers.example.com.
 
 ## Decision
 
-Design opcua-howick and the plat-trunk Tauri integration so that:
+Design opcua-server and the plat-trunk Tauri integration so that:
 
-1. **opcua-howick is always a separate process** — never embedded in Tauri.
+1. **opcua-server is always a separate process** — never embedded in Tauri.
    It talks to the physical machine and must be restartable independently.
 
-2. **opcua-howick communicates with plat-trunk via the same HTTP API**
+2. **opcua-server communicates with plat-trunk via the same HTTP API**
    regardless of topology. In cloud: CF Worker URL. In LAN: localhost URL.
    No special-casing.
 
@@ -153,7 +153,7 @@ Design opcua-howick and the plat-trunk Tauri integration so that:
 
 ## Consequences
 
-- opcua-howick needs a configurable `plat_trunk_url` pointing to either
+- opcua-server needs a configurable `plat_trunk_url` pointing to either
   CF Worker or localhost depending on topology
 - Tauri needs a sidecar config to start Hono on a local port
 - The CSV job submission flow is the same in all topologies
@@ -169,4 +169,4 @@ Design opcua-howick and the plat-trunk Tauri integration so that:
 - plat-trunk ADR-0038: Automerge versioning model
 - plat-trunk ADR-0008: Sync architecture
 - https://github.com/joeblew999/howick-rs
-- https://github.com/joeblew999/opcua-howick
+- https://github.com/joeblew999/opcua-server

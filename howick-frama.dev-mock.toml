@@ -1,4 +1,4 @@
-# howick-agent.dev-mock.toml — howick-agent polling mock-plat-trunk
+# howick-frama.dev-mock.toml — howick-frama polling mock-plat-trunk
 #
 # Use when testing the HTTP polling path against the local mock server.
 # Requires: mise run dev:mock  (mock-plat-trunk on :3000)

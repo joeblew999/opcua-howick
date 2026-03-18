@@ -1,4 +1,4 @@
-//! # howick-agent
+//! # howick-frama
 //!
 //! Minimal Howick edge agent for Raspberry Pi Zero 2W.
 //!
@@ -21,7 +21,7 @@
 //!
 //! See docs/customer/06-pi-zero-setup.md for Pi Zero 2W setup guide.
 //!
-//! ## Config (howick-agent.dev.toml)
+//! ## Config (howick-frama.dev.toml)
 //!
 //! ```toml
 //! [machine]
@@ -48,14 +48,14 @@ use tracing_subscriber::EnvFilter;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     if std::env::args().any(|a| a == "--version" || a == "-V") {
-        println!("howick-agent {VERSION}");
+        println!("howick-frama {VERSION}");
         return Ok(());
     }
 
     tracing_subscriber::fmt()
         .with_env_filter(
             EnvFilter::from_default_env()
-                .add_directive("howick_agent=info".parse().unwrap())
+                .add_directive("howick_frama=info".parse().unwrap())
                 .add_directive("opcua_howick=info".parse().unwrap()),
         )
         .compact() // compact format — saves log space on Pi Zero's SD card
@@ -63,7 +63,7 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!(
         version = VERSION,
-        "howick-agent starting (Pi Zero 2W minimal mode)"
+        "howick-frama starting (Pi Zero 2W minimal mode)"
     );
 
     // Background self-update check — runs once on startup.
@@ -73,7 +73,7 @@ async fn main() -> anyhow::Result<()> {
         let client = reqwest::Client::new();
         match updater::check_and_update(
             &client,
-            "howick-agent",
+            "howick-frama",
             VERSION,
             "https://api.github.com",
             None,
@@ -93,7 +93,7 @@ async fn main() -> anyhow::Result<()> {
         .skip_while(|a| a != "--config")
         .nth(1)
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("howick-agent.dev.toml"));
+        .unwrap_or_else(|| PathBuf::from("howick-frama.dev.toml"));
     let config = config::Config::load_or_default(&config_path);
 
     // On Linux (Pi Zero) warn if USB gadget mode is not configured — it's required.

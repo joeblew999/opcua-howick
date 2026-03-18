@@ -1,6 +1,6 @@
 /// Coil weight sensor — Phase 2.
 ///
-/// This module runs on the Pi Zero 2W inside howick-agent.
+/// This module runs on the Pi Zero 2W inside howick-frama.
 /// It reads the raw coil weight from the load cell + HX711 ADC and pushes it
 /// to opcua-howick (Pi 5) via POST /api/sensor/coil every poll_interval_secs.
 ///

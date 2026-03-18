@@ -67,7 +67,7 @@ async fn handle_new_job(csv_path: &Path, state: &SharedState) -> anyhow::Result<
         .to_string();
     let job_id = format!("{}-{}", frameset_name, timestamp_id());
 
-    // Hold in queue — howick-agent (Pi Zero) picks up via HTTP and writes to USB
+    // Hold in queue — howick-frama (Pi Zero) picks up via HTTP and writes to USB
     let job = Job {
         id: job_id.clone(),
         frameset_name: frameset_name.clone(),

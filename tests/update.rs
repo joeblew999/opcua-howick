@@ -36,7 +36,7 @@ async fn start_mock_server(tag_name: &'static str) -> u16 {
     let port = listener.local_addr().unwrap().port();
 
     // Build the asset name using the real target_triple() so the updater can find it.
-    let asset_name = format!("howick-agent-{}", target_triple());
+    let asset_name = format!("howick-frama-{}", target_triple());
     let download_url = format!("http://127.0.0.1:{port}/assets/{asset_name}");
 
     // Build JSON response once; move it into the server task.
@@ -57,7 +57,7 @@ async fn start_mock_server(tag_name: &'static str) -> u16 {
                 break;
             };
             let release_json = release_json.clone();
-            let asset_name_clone = format!("howick-agent-{}", target_triple());
+            let asset_name_clone = format!("howick-frama-{}", target_triple());
 
             tokio::spawn(async move {
                 let mut buf = vec![0u8; 8192];
@@ -110,7 +110,7 @@ async fn update_downloads_binary_when_newer_version_available() {
 
     let result = check_and_update(
         &client,
-        "howick-agent",
+        "howick-frama",
         "0.1.0 (abc1234)",
         &api_base,
         Some(&install_path),
@@ -151,7 +151,7 @@ async fn update_skips_when_already_at_latest_version() {
 
     let result = check_and_update(
         &client,
-        "howick-agent",
+        "howick-frama",
         "0.1.0 (abc1234)",
         &api_base,
         Some(&install_path),

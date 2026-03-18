@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** March 2026
-**Context:** opcua-howick + plat-trunk factory integration
+**Context:** opcua-server + plat-trunk factory integration
 
 ---
 
@@ -57,25 +57,25 @@ for different users and contexts:
 - Workflow 1 (SketchUp) is for Prin's existing operator workflow
 - Workflow 2 (plat-trunk) is for users of ubuntu Software's CAD platform
 
-opcua-howick and howick-agent must never require one workflow over the other.
+opcua-server and howick-frama must never require one workflow over the other.
 The CSV is the only interface that matters.
 
 ---
 
 ## Consequences
 
-### For opcua-howick
+### For opcua-server
 
 - The dashboard upload UI (`POST /upload`) is a first-class feature, not a
   temporary workaround. It is the primary entry point for Workflow 1.
 - The job poller (`src/poller.rs`) handles Workflow 2 — polling plat-trunk
   for pending jobs. Both paths write to the same job queue and file watcher.
-- Configuration (`opcua-howick.dev.toml`) must support both paths without code changes.
+- Configuration (`opcua-server.dev.toml`) must support both paths without code changes.
 
-### For howick-agent
+### For howick-frama
 
-- howick-agent polls whatever URL is configured in `plat_trunk.url`.
-- In Workflow 1: points at opcua-howick's local queue endpoint.
+- howick-frama polls whatever URL is configured in `plat_trunk.url`.
+- In Workflow 1: points at opcua-server's local queue endpoint.
 - In Workflow 2: points at plat-trunk's API.
 - Same binary, same code, different config.
 
@@ -85,7 +85,7 @@ The CSV is the only interface that matters.
   reference for both workflows.
 - Any Framing Extractor changes in plat-trunk must produce output compatible
   with these files.
-- opcua-howick and howick-agent treat CSV content as opaque — they deliver it,
+- opcua-server and howick-frama treat CSV content as opaque — they deliver it,
   they do not validate or parse it.
 
 ### For testing

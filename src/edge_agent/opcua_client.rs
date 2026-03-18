@@ -1,11 +1,11 @@
 //! OPC UA client agent — connects to the Pi 5 OPC UA server as an M2M client.
 //!
-//! This is used by howick-agent (Pi Zero) when `plat_trunk.url` is an OPC UA
+//! This is used by howick-frama (Pi Zero) when `plat_trunk.url` is an OPC UA
 //! endpoint (starts with `opc.tcp://`).
 //!
 //! ## Industry pattern: subscriptions, not polling
 //!
-//! Instead of polling an HTTP endpoint every N seconds, howick-agent:
+//! Instead of polling an HTTP endpoint every N seconds, howick-frama:
 //!   1. Connects to the Pi 5 OPC UA server
 //!   2. **Subscribes** to `Jobs/PendingJobId`
 //!   3. The Pi 5 **pushes** a notification the instant a new job is queued

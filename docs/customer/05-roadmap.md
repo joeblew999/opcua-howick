@@ -57,7 +57,7 @@ Designed for when plat-trunk's Framing Extractor is ready.
 
 | Item | Status | Notes |
 |------|--------|-------|
-| howick-agent polls plat-trunk job queue | ✅ Done | same binary, different config URL |
+| howick-frama polls plat-trunk job queue | ✅ Done | same binary, different config URL |
 | Machine state readable via OPC UA | ✅ Done | status, queue depth, coil remaining |
 | plat-trunk Framing Extractor — STEP → Howick CSV | ⏳ plat-trunk work | produces same CSV as FrameBuilderMRD |
 

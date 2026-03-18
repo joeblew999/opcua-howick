@@ -45,7 +45,7 @@ mise run setup:first-boot:pi-zero
 ```bash
 export ZERO_HOST=pi@100.x.x.x   # Tailscale IP from step 1
 mise run setup:post-reboot:pi-zero
-# deploys binary + howick-agent.pi-zero.toml → ~/config.toml (first time only)
+# deploys binary + howick-frama.pi-zero.toml → ~/config.toml (first time only)
 ```
 
 Full Pi Zero USB gadget detail in Document 6 (Pi Zero Setup).
@@ -67,7 +67,7 @@ mise run setup:first-boot:pi5
 ZERO_HOST=pi@100.x.x.x mise run deploy:pi-zero
 PI5_HOST=pi@100.x.x.x  mise run deploy:pi5
 # Config is NOT overwritten — only the binary updates
-# To force-reset config: scp howick-agent.pi-zero.toml pi@100.x.x.x:~/config.toml
+# To force-reset config: scp howick-frama.pi-zero.toml pi@100.x.x.x:~/config.toml
 ```
 
 ### Trigger update check immediately (don't wait an hour)
@@ -84,8 +84,8 @@ mise run ssh:pi5        # PI5_HOST must be set
 
 ### Logs
 ```bash
-mise run logs:pi-zero   # stream howick-agent logs
-mise run logs:pi5       # stream opcua-howick logs
+mise run logs:pi-zero   # stream howick-frama logs
+mise run logs:pi5       # stream opcua-server logs
 ```
 
 ### Status
@@ -96,13 +96,13 @@ mise run status:pi5      # systemd + HTTP API
 
 ### Check auto-update timer
 ```bash
-ssh $ZERO_HOST 'systemctl list-timers howick-agent-update.timer'
-ssh $PI5_HOST  'systemctl list-timers opcua-howick-update.timer'
+ssh $ZERO_HOST 'systemctl list-timers howick-frama-update.timer'
+ssh $PI5_HOST  'systemctl list-timers opcua-server-update.timer'
 ```
 
 ### Check installed version
 ```bash
-ssh $ZERO_HOST 'cat ~/.howick-agent-version'
+ssh $ZERO_HOST 'cat ~/.howick-frama-version'
 ssh $PI5_HOST  'cat ~/.opcua-server-version'
 ```
 
@@ -127,16 +127,16 @@ mise run update:check:pi5
 
 | Timer | Fires | Script |
 |-------|-------|--------|
-| `howick-agent-update.timer` | 5min after boot, then every hour | `/usr/local/bin/howick-agent-update.sh` |
-| `opcua-howick-update.timer` | 5min after boot, then every hour | `/usr/local/bin/opcua-server-update.sh` |
+| `howick-frama-update.timer` | 5min after boot, then every hour | `/usr/local/bin/howick-frama-update.sh` |
+| `opcua-server-update.timer` | 5min after boot, then every hour | `/usr/local/bin/opcua-server-update.sh` |
 
 Each script:
 1. Calls GitHub API for latest release tag
-2. Compares with version file on Pi (`~/.howick-agent-version` or `~/.opcua-server-version`)
+2. Compares with version file on Pi (`~/.howick-frama-version` or `~/.opcua-server-version`)
 3. If newer: downloads binary, writes version file, restarts service
 4. If same: exits silently
 
-Logs: `journalctl -u howick-agent-update` / `journalctl -u opcua-server-update`
+Logs: `journalctl -u howick-frama-update` / `journalctl -u opcua-server-update`
 
 ---
 
@@ -146,8 +146,8 @@ All secrets live in Doppler — never written to disk on the Pi.
 
 | Project | Config | Used by |
 |---------|--------|---------|
-| `opcua-howick` | `pi-zero` | howick-agent on Pi Zero 2W |
-| `opcua-howick` | `pi5` | opcua-howick on Pi 5 |
+| `opcua-server` | `pi-zero` | howick-frama on Pi Zero 2W |
+| `opcua-server` | `pi5` | opcua-server on Pi 5 |
 
 ```bash
 mise run doppler:secrets              # list secrets locally
