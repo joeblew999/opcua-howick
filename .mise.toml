@@ -129,7 +129,7 @@ echo ""
 
 [tasks.build]
 description = "Build (native dev — incremental)"
-sources  = ["src/**/*.rs", "Cargo.toml", "Cargo.lock"]
+sources  = ["crates/**/*.rs", "Cargo.toml", "Cargo.lock"]
 outputs  = ["target/debug/opcua-server", "target/debug/howick-frama"]
 run      = "cargo build"
 
@@ -192,7 +192,7 @@ run         = "mise run build:bin -- howick-frama aarch64-unknown-linux-gnu true
 description = "Deploy howick-frama to Pi Zero 2W — installs service + copies howick-frama.pi-zero.toml on first deploy"
 depends     = ["build:agent:pi-zero"]
 run         = """
-VERSION=$(cargo pkgid --quiet | cut -d@ -f2)
+VERSION=$(cargo pkgid --quiet opcua-howick | cut -d@ -f2)
 scp target/aarch64-unknown-linux-gnu/release/howick-frama ${ZERO_HOST:-pi@howick-pi-zero.local}:~/howick-frama.new
 scp deploy/howick-frama.service ${ZERO_HOST:-pi@howick-pi-zero.local}:~/howick-frama.service
 ssh ${ZERO_HOST:-pi@howick-pi-zero.local} '
@@ -402,7 +402,7 @@ REMOTE
 description = "Deploy opcua-server to Pi 5 — installs service + copies opcua-server.pi5.toml on first deploy"
 depends     = ["build:pi5"]
 run         = """
-VERSION=$(cargo pkgid --quiet | cut -d@ -f2)
+VERSION=$(cargo pkgid --quiet opcua-howick | cut -d@ -f2)
 scp target/aarch64-unknown-linux-gnu/release/opcua-server ${PI5_HOST:-pi@howick-pi5.local}:~/opcua-server.new
 scp deploy/opcua-server.service ${PI5_HOST:-pi@howick-pi5.local}:~/opcua-server.service
 ssh ${PI5_HOST:-pi@howick-pi5.local} "
