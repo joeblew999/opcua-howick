@@ -38,6 +38,21 @@ Related projects:
 | `opcua-howick` | Pi 5 / NUC / Mac | OPC UA server + HTTP server + file watcher + job poller |
 | `howick-agent` | Pi Zero 2W | Minimal: subscribes to Pi 5 OPC UA server, writes CSV to USB gadget |
 
+### Module layout
+
+| Path | Used by | Purpose |
+|------|---------|---------|
+| `src/config.rs` | both | Configuration types and loader |
+| `src/machine.rs` | both | Shared machine state, job types |
+| `src/updater.rs` | both | Self-update logic |
+| `src/http_poller.rs` | both | HTTP polling of plat-trunk for pending jobs |
+| `src/job_server/opcua_server.rs` | Pi 5 only | OPC UA server — exposes address space |
+| `src/job_server/http.rs` | Pi 5 only | HTTP JSON API + dashboard |
+| `src/job_server/watcher.rs` | Pi 5 only | File watcher for dropped CSVs |
+| `src/edge_agent/opcua_client.rs` | Pi Zero only | OPC UA subscription client |
+| `src/edge_agent/sensor.rs` | Pi Zero only | Coil weight sensor push |
+| `src/edge_agent/usb_gadget.rs` | Pi Zero only | USB mass storage gadget write |
+
 ### OPC UA is the M2M backbone
 
 OPC UA is the **primary transport** between Pi Zero and Pi 5. This is real industrial-grade OPC UA — the same protocol used to connect SCADA systems to Siemens PLCs and Fanuc CNCs.
@@ -46,7 +61,7 @@ OPC UA is the **primary transport** between Pi Zero and Pi 5. This is real indus
 - Pi Zero runs `howick-agent` — **subscribes** to `Jobs/PendingJobId`, server pushes instantly on change
 - No polling. No custom protocol. Standard OPC UA subscriptions.
 
-HTTP API (`http_server.rs`) is for the browser dashboard only — Tauri app or direct browser.
+HTTP API (`job_server/http.rs`) is for the browser dashboard only — Tauri app or direct browser.
 
 ### OPC UA address space
 
@@ -127,7 +142,7 @@ session.call_one((
 ## Running tests
 
 ```bash
-cargo test                    # all tests (6 HTTP pipeline + 3 OPC UA integration)
+cargo test                    # all tests (15 total: 5 updater unit + 3 OPC UA integration + 5 HTTP pipeline + 2 update)
 cargo test opcua              # OPC UA integration tests only
 cargo test --test pipeline    # HTTP pipeline tests only
 RUST_LOG=debug cargo test     # verbose logging

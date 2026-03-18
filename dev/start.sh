@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
-# Full dev stack — opcua-howick (server) + howick-agent (OPC UA client)
+# Full dev stack — mirrors production hardware:
 #
-# What runs:
-#   opcua-howick  :4840 OPC UA server | :4841 HTTP dashboard
-#   howick-agent  subscribes to :4840 via OPC UA — server pushes jobs instantly
+#   opcua-howick  reads config.toml        (same as config.pi5.toml on Pi 5)
+#   howick-agent  reads config.agent.toml  (same as config.agent.pi-zero.toml on Pi Zero)
 #
-# What to do:
-#   open http://localhost:4841/dashboard
-#   mise run dev:job    — drop T1.csv fixture into the pipeline
-#   mise run dev:status — check machine state JSON
+# Each binary has its own config file — no env var overrides needed.
+# This is the same pattern used on hardware, just with localhost addresses.
+#
+# Dashboard: http://localhost:4841/dashboard
+# Drop a job: mise run dev:job
+# Check state: mise run dev:status
 
 set -e
 
@@ -18,12 +19,11 @@ mkdir -p jobs/input jobs/machine jobs/output
 
 cargo build --bin opcua-howick --bin howick-agent 2>&1 | grep -E "^error|Compiling|Finished"
 
-DELIVERY_MODE=queue RUST_LOG=opcua_howick=info cargo run --bin opcua-howick &
+RUST_LOG=opcua_howick=info cargo run --bin opcua-howick &
 SERVER_PID=$!
 sleep 2
 
-# OPC UA M2M — agent subscribes to Pi 5 server, no polling
-PLAT_TRUNK_URL=opc.tcp://127.0.0.1:4840/ RUST_LOG=howick_agent=info cargo run --bin howick-agent &
+RUST_LOG=howick_agent=info cargo run --bin howick-agent -- --config config.agent.toml &
 AGENT_PID=$!
 
 echo ""

@@ -5,6 +5,7 @@
 [tools]
 pandoc = "latest"
 typst  = "latest"
+# cargo-release: install once with `cargo install cargo-release`
 
 [env]
 RUST_BACKTRACE = "1"
@@ -53,15 +54,9 @@ depends     = ["dev:setup"]
 run         = "DELIVERY_MODE=queue PLAT_TRUNK_URL=opc.tcp://127.0.0.1:4840/ RUST_LOG=howick_agent=debug cargo run --bin howick-agent"
 
 [tasks."dev:agent:local"]
-description = "Run howick-agent in HTTP polling mode against local opcua-howick queue — needs delivery_mode=queue in config.toml"
+description = "Run howick-agent in HTTP polling mode against local opcua-howick queue"
 depends     = ["dev:setup"]
-run         = """
-grep -q 'delivery_mode = "queue"' config.toml || {
-  echo "ERROR: set delivery_mode = \"queue\" in config.toml first"
-  exit 1
-}
-PLAT_TRUNK_URL=http://localhost:4841 RUST_LOG=howick_agent=debug cargo run --bin howick-agent
-"""
+run         = "PLAT_TRUNK_URL=http://localhost:4841 RUST_LOG=howick_agent=debug cargo run --bin howick-agent"
 
 [tasks."dev:mock"]
 description = "Start mock plat-trunk backend on :3000 (Path 2 — simulates plat-trunk serving T1+W1 fixture jobs)"
@@ -149,55 +144,14 @@ description = "Full CI gate — check + fmt + test"
 depends     = ["check", "fmt-check", "test"]
 
 # ── Release ───────────────────────────────────────────────────────────────────
-# Prerequisites: gh CLI installed and authenticated (brew install gh && gh auth login)
+# cargo-release bumps Cargo.toml, commits, tags, pushes.
+# CI catches the tag push, builds all binaries, creates the GitHub Release.
+# Pis self-update on next restart (binary checks GitHub on startup)
 #
 # Usage:
-#   mise run release          # tags + creates GitHub Release from current Cargo.toml version
-#
-# What happens next (automatically in CI):
-#   GitHub Actions builds 6 binaries (linux x86_64, macos arm64, macos x86_64,
-#   pi-5 arm64, pi-zero-2w arm64, windows x86_64) and attaches them to the release.
-#
-# To bump the version first, edit Cargo.toml [package] version then run this task.
-
-[tasks.release]
-description = "Tag + create GitHub Release — CI builds and attaches all binaries automatically"
-run         = """
-set -euo pipefail
-
-# Require clean working tree
-if ! git diff --quiet || ! git diff --staged --quiet; then
-  echo "ERROR: working tree has uncommitted changes — commit or stash first"
-  exit 1
-fi
-
-# Extract version from Cargo.toml
-VERSION=$(cargo metadata --no-deps --format-version 1 \
-  | python3 -c "import sys,json; print(json.load(sys.stdin)['packages'][0]['version'])")
-TAG="v${VERSION}"
-
-# Check tag doesn't already exist
-if git tag --list | grep -q "^${TAG}$"; then
-  echo "ERROR: tag ${TAG} already exists — bump version in Cargo.toml first"
-  exit 1
-fi
-
-echo "Releasing ${TAG}..."
-
-# Tag and push
-git tag "${TAG}"
-git push origin "${TAG}"
-
-# Create GitHub Release (CI picks it up, builds binaries, attaches them)
-gh release create "${TAG}" \
-  --title "${TAG}" \
-  --generate-notes
-
-echo ""
-echo "Release ${TAG} created."
-echo "CI is now building binaries for all targets — check GitHub Actions for progress."
-echo "Binaries will appear in the release once CI completes (~10 min)."
-"""
+#   mise run release patch   # 0.1.0 → 0.1.1
+#   mise run release minor   # 0.1.0 → 0.2.0
+#   mise run release major   # 0.1.0 → 1.0.0
 
 # ── Cross-compile targets ─────────────────────────────────────────────────────
 # Prerequisites: cargo install cross
@@ -219,26 +173,39 @@ description = "Cross-compile howick-agent for Pi Zero 2W (aarch64)"
 run         = "cross build --release --bin howick-agent --target aarch64-unknown-linux-gnu"
 
 [tasks."deploy:pi-zero"]
-description = "Build + deploy howick-agent to Pi Zero 2W — copies config.pi-zero.toml on first deploy"
+description = "Build + deploy howick-agent to Pi Zero 2W — installs service + copies config.agent.pi-zero.toml → ~/config.toml on first deploy"
 run         = """
 cross build --release --bin howick-agent --target aarch64-unknown-linux-gnu
+VERSION=$(cargo metadata --no-deps --format-version 1 | python3 -c "import sys,json; print(json.load(sys.stdin)['packages'][0]['version'])")
 scp target/aarch64-unknown-linux-gnu/release/howick-agent ${ZERO_HOST:-pi@howick-pi-zero.local}:~/howick-agent.new
+scp deploy/howick-agent.service ${ZERO_HOST:-pi@howick-pi-zero.local}:~/howick-agent.service
 ssh ${ZERO_HOST:-pi@howick-pi-zero.local} '
   mv ~/howick-agent.new ~/howick-agent
   chmod +x ~/howick-agent
-  sudo systemctl restart howick-agent 2>/dev/null || echo "Service not installed yet — see docs/customer/06-pi-zero-setup.md"
+  if [ ! -f /etc/systemd/system/howick-agent.service ]; then
+    sudo mv ~/howick-agent.service /etc/systemd/system/
+    sudo systemctl daemon-reload
+    sudo systemctl enable howick-agent
+    echo "Service installed and enabled"
+  else
+    rm -f ~/howick-agent.service
+  fi
+  sudo systemctl restart howick-agent
   sleep 2
-  sudo systemctl status howick-agent --no-pager 2>/dev/null || echo "Run: ./howick-agent"
+  sudo systemctl status howick-agent --no-pager
 '
-VERSION=$(cargo metadata --no-deps --format-version 1 | python3 -c "import sys,json; print(json.load(sys.stdin)['packages'][0]['version'])")
 ssh ${ZERO_HOST:-pi@howick-pi-zero.local} "echo 'v${VERSION}' > ~/.howick-agent-version"
 # Copy config on first deploy only — don't overwrite if already customised
 ssh ${ZERO_HOST:-pi@howick-pi-zero.local} '[ -f ~/config.toml ]' \
-  || { echo "First deploy — copying config.pi-zero.toml → ~/config.toml"; \
-       scp config.pi-zero.toml ${ZERO_HOST:-pi@howick-pi-zero.local}:~/config.toml; }
+  || { echo "First deploy — copying config.agent.pi-zero.toml → ~/config.toml"; \
+       scp config.agent.pi-zero.toml ${ZERO_HOST:-pi@howick-pi-zero.local}:~/config.toml; }
 echo ""
 echo "Pi Zero deployed (howick-agent v${VERSION})"
 """
+
+[tasks.release]
+description = "Release a new version — bumps Cargo.toml, tags, pushes; CI builds all binaries + creates GitHub Release"
+run         = "cargo release ${1:-patch} --execute --no-confirm"
 
 [tasks."build:linux"]
 description = "Build for Linux x86_64"
@@ -291,9 +258,6 @@ echo ""
 echo "Step 2/3: Deploy howick-agent binary..."
 mise run deploy:pi-zero
 echo ""
-echo "Step 3/3: Install auto-update timer..."
-mise run setup:autoupdate:pi-zero
-echo ""
 echo "Pi Zero 2W fully provisioned."
 echo "Logs:   mise run logs:pi-zero"
 echo "Status: mise run status:pi-zero"
@@ -311,87 +275,14 @@ echo ""
 echo "Step 3/4: Doppler secrets..."
 mise run doppler:setup:pi5
 echo ""
-echo "Step 4/4: Deploy binary + auto-update timer..."
+echo "Step 3/3: Deploy binary..."
 mise run deploy:pi5
-mise run setup:autoupdate:pi5
 echo ""
 echo "Pi 5 fully provisioned."
 echo "Logs:    mise run logs:pi5"
 echo "Status:  mise run status:pi5"
 echo "Monitor: http://<tailscale-ip>:19999"
 """
-
-# ── Auto-update (pull from GitHub Releases every hour) ────────────────────────
-
-[tasks."setup:autoupdate:pi-zero"]
-description = "Install auto-update timer on Pi Zero 2W (pulls GitHub Releases hourly)"
-run         = """
-ssh ${ZERO_HOST:-pi@howick-pi-zero.local} 'sudo bash -s' << 'REMOTE'
-set -euo pipefail
-
-cp /tmp/howick-agent-update.sh /usr/local/bin/howick-agent-update.sh 2>/dev/null || true
-chmod +x /usr/local/bin/howick-agent-update.sh
-
-# Install systemd units
-cp /tmp/howick-agent-update.service /etc/systemd/system/
-cp /tmp/howick-agent-update.timer   /etc/systemd/system/
-
-systemctl daemon-reload
-systemctl enable howick-agent-update.timer
-systemctl start  howick-agent-update.timer
-
-echo "Auto-update timer installed."
-systemctl list-timers howick-agent-update.timer --no-pager
-REMOTE
-"""
-
-[tasks."setup:autoupdate:pi-zero:upload"]
-description = "Upload auto-update scripts to Pi Zero 2W then install"
-run         = """
-scp deploy/howick-agent-update.sh      ${ZERO_HOST:-pi@howick-pi-zero.local}:/tmp/
-scp deploy/howick-agent-update.service ${ZERO_HOST:-pi@howick-pi-zero.local}:/tmp/
-scp deploy/howick-agent-update.timer   ${ZERO_HOST:-pi@howick-pi-zero.local}:/tmp/
-mise run setup:autoupdate:pi-zero
-"""
-
-[tasks."setup:autoupdate:pi5"]
-description = "Install auto-update timer on Pi 5 (pulls GitHub Releases hourly)"
-run         = """
-ssh ${PI5_HOST:-pi@howick-pi5.local} 'sudo bash -s' << 'REMOTE'
-set -euo pipefail
-
-cp /tmp/opcua-howick-update.sh /usr/local/bin/opcua-howick-update.sh 2>/dev/null || true
-chmod +x /usr/local/bin/opcua-howick-update.sh
-
-# Install systemd units
-cp /tmp/opcua-howick-update.service /etc/systemd/system/
-cp /tmp/opcua-howick-update.timer   /etc/systemd/system/
-
-systemctl daemon-reload
-systemctl enable opcua-howick-update.timer
-systemctl start  opcua-howick-update.timer
-
-echo "Auto-update timer installed."
-systemctl list-timers opcua-howick-update.timer --no-pager
-REMOTE
-"""
-
-[tasks."setup:autoupdate:pi5:upload"]
-description = "Upload auto-update scripts to Pi 5 then install"
-run         = """
-scp deploy/opcua-howick-update.sh      ${PI5_HOST:-pi@howick-pi5.local}:/tmp/
-scp deploy/opcua-howick-update.service ${PI5_HOST:-pi@howick-pi5.local}:/tmp/
-scp deploy/opcua-howick-update.timer   ${PI5_HOST:-pi@howick-pi5.local}:/tmp/
-mise run setup:autoupdate:pi5
-"""
-
-[tasks."update:check:pi-zero"]
-description = "Manually trigger update check on Pi Zero 2W"
-run         = "ssh ${ZERO_HOST:-pi@howick-pi-zero.local} 'sudo /usr/local/bin/howick-agent-update.sh'"
-
-[tasks."update:check:pi5"]
-description = "Manually trigger update check on Pi 5"
-run         = "ssh ${PI5_HOST:-pi@howick-pi5.local} 'sudo /usr/local/bin/opcua-howick-update.sh'"
 
 # ── First-time Pi setup ───────────────────────────────────────────────────────
 # Run these once per Pi after flashing. Tailscale must be installed first.
@@ -472,15 +363,24 @@ REMOTE
 # ZERO_HOST — Tailscale IP or hostname of Pi Zero 2W (e.g. pi@100.x.x.x)
 
 [tasks."deploy:pi5"]
-description = "Build + deploy opcua-howick to Pi 5 — copies config.pi5.toml on first deploy"
+description = "Build + deploy opcua-howick to Pi 5 — installs service + copies config.pi5.toml → ~/config.toml on first deploy"
 run         = """
 cross build --release --target aarch64-unknown-linux-gnu
 VERSION=$(cargo metadata --no-deps --format-version 1 | python3 -c "import sys,json; print(json.load(sys.stdin)['packages'][0]['version'])")
 scp target/aarch64-unknown-linux-gnu/release/opcua-howick ${PI5_HOST:-pi@howick-pi5.local}:~/opcua-howick.new
+scp deploy/opcua-howick.service ${PI5_HOST:-pi@howick-pi5.local}:~/opcua-howick.service
 ssh ${PI5_HOST:-pi@howick-pi5.local} "
   mv ~/opcua-howick.new ~/opcua-howick
   chmod +x ~/opcua-howick
   echo 'v${VERSION}' > ~/.opcua-howick-version
+  if [ ! -f /etc/systemd/system/opcua-howick.service ]; then
+    sudo mv ~/opcua-howick.service /etc/systemd/system/
+    sudo systemctl daemon-reload
+    sudo systemctl enable opcua-howick
+    echo 'Service installed and enabled'
+  else
+    rm -f ~/opcua-howick.service
+  fi
   sudo systemctl restart opcua-howick
   sleep 2
   sudo systemctl status opcua-howick --no-pager
@@ -493,11 +393,20 @@ ssh ${PI5_HOST:-pi@howick-pi5.local} '[ -f ~/config.toml ]' \
 
 
 [tasks."deploy:windows"]
-description = "Copy opcua-howick.exe to Howick Windows PC over network (runs alongside existing SketchUp + FrameBuilderMRD)"
+description = "Build + copy both binaries + configs to Windows Design PC (\\\\howick-pc or set WINDOWS_HOST)"
 run         = """
 cargo build --release --target x86_64-pc-windows-msvc
-cp target/x86_64-pc-windows-msvc/release/opcua-howick.exe ${WINDOWS_HOST:-//howick-pc/c$/opcua-howick/}/opcua-howick.exe
-echo "Deployed to Windows PC. Edit config.toml then run opcua-howick.exe"
+DEST=${WINDOWS_HOST:-//howick-pc/c$/opcua-howick}
+mkdir -p "$DEST"
+cp target/x86_64-pc-windows-msvc/release/opcua-howick.exe "$DEST"/opcua-howick.exe
+cp target/x86_64-pc-windows-msvc/release/howick-agent.exe "$DEST"/howick-agent.exe
+# Copy configs on first deploy only
+[ -f "$DEST/config.toml"       ] || cp config.windows.toml       "$DEST"/config.toml
+[ -f "$DEST/config.agent.toml" ] || cp config.agent.windows.toml "$DEST"/config.agent.toml
+echo "Deployed to Windows PC ($DEST)"
+echo "  opcua-howick.exe  reads config.toml"
+echo "  howick-agent.exe  reads config.agent.toml (--config config.agent.toml)"
+echo "Edit both configs, then start both .exe files."
 """
 
 # ── SSH shortcuts ──────────────────────────────────────────────────────────────

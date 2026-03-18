@@ -15,11 +15,8 @@ pub const VERSION: &str = concat!(
 );
 
 pub mod config;
-pub mod http_server;
+pub mod edge_agent;
+pub mod http_poller;
+pub mod job_server;
 pub mod machine;
-pub mod opcua_client;
-pub mod poller;
-pub mod sensor;
-pub mod server;
-pub mod usb_gadget;
-pub mod watcher;
+pub mod updater;

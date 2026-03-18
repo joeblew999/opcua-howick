@@ -46,6 +46,8 @@ struct Queue {
     next: usize,
     /// True when the current job has been served but not yet acknowledged.
     pending: bool,
+    /// True once we have printed the "all jobs done" message — suppresses repeat spam.
+    empty_logged: bool,
 }
 
 #[tokio::main]
@@ -58,6 +60,7 @@ async fn main() -> anyhow::Result<()> {
     let queue = Arc::new(Mutex::new(Queue {
         next: 0,
         pending: false,
+        empty_logged: false,
     }));
 
     println!("Mock plat-trunk listening on http://localhost:3000");
@@ -112,10 +115,13 @@ async fn handle(
                         }
                     }
                 } else {
-                    println!(
-                        "  [mock] GET pending → empty (all {} jobs completed)",
-                        JOBS.len()
-                    );
+                    if !q.empty_logged {
+                        println!(
+                            "  [mock] GET pending → empty (all {} jobs completed — waiting for new jobs)",
+                            JOBS.len()
+                        );
+                        q.empty_logged = true;
+                    }
                     (200, r#"{"jobs":[]}"#.to_string())
                 }
             } else {

@@ -12,7 +12,11 @@
 //!   - Job poller                 — polls plat-trunk API for R2-queued jobs
 //!   - File watcher               — picks up CSV files dropped locally
 
-use opcua_howick::{config, http_server, machine, poller, server, watcher, VERSION};
+use opcua_howick::{
+    config,
+    job_server::{http, opcua_server, watcher},
+    machine, updater, VERSION,
+};
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -33,7 +37,34 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!(version = VERSION, "opcua-howick starting");
 
-    let config_path = PathBuf::from("config.toml");
+    // Background self-update check — runs once on startup.
+    // On update: exit(0) so systemd restarts the new binary automatically.
+    // On failure (offline, no asset, etc.): logged at debug level and ignored.
+    tokio::spawn(async move {
+        let client = reqwest::Client::new();
+        match updater::check_and_update(
+            &client,
+            "opcua-howick",
+            VERSION,
+            "https://api.github.com",
+            None,
+        )
+        .await
+        {
+            Ok(true) => {
+                tracing::info!("Self-update complete — restarting");
+                std::process::exit(0);
+            }
+            Ok(false) => {}
+            Err(e) => tracing::debug!("Update check failed (offline?): {e}"),
+        }
+    });
+
+    let config_path = std::env::args()
+        .skip_while(|a| a != "--config")
+        .nth(1)
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("config.toml"));
     let config = config::Config::load_or_default(&config_path);
 
     tracing::info!(
@@ -67,13 +98,13 @@ async fn main() -> anyhow::Result<()> {
         r = watcher::run_job_watcher(config.machine.clone(), state.clone()) => {
             if let Err(e) = r { tracing::error!("File watcher: {e}"); }
         }
-        r = poller::run_job_poller(config.clone(), state.clone()) => {
+        r = opcua_howick::http_poller::run_job_poller(config.clone(), state.clone()) => {
             if let Err(e) = r { tracing::error!("Job poller: {e}"); }
         }
-        r = server::run_server(&config, state.clone()) => {
+        r = opcua_server::run_server(&config, state.clone()) => {
             if let Err(e) = r { tracing::error!("OPC UA server: {e}"); }
         }
-        r = http_server::run_http_server(http_listener, &config, state.clone()) => {
+        r = http::run_http_server(http_listener, &config, state.clone()) => {
             if let Err(e) = r { tracing::error!("HTTP server: {e}"); }
         }
     }

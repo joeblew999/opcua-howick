@@ -1,0 +1,36 @@
+# config.agent.windows.toml — Windows Design PC howick-agent config
+#
+# Deployed alongside config.windows.toml by: mise run deploy:windows
+# howick-agent polls the local opcua-howick HTTP queue and writes jobs to the USB stick.
+#
+# machine_input_dir = USB stick root. Change D:\ to E:\ or F:\ if needed.
+# howick-agent is started with: howick-agent.exe --config config.agent.toml
+
+[opcua]
+host             = "0.0.0.0"
+port             = 4840
+application_name = "Howick Edge Agent - Pi Zero"
+
+[http]
+host = "0.0.0.0"
+port = 4841
+
+[machine]
+machine_name      = "Howick FRAMA"
+job_input_dir     = "C:\\opcua-howick\\jobs\\input"
+machine_input_dir = "D:\\"              # USB stick root — change if different drive letter
+machine_output_dir = "C:\\opcua-howick\\jobs\\output"
+usb_gadget_mode   = false               # no USB gadget on Windows — writes direct to USB stick
+
+[plat_trunk]
+url                       = "http://localhost:4841"   # polls local opcua-howick job queue
+api_key                   = ""
+status_push_interval_secs = 5
+
+[sensor]
+# Phase 2 coil sensor: not available in Option A (sensor wires to Pi Zero GPIO, not Windows)
+enabled            = false
+empty_spool_kg     = 18.0
+steel_kg_per_m     = 0.74
+low_alert_m        = 50.0
+poll_interval_secs = 30

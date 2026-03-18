@@ -4,7 +4,7 @@ use std::time::SystemTime;
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use tokio::sync::mpsc;
 
-use crate::config::{DeliveryMode, MachineConfig};
+use crate::config::MachineConfig;
 use crate::machine::{Job, MachineStatus, SharedState};
 
 /// Watch the job input directory for new CSV files.
@@ -41,7 +41,7 @@ pub async fn run_job_watcher(config: MachineConfig, state: SharedState) -> anyho
             for path in event.paths {
                 if is_csv(&path) {
                     tracing::info!("New job file detected: {}", path.display());
-                    if let Err(e) = handle_new_job(&path, &config, &state).await {
+                    if let Err(e) = handle_new_job(&path, &state).await {
                         tracing::error!("Failed to process job {}: {e}", path.display());
                     }
                 }
@@ -58,16 +58,7 @@ fn is_csv(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
-async fn handle_new_job(
-    csv_path: &Path,
-    config: &MachineConfig,
-    state: &SharedState,
-) -> anyhow::Result<()> {
-    let filename = csv_path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("unknown.csv");
-
+async fn handle_new_job(csv_path: &Path, state: &SharedState) -> anyhow::Result<()> {
     // Derive job ID and frameset name from filename (e.g. "W1.csv" → "W1")
     let frameset_name = csv_path
         .file_stem()
@@ -76,47 +67,21 @@ async fn handle_new_job(
         .to_string();
     let job_id = format!("{}-{}", frameset_name, timestamp_id());
 
-    match config.delivery_mode {
-        DeliveryMode::Direct => {
-            // Write directly to machine_input_dir — Topology A (Design PC, no Pi Zero)
-            // Skip the queue entirely: file goes straight to completed.
-            let csv = tokio::fs::read_to_string(csv_path).await?;
-            crate::usb_gadget::write_job(config, filename, &csv).await?;
-            tracing::info!(
-                "CSV written to machine input: {}",
-                config.machine_input_dir.join(filename).display()
-            );
-            let job = Job {
-                id: job_id.clone(),
-                frameset_name: frameset_name.clone(),
-                csv_path: csv_path.to_path_buf(),
-                submitted_at: SystemTime::now(),
-            };
-            let mut s = state.write().await;
-            s.completed_jobs.push(job);
-            s.status = MachineStatus::Idle;
-            s.current_job = None;
-            tracing::info!("Job {} delivered directly to machine", job_id);
-        }
-        DeliveryMode::Queue => {
-            // Hold in queue — howick-agent (Pi Zero) picks up via HTTP
-            // Topology B/C: agent polls /api/jobs/howick/pending and confirms via /complete
-            let job = Job {
-                id: job_id.clone(),
-                frameset_name: frameset_name.clone(),
-                csv_path: csv_path.to_path_buf(),
-                submitted_at: SystemTime::now(),
-            };
-            let mut s = state.write().await;
-            s.job_queue.push(job);
-            s.status = MachineStatus::Idle;
-            tracing::info!(
-                "Job {} queued for agent pickup (depth: {})",
-                job_id,
-                s.job_queue.len()
-            );
-        }
-    }
+    // Hold in queue — howick-agent (Pi Zero) picks up via HTTP and writes to USB
+    let job = Job {
+        id: job_id.clone(),
+        frameset_name: frameset_name.clone(),
+        csv_path: csv_path.to_path_buf(),
+        submitted_at: SystemTime::now(),
+    };
+    let mut s = state.write().await;
+    s.job_queue.push(job);
+    s.status = MachineStatus::Idle;
+    tracing::info!(
+        "Job {} queued for agent pickup (depth: {})",
+        job_id,
+        s.job_queue.len()
+    );
 
     Ok(())
 }

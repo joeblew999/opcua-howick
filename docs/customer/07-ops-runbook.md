@@ -45,7 +45,7 @@ mise run setup:first-boot:pi-zero
 ```bash
 export ZERO_HOST=pi@100.x.x.x   # Tailscale IP from step 1
 mise run setup:post-reboot:pi-zero
-# deploys binary + config.pi-zero.toml → ~/config.toml (first time only)
+# deploys binary + config.agent.pi-zero.toml → ~/config.toml (first time only)
 ```
 
 Full Pi Zero USB gadget detail in Document 6 (Pi Zero Setup).
@@ -67,7 +67,7 @@ mise run setup:first-boot:pi5
 ZERO_HOST=pi@100.x.x.x mise run deploy:pi-zero
 PI5_HOST=pi@100.x.x.x  mise run deploy:pi5
 # Config is NOT overwritten — only the binary updates
-# To force-reset config: scp config.pi-zero.toml pi@100.x.x.x:~/config.toml
+# To force-reset config: scp config.agent.pi-zero.toml pi@100.x.x.x:~/config.toml
 ```
 
 ### Trigger update check immediately (don't wait an hour)

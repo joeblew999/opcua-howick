@@ -42,7 +42,7 @@ BINARY_PATH="target/$TARGET/release/$BINARY"
 echo "Deploying to $ZERO_HOST..."
 scp "$BINARY_PATH" "$ZERO_HOST:~/$BINARY.new"
 scp deploy/howick-agent.service "$ZERO_HOST:~/howick-agent.service"
-scp config.toml "$ZERO_HOST:~/config.toml.example"
+scp config.agent.pi-zero.toml "$ZERO_HOST:~/config.toml.example"
 
 ssh "$ZERO_HOST" << 'REMOTE'
   set -e

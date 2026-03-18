@@ -183,7 +183,9 @@ pub async fn run_opcua_agent(config: Config, state: SharedState) -> anyhow::Resu
 
         // Write CSV to machine input directory (triggers USB gadget refresh if configured)
         let filename = format!("{frameset_name}.csv");
-        if let Err(e) = crate::usb_gadget::write_job(&config.machine, &filename, &csv).await {
+        if let Err(e) =
+            crate::edge_agent::usb_gadget::write_job(&config.machine, &filename, &csv).await
+        {
             tracing::error!(job_id = %job_id, "USB write failed: {e}");
             continue;
         }

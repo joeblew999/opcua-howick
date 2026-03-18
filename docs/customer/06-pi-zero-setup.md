@@ -121,7 +121,7 @@ mise run logs:pi-zero      # stream live logs
 
 ## Config on Pi Zero
 
-Copy `config.pi-zero.toml` to `~/config.toml`. Key values:
+Copy `config.agent.pi-zero.toml` to `~/config.toml`. Key values:
 
 ```toml
 [machine]

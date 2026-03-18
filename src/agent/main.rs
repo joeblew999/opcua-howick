@@ -36,7 +36,11 @@
 //! status_push_interval_secs = 5
 //! ```
 
-use opcua_howick::{config, machine, opcua_client, poller, sensor, VERSION};
+use opcua_howick::{
+    config,
+    edge_agent::{opcua_client, sensor},
+    http_poller, machine, updater, VERSION,
+};
 
 use std::path::PathBuf;
 use tracing_subscriber::EnvFilter;
@@ -62,15 +66,43 @@ async fn main() -> anyhow::Result<()> {
         "howick-agent starting (Pi Zero 2W minimal mode)"
     );
 
-    let config_path = PathBuf::from("config.toml");
+    // Background self-update check — runs once on startup.
+    // On update: exit(0) so systemd restarts the new binary automatically.
+    // On failure (offline, no asset, etc.): logged at debug level and ignored.
+    tokio::spawn(async move {
+        let client = reqwest::Client::new();
+        match updater::check_and_update(
+            &client,
+            "howick-agent",
+            VERSION,
+            "https://api.github.com",
+            None,
+        )
+        .await
+        {
+            Ok(true) => {
+                tracing::info!("Self-update complete — restarting");
+                std::process::exit(0);
+            }
+            Ok(false) => {}
+            Err(e) => tracing::debug!("Update check failed (offline?): {e}"),
+        }
+    });
+
+    let config_path = std::env::args()
+        .skip_while(|a| a != "--config")
+        .nth(1)
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("config.toml"));
     let config = config::Config::load_or_default(&config_path);
 
-    // Validate USB gadget mode is configured
+    // On Linux (Pi Zero) warn if USB gadget mode is not configured — it's required.
+    // On other platforms (dev laptop) usb_gadget_mode = false is correct.
+    #[cfg(target_os = "linux")]
     if !config.machine.usb_gadget_mode {
         tracing::warn!(
-            "usb_gadget_mode = false in config.toml\n\
-             Set usb_gadget_mode = true and machine_input_dir = /mnt/usb_share\n\
-             See docs/customer/06-pi-zero-setup.md for Pi Zero 2W setup guide"
+            "usb_gadget_mode = false — set true on Pi Zero 2W with machine_input_dir = /mnt/usb_share\n\
+             See docs/customer/06-pi-zero-setup.md"
         );
     }
 
@@ -141,6 +173,6 @@ async fn run_job_transport(
     if use_opcua {
         opcua_client::run_opcua_agent(config, state).await
     } else {
-        poller::run_job_poller(config, state).await
+        http_poller::run_job_poller(config, state).await
     }
 }

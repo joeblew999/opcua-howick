@@ -1,12 +1,10 @@
-# config.pi5.toml — Option B: Pi 5 server config
+# config.pi5.toml — Pi 5 server config (Option B hardware)
 #
 # Copy to ~/config.toml on the Pi 5.
-# Pi 5 runs opcua-howick, serving the dashboard and job queue.
-# Pi Zero polls the Pi 5 at http://howick-pi5.local:4841/api/jobs/howick/pending
-# and writes each job CSV to its virtual USB drive.
+# Pi 5 runs opcua-howick: dashboard (:4841), OPC UA server (:4840), job queue.
+# Pi Zero (howick-agent) subscribes via OPC UA and writes jobs to its virtual USB.
 #
-# Operator opens http://howick-pi5.local:4841/dashboard on any browser
-# on the factory WiFi and drags CSVs in. USB stick retired permanently.
+# Dashboard: http://howick-pi5.local:4841/dashboard — any browser on factory WiFi
 
 [opcua]
 host             = "0.0.0.0"
@@ -23,8 +21,7 @@ machine_name = "Howick FRAMA"
 # Incoming uploads from dashboard land here
 job_input_dir = "/home/pi/jobs/input"
 
-# Pi 5 does NOT write to machine_input_dir directly — Pi Zero does that.
-# This path is unused in queue mode but must be set.
+# Pi 5 does not write to machine_input_dir — Pi Zero (howick-agent) does.
 machine_input_dir = "/home/pi/jobs/machine"
 
 machine_output_dir = "/home/pi/jobs/output"
@@ -32,8 +29,6 @@ machine_output_dir = "/home/pi/jobs/output"
 # Pi 5 is not the USB gadget — Pi Zero is
 usb_gadget_mode = false
 
-# Queue: watcher holds jobs for Pi Zero to pick up via HTTP
-delivery_mode = "queue"
 
 [plat_trunk]
 # Pi Zero polls THIS machine's HTTP server, not plat-trunk (no plat-trunk needed yet)

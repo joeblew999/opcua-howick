@@ -1,8 +1,7 @@
-# config.pi-zero.toml — Pi Zero 2W howick-agent config
+# config.agent.pi-zero.toml — Pi Zero 2W howick-agent config
 #
-# Copy to ~/config.toml on the Pi Zero 2W.
-# howick-agent polls the Pi 5 for pending jobs and writes each CSV
-# to /mnt/usb_share — the virtual USB drive presented to the Howick FRAMA.
+# Deployed to ~/config.toml on the Pi Zero 2W by: mise run deploy:pi-zero
+# howick-agent subscribes to Pi 5 OPC UA server and writes jobs to virtual USB.
 #
 # USB gadget setup: see docs/customer/06-pi-zero-setup.md
 # The Howick FRAMA sees the Pi Zero as a normal USB stick.
@@ -36,8 +35,6 @@ machine_output_dir = "/home/pi/jobs/output"
 # Pi Zero IS the USB gadget — this triggers usb-refresh.sh after each write
 usb_gadget_mode = true
 
-# Queue: howick-agent fetches from Pi 5 queue (delivery_mode not used by howick-agent directly)
-delivery_mode = "queue"
 
 [plat_trunk]
 # Pi Zero connects to Pi 5 via OPC UA — subscribes to Jobs/PendingJobId.

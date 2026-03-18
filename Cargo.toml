@@ -16,9 +16,9 @@ readme = "README.md"
 name = "opcua-howick"
 path = "src/main.rs"
 
-# Minimal agent: poller + USB gadget write only — NO OPC UA, NO HTTP server
-# For: Raspberry Pi Zero 2W (512MB RAM, replaces USB stick)
-# RAM: ~16MB   Binary: ~3MB
+# Minimal agent: OPC UA client — subscribes to Pi 5, writes CSV to USB gadget
+# For: Raspberry Pi Zero 2W (512MB RAM, replaces USB stick permanently)
+# RAM: ~16MB   Binary: ~3MB   Config: config.agent.toml (dev) / config.toml (Pi Zero)
 [[bin]]
 name = "howick-agent"
 path = "src/agent/main.rs"

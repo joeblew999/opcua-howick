@@ -9,23 +9,24 @@
 
 ## Option A — Design PC only
 
-Simplest start. No hardware purchase. `opcua-howick.exe` runs on the Design PC
-alongside SketchUp and FrameBuilderMRD. Operator still carries USB stick to the
-machine, but gets the dashboard and drag-and-drop upload instead of manually
-copying files.
+Simplest start. No hardware purchase. Both binaries run on the Design PC alongside
+SketchUp and FrameBuilderMRD. Operator still carries USB stick to the machine, but
+the file copying is automatic — drag into the browser, the USB stick has it.
 
 ```
 ┌─────────────────────────────────────────────────────┐
 │  Design PC (Windows)                                │
 │                                                     │
 │  SketchUp + FrameBuilderMRD  — generates CSV        │
-│  opcua-howick.exe            — dashboard + watcher  │
+│  opcua-howick.exe            — dashboard + job queue│
+│  howick-agent.exe            — picks up queued jobs │
+│                                writes to USB stick  │
 │  Browser                     — Job Dashboard        │
 │                                http://localhost:4841│
 └──────────────────────┬──────────────────────────────┘
                        │
                   USB stick
-                  (still manual walk)
+                  (still manual walk — file copied automatically)
                        │
 ┌──────────────────────▼──────────────────────────────┐
 │  Howick FRAMA                                       │
@@ -36,9 +37,8 @@ copying files.
 
 Key config (see `config.windows.toml`):
 ```toml
-delivery_mode     = "direct"
 usb_gadget_mode   = false
-machine_input_dir = "C:\\Howick\\Jobs\\"   # TBC with Prin's operator
+machine_input_dir = "D:\\"   # USB stick drive letter — TBC with Prin's operator
 ```
 
 ---
@@ -80,10 +80,9 @@ USB port and replaces the USB stick. Operator uses a browser on any device.
 └─────────────────────────────────────────────────────┘
 ```
 
-Key config (see `config.pi5.toml` and `config.pi-zero.toml`):
+Key config (see `config.pi5.toml` and `config.agent.pi-zero.toml`):
 ```toml
 # Pi 5
-delivery_mode   = "queue"
 usb_gadget_mode = false
 
 # Pi Zero
@@ -91,7 +90,7 @@ usb_gadget_mode   = true
 machine_input_dir = "/mnt/usb_share"   # TBC with Prin's operator
 
 [plat_trunk]
-url = "http://pi5.local:4841"
+url = "opc.tcp://howick-pi5.local:4840/"   # OPC UA subscription — Pi Zero subscribes to Pi 5
 ```
 
 ---
@@ -131,7 +130,7 @@ workflow continues unchanged alongside it.
 | SketchUp | Design PC | Prin's 3D design tool |
 | FrameBuilderMRD | Design PC | Howick's CSV generator |
 | opcua-howick | Design PC (Option A) or Pi 5 (Option B) | Dashboard, job queue, OPC UA server |
-| howick-agent | Pi Zero only | Polls for jobs, writes CSV to virtual USB |
+| howick-agent | Design PC (Option A) or Pi Zero 2W (Option B) | Polls for jobs, writes CSV to USB |
 | plat-trunk | Cloud / LAN (Phase 3 — future) | ubuntu Software's STEP CAD platform |
 
 ---
@@ -246,7 +245,7 @@ Reference jobs from Prin's machine used to develop and test this system:
 ## Key unknown
 
 **What folder on the USB does the Howick FRAMA look for CSV files?**
-One question for Prin's operator. Sets `machine_input_dir` in `config.pi-zero.toml`.
+One question for Prin's operator. Sets `machine_input_dir` in `config.agent.pi-zero.toml`.
 
 ---
 

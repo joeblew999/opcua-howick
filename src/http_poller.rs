@@ -1,16 +1,11 @@
-/// Job poller — polls the plat-trunk backend for pending Howick jobs.
+/// Job poller — polls plat-trunk (Phase 3 cloud backend) for pending Howick jobs.
 ///
-/// This is the cloud-topology counterpart to the file watcher.
-/// In all topologies, opcua-howick calls the same HTTP API:
+/// Used when plat-trunk is the upstream job source (Phase 3 and beyond).
+/// In local dev and Option B hardware, jobs arrive via the dashboard upload
+/// or file watcher instead — this poller is dormant until plat-trunk is live.
 ///
-/// ```text
-/// Topology A (Cloud):  polls https://your-worker.workers.dev/api/jobs/howick/pending
-/// Topology B/C (LAN):  polls http://localhost:3000/api/jobs/howick/pending
-/// ```
-///
-/// The CF Worker stores jobs in R2 at `jobs/howick/{job_id}.csv`.
-/// This poller fetches pending jobs, writes CSV to the machine input directory,
-/// then marks them as completed via the API.
+/// Polls `{plat_trunk.url}/api/jobs/howick/pending` every `status_push_interval_secs`.
+/// Each pending job is written as CSV to `machine_input_dir`, then acknowledged.
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
@@ -68,7 +63,9 @@ pub async fn run_job_poller(config: Config, state: SharedState) -> anyhow::Resul
         )
         .await
         {
-            tracing::warn!("Poll error (will retry): {e}");
+            // Connection refused is expected in local dev (plat-trunk not running).
+            // Use debug so local runs stay quiet; set RUST_LOG=debug to see it.
+            tracing::debug!("Poll error (will retry): {e}");
         }
         tokio::time::sleep(interval).await;
     }
@@ -134,7 +131,7 @@ async fn process_job(
 ) -> anyhow::Result<()> {
     // Write CSV to machine input directory (handles USB gadget refresh if configured)
     let filename = format!("{}.csv", job.frameset_name);
-    crate::usb_gadget::write_job(mc_config, &filename, &job.csv).await?;
+    crate::edge_agent::usb_gadget::write_job(mc_config, &filename, &job.csv).await?;
 
     let dest = mc_config.machine_input_dir.join(&filename);
     tracing::info!(

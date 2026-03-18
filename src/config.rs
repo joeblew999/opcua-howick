@@ -24,18 +24,6 @@ pub struct OpcUaConfig {
     pub application_name: String,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub enum DeliveryMode {
-    #[default]
-    /// File watcher writes CSV directly to machine_input_dir.
-    /// Use for Topology A (Design PC only) — no Pi Zero.
-    Direct,
-    /// File watcher holds CSV in queue; howick-agent picks it up via HTTP.
-    /// Use for Topology B/C (Pi Zero polls opcua-howick or plat-trunk).
-    Queue,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MachineConfig {
     pub machine_name: String,
@@ -47,11 +35,6 @@ pub struct MachineConfig {
     /// Set false for all other deployments (Pi 5, NUC, Windows, Mac).
     #[serde(default)]
     pub usb_gadget_mode: bool,
-    /// How uploaded CSVs reach the Howick FRAMA machine:
-    ///   "direct" — watcher writes immediately to machine_input_dir (Topology A, no Pi Zero)
-    ///   "queue"  — watcher holds in queue; howick-agent picks up via HTTP (Topology B/C)
-    #[serde(default)]
-    pub delivery_mode: DeliveryMode,
 }
 
 /// HTTP status server — the CF Worker / Tauri backend calls this to get
@@ -149,7 +132,6 @@ impl Default for Config {
                 machine_input_dir: PathBuf::from("./jobs/machine"),
                 machine_output_dir: PathBuf::from("./jobs/output"),
                 usb_gadget_mode: false,
-                delivery_mode: DeliveryMode::Direct,
             },
             http: HttpConfig {
                 host: "0.0.0.0".to_string(),
@@ -204,14 +186,6 @@ impl Config {
         if let Ok(url) = std::env::var("PLAT_TRUNK_URL") {
             tracing::info!("PLAT_TRUNK_URL override: {url}");
             config.plat_trunk.url = url;
-        }
-        if let Ok(mode) = std::env::var("DELIVERY_MODE") {
-            config.machine.delivery_mode = match mode.to_lowercase().as_str() {
-                "queue" => DeliveryMode::Queue,
-                "direct" => DeliveryMode::Direct,
-                _ => config.machine.delivery_mode,
-            };
-            tracing::info!("DELIVERY_MODE override: {mode}");
         }
         config
     }

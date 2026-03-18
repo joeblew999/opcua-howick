@@ -1,0 +1,20 @@
+# cargo-release config
+# Usage:
+#   mise run release patch   # 0.1.0 → 0.1.1
+#   mise run release minor   # 0.1.0 → 0.2.0
+#   mise run release major   # 0.1.0 → 1.0.0
+#
+# What it does:
+#   1. Bumps version in Cargo.toml
+#   2. Commits "chore: release vX.Y.Z"
+#   3. Tags vX.Y.Z
+#   4. Pushes commit + tag → CI builds all binaries + creates GitHub Release
+#   5. Pis self-update within 1hr (or: mise run update:check:*)
+
+sign-commit = false
+sign-tag    = false
+push        = true
+publish     = false   # not on crates.io
+
+pre-release-commit-message = "chore: release v{{version}}"
+tag-message                = "v{{version}}"

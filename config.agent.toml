@@ -1,0 +1,40 @@
+# config.agent.toml — local dev howick-agent config
+#
+# Mirrors config.agent.pi-zero.toml for localhost.
+# howick-agent subscribes to the local opcua-howick instance via OPC UA.
+#
+# On Pi Zero hardware, howick-agent reads ~/config.toml (config.agent.pi-zero.toml).
+# In dev, it reads this file: mise run dev:all passes --config config.agent.toml.
+#
+# The only meaningful differences from config.agent.pi-zero.toml:
+#   plat_trunk.url  = opc.tcp://127.0.0.1:4840/   (localhost instead of pi5.local)
+#   usb_gadget_mode = false                         (no USB gadget on a laptop)
+#   machine_input_dir = ./jobs/machine              (local dir instead of /mnt/usb_share)
+
+[opcua]
+host             = "0.0.0.0"
+port             = 4840
+application_name = "Howick Edge Agent - Pi Zero"
+
+[http]
+host = "0.0.0.0"
+port = 4841
+
+[machine]
+machine_name      = "Howick FRAMA"
+job_input_dir     = "./jobs/input"
+machine_input_dir = "./jobs/machine"   # simulates /mnt/usb_share on Pi Zero
+machine_output_dir = "./jobs/output"
+usb_gadget_mode   = false              # not a Pi Zero — no USB gadget refresh needed
+
+[plat_trunk]
+url                       = "opc.tcp://127.0.0.1:4840/"   # subscribe to local opcua-howick
+api_key                   = ""
+status_push_interval_secs = 5
+
+[sensor]
+enabled            = false
+empty_spool_kg     = 18.0
+steel_kg_per_m     = 0.74
+low_alert_m        = 50.0
+poll_interval_secs = 30

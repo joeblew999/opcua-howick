@@ -40,7 +40,7 @@ pub struct MachineState {
 
     /// When a CSV was last uploaded via the web UI
     pub last_upload_at: Option<std::time::SystemTime>,
-    /// When howick-agent last polled the local job queue (delivery_mode=queue)
+    /// When howick-agent last polled the local job queue
     pub agent_last_seen_at: Option<std::time::SystemTime>,
     /// Last error reported by howick-agent via POST /api/jobs/howick/:id/error
     pub agent_last_error: String,

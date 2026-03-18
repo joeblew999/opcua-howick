@@ -135,35 +135,16 @@ async fn handle_connection(
                         .unwrap_or(0)
                 );
 
-                use crate::config::DeliveryMode;
-                use crate::machine::{Job, MachineStatus};
-                match machine_config.delivery_mode {
-                    DeliveryMode::Direct => {
-                        crate::usb_gadget::write_job(&machine_config, &filename, &csv).await?;
-                        let mut s = state.write().await;
-                        s.last_upload_at = Some(SystemTime::now());
-                        s.completed_jobs.push(Job {
-                            id: job_id.clone(),
-                            frameset_name: frameset_name.clone(),
-                            csv_path: dest,
-                            submitted_at: SystemTime::now(),
-                        });
-                        s.status = MachineStatus::Idle;
-                        s.current_job = None;
-                        tracing::info!("Job {} delivered directly to machine", job_id);
-                    }
-                    DeliveryMode::Queue => {
-                        let mut s = state.write().await;
-                        s.last_upload_at = Some(SystemTime::now());
-                        s.job_queue.push(Job {
-                            id: job_id.clone(),
-                            frameset_name: frameset_name.clone(),
-                            csv_path: dest,
-                            submitted_at: SystemTime::now(),
-                        });
-                        tracing::info!("Job {} queued (depth: {})", job_id, s.job_queue.len());
-                    }
-                }
+                use crate::machine::Job;
+                let mut s = state.write().await;
+                s.last_upload_at = Some(SystemTime::now());
+                s.job_queue.push(Job {
+                    id: job_id.clone(),
+                    frameset_name: frameset_name.clone(),
+                    csv_path: dest,
+                    submitted_at: SystemTime::now(),
+                });
+                tracing::info!("Job {} queued (depth: {})", job_id, s.job_queue.len());
 
                 let body =
                     format!(r#"{{"ok":true,"frameset_name":"{frameset_name}","queued":true}}"#);
@@ -243,10 +224,8 @@ async fn handle_connection(
             ("200", "application/json", body)
         }
 
-        // ── Local job queue — Path 1 Topology B/C ────────────────────────────
-        // howick-agent (Pi Zero) polls these when delivery_mode=queue and
-        // plat_trunk.url points at this machine instead of plat-trunk.
-        // Same API shape as plat-trunk so howick-agent works unchanged.
+        // ── Local job queue — howick-agent (Pi Zero) polls these ─────────────
+        // Same API shape as plat-trunk so howick-agent works against both.
         ("GET", "/api/jobs/howick/pending") => {
             let mut s = state.write().await;
             s.agent_last_seen_at = Some(SystemTime::now());
@@ -394,7 +373,7 @@ fn sanitise_filename(raw: &str) -> String {
 }
 
 fn dashboard_page() -> &'static str {
-    include_str!("assets/dashboard.html")
+    include_str!("../assets/dashboard.html")
 }
 
 /// Extract a JSON number value by key from a flat JSON object string.

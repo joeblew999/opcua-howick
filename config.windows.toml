@@ -1,13 +1,13 @@
-# config.windows.toml — Option A: Design PC only (Windows)
+# config.windows.toml — Option A: Windows Design PC
 #
-# Copy to config.toml on the Design PC.
-# opcua-howick.exe runs alongside SketchUp + FrameBuilderMRD.
-# Operator drags CSV into browser at http://localhost:4841/dashboard
-# then carries USB stick to Howick FRAMA as before.
+# Both binaries run on the Design PC alongside SketchUp + FrameBuilderMRD.
+#   opcua-howick.exe — dashboard + job queue (http://localhost:4841/dashboard)
+#   howick-agent.exe — picks up queued jobs, writes to USB stick automatically
 #
-# machine_input_dir is the USB stick root on the Design PC.
-# Windows assigns USB sticks a drive letter — D:\ is the default here.
-# Change to E:\ or F:\ if D: is already taken by another drive.
+# Operator drags CSV into the browser. USB stick gets the file automatically.
+# Operator still walks the stick to the Howick FRAMA — but copying is automatic.
+#
+# machine_input_dir = USB stick root. Change D:\ to E:\ or F:\ if needed.
 
 [opcua]
 host             = "0.0.0.0"
@@ -32,11 +32,10 @@ machine_output_dir = "C:\\opcua-howick\\jobs\\output"
 # Not a Pi Zero — no USB gadget emulation
 usb_gadget_mode = false
 
-# Direct: watcher copies CSV to machine_input_dir immediately (no Pi Zero needed)
-delivery_mode = "direct"
 
 [plat_trunk]
-# Not used in Option A — Pi Zero is not present
+# Phase 3 future: set to cloud plat-trunk URL when ready
+# Leave as-is for Option A — poller is dormant, jobs arrive via dashboard upload
 url                       = "http://localhost:3000"
 api_key                   = ""
 status_push_interval_secs = 5

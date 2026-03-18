@@ -24,10 +24,10 @@ use tokio::net::TcpListener;
 use tokio::time::sleep;
 
 use opcua_howick::config::{
-    Config, DeliveryMode, HttpConfig, MachineConfig, OpcUaConfig, PlatTrunkConfig, SensorConfig,
+    Config, HttpConfig, MachineConfig, OpcUaConfig, PlatTrunkConfig, SensorConfig,
 };
+use opcua_howick::job_server::opcua_server::run_server_with;
 use opcua_howick::machine::{new_shared_state, MachineStatus};
-use opcua_howick::server::run_server_with;
 
 // ── Counter for unique test PKI dirs ───────────────────────────────────────────
 
@@ -52,7 +52,6 @@ fn make_config(port: u16) -> Config {
             machine_input_dir: std::env::temp_dir().join("howick-opcua-test-machine"),
             machine_output_dir: std::env::temp_dir().join("howick-opcua-test-output"),
             usb_gadget_mode: false,
-            delivery_mode: DeliveryMode::Queue,
         },
         http: HttpConfig {
             host: "127.0.0.1".into(),

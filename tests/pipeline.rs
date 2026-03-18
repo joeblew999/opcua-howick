@@ -14,11 +14,11 @@ use tokio::net::TcpListener;
 use tokio::time::sleep;
 
 use opcua_howick::config::{
-    Config, DeliveryMode, HttpConfig, MachineConfig, OpcUaConfig, PlatTrunkConfig, SensorConfig,
+    Config, HttpConfig, MachineConfig, OpcUaConfig, PlatTrunkConfig, SensorConfig,
 };
-use opcua_howick::http_server::run_http_server;
+use opcua_howick::job_server::http::run_http_server;
+use opcua_howick::job_server::watcher::run_job_watcher;
 use opcua_howick::machine::{new_shared_state, MachineStatus};
-use opcua_howick::watcher::run_job_watcher;
 
 // ── Fixture CSV ────────────────────────────────────────────────────────────────
 
@@ -35,11 +35,7 @@ fn test_dirs() -> (std::path::PathBuf, std::path::PathBuf) {
     (base.join("input"), base.join("machine"))
 }
 
-fn make_config(
-    delivery_mode: DeliveryMode,
-    job_input_dir: std::path::PathBuf,
-    machine_input_dir: std::path::PathBuf,
-) -> Config {
+fn make_config(job_input_dir: std::path::PathBuf, machine_input_dir: std::path::PathBuf) -> Config {
     Config {
         opcua: OpcUaConfig {
             host: "0.0.0.0".into(),
@@ -52,7 +48,6 @@ fn make_config(
             machine_input_dir,
             machine_output_dir: std::env::temp_dir().join("howick-test-out"),
             usb_gadget_mode: false,
-            delivery_mode,
         },
         http: HttpConfig {
             host: "127.0.0.1".into(),
@@ -106,7 +101,7 @@ async fn start(config: Config) -> std::net::SocketAddr {
 #[tokio::test]
 async fn health_check() {
     let (input, machine) = test_dirs();
-    let addr = start(make_config(DeliveryMode::Queue, input, machine)).await;
+    let addr = start(make_config(input, machine)).await;
 
     let resp = reqwest::get(format!("http://{addr}/health")).await.unwrap();
     assert_eq!(resp.status(), 200);
@@ -117,7 +112,7 @@ async fn health_check() {
 #[tokio::test]
 async fn status_returns_expected_fields() {
     let (input, machine) = test_dirs();
-    let addr = start(make_config(DeliveryMode::Queue, input, machine)).await;
+    let addr = start(make_config(input, machine)).await;
 
     let resp = reqwest::get(format!("http://{addr}/status")).await.unwrap();
     assert_eq!(resp.status(), 200);
@@ -132,7 +127,7 @@ async fn status_returns_expected_fields() {
 #[tokio::test]
 async fn dashboard_serves_html() {
     let (input, machine) = test_dirs();
-    let addr = start(make_config(DeliveryMode::Queue, input, machine)).await;
+    let addr = start(make_config(input, machine)).await;
 
     let resp = reqwest::get(format!("http://{addr}/dashboard"))
         .await
@@ -142,41 +137,12 @@ async fn dashboard_serves_html() {
     assert!(body.contains("Howick Pipeline"));
 }
 
-/// User drags CSV into dashboard → POST /upload → file lands in machine dir (Option A / direct)
-#[tokio::test]
-async fn upload_direct_delivers_file() {
-    let (input, machine) = test_dirs();
-    let machine_clone = machine.clone();
-    let addr = start(make_config(DeliveryMode::Direct, input, machine)).await;
-
-    let client = reqwest::Client::new();
-    let resp = client
-        .post(format!("http://{addr}/upload"))
-        .header("Content-Type", "text/plain")
-        .header("X-Filename", "T1.csv")
-        .body(T1_CSV)
-        .send()
-        .await
-        .unwrap();
-
-    assert_eq!(resp.status(), 200);
-    let json: serde_json::Value = resp.json().await.unwrap();
-    assert_eq!(json["ok"], true);
-
-    sleep(Duration::from_millis(500)).await; // watcher processes the file
-
-    assert!(
-        machine_clone.join("T1.csv").exists(),
-        "CSV should be in machine_input_dir after direct delivery"
-    );
-}
-
-/// Full Option B pipeline:
+/// Full pipeline:
 /// User uploads → job queued → howick-agent polls → agent completes → job in completed list
 #[tokio::test]
 async fn upload_queue_agent_poll_complete() {
     let (input, machine) = test_dirs();
-    let addr = start(make_config(DeliveryMode::Queue, input, machine)).await;
+    let addr = start(make_config(input, machine)).await;
 
     let client = reqwest::Client::new();
 
@@ -254,7 +220,7 @@ async fn upload_queue_agent_poll_complete() {
 #[tokio::test]
 async fn sensor_push_updates_coil_status() {
     let (input, machine) = test_dirs();
-    let addr = start(make_config(DeliveryMode::Queue, input, machine)).await;
+    let addr = start(make_config(input, machine)).await;
 
     let client = reqwest::Client::new();
 
