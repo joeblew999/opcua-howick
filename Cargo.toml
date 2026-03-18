@@ -9,16 +9,16 @@ readme = "README.md"
 
 # ── Binaries ──────────────────────────────────────────────────────────────────
 
-# Full agent: OPC UA server + HTTP status + poller + file watcher
+# OPC UA server + HTTP dashboard + job queue + file watcher
 # For: Raspberry Pi 5, NUC, Mac Mini, Windows PC
 # RAM: ~64MB   Binary: ~15MB
 [[bin]]
-name = "opcua-howick"
+name = "opcua-server"
 path = "src/main.rs"
 
-# Minimal agent: OPC UA client — subscribes to Pi 5, writes CSV to USB gadget
+# Howick FRAMA edge agent: OPC UA client — subscribes to opcua-server, writes CSV to USB gadget
 # For: Raspberry Pi Zero 2W (512MB RAM, replaces USB stick permanently)
-# RAM: ~16MB   Binary: ~3MB   Config: howick-agent.dev.toml (dev) / config.toml (Pi Zero)
+# RAM: ~16MB   Binary: ~3MB
 [[bin]]
 name = "howick-agent"
 path = "src/agent/main.rs"

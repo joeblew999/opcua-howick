@@ -24,7 +24,7 @@ when Windows starts.
 
 ### What Gerard does
 
-- Installs `opcua-howick.exe` on your Design PC remotely
+- Installs `opcua-server.exe` on your Design PC remotely
 - Configures it to point at the folder where your job files are saved
 - Runs a test job to confirm it works
 - Done in under an hour

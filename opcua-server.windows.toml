@@ -1,7 +1,7 @@
-# opcua-howick.windows.toml — Option A: Windows Design PC
+# opcua-server.windows.toml — Option A: Windows Design PC
 #
 # Both binaries run on the Design PC alongside SketchUp + FrameBuilderMRD.
-#   opcua-howick.exe — dashboard + job queue (http://localhost:4841/dashboard)
+#   opcua-server.exe — dashboard + job queue (http://localhost:4841/dashboard)
 #   howick-agent.exe — picks up queued jobs, writes to USB stick automatically
 #
 # Operator drags CSV into the browser. USB stick gets the file automatically.
@@ -22,12 +22,12 @@ port = 4841
 machine_name = "Howick FRAMA"
 
 # Incoming uploads land here first (watcher picks them up)
-job_input_dir = "C:\\opcua-howick\\jobs\\input"
+job_input_dir = "C:\\opcua-server\\jobs\\input"
 
 # Root of USB stick — Windows assigns D:\ by default for the first USB drive
 machine_input_dir = "D:\\"
 
-machine_output_dir = "C:\\opcua-howick\\jobs\\output"
+machine_output_dir = "C:\\opcua-server\\jobs\\output"
 
 # Not a Pi Zero — no USB gadget emulation
 usb_gadget_mode = false

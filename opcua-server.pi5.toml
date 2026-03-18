@@ -1,7 +1,7 @@
-# opcua-howick.pi5.toml — Pi 5 server config (Option B hardware)
+# opcua-server.pi5.toml — Pi 5 server config (Option B hardware)
 #
 # Copy to ~/config.toml on the Pi 5.
-# Pi 5 runs opcua-howick: dashboard (:4841), OPC UA server (:4840), job queue.
+# Pi 5 runs opcua-server: dashboard (:4841), OPC UA server (:4840), job queue.
 # Pi Zero (howick-agent) subscribes via OPC UA and writes jobs to its virtual USB.
 #
 # Dashboard: http://howick-pi5.local:4841/dashboard — any browser on factory WiFi

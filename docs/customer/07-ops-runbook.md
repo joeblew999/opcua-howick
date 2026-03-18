@@ -55,7 +55,7 @@ Full Pi Zero USB gadget detail in Document 6 (Pi Zero Setup).
 ```bash
 export PI5_HOST=pi@howick-pi5.local
 mise run setup:first-boot:pi5
-# deploys binary + opcua-howick.pi5.toml → ~/config.toml (first time only)
+# deploys binary + opcua-server.pi5.toml → ~/config.toml (first time only)
 ```
 
 ---
@@ -103,7 +103,7 @@ ssh $PI5_HOST  'systemctl list-timers opcua-howick-update.timer'
 ### Check installed version
 ```bash
 ssh $ZERO_HOST 'cat ~/.howick-agent-version'
-ssh $PI5_HOST  'cat ~/.opcua-howick-version'
+ssh $PI5_HOST  'cat ~/.opcua-server-version'
 ```
 
 ---
@@ -128,15 +128,15 @@ mise run update:check:pi5
 | Timer | Fires | Script |
 |-------|-------|--------|
 | `howick-agent-update.timer` | 5min after boot, then every hour | `/usr/local/bin/howick-agent-update.sh` |
-| `opcua-howick-update.timer` | 5min after boot, then every hour | `/usr/local/bin/opcua-howick-update.sh` |
+| `opcua-howick-update.timer` | 5min after boot, then every hour | `/usr/local/bin/opcua-server-update.sh` |
 
 Each script:
 1. Calls GitHub API for latest release tag
-2. Compares with version file on Pi (`~/.howick-agent-version` or `~/.opcua-howick-version`)
+2. Compares with version file on Pi (`~/.howick-agent-version` or `~/.opcua-server-version`)
 3. If newer: downloads binary, writes version file, restarts service
 4. If same: exits silently
 
-Logs: `journalctl -u howick-agent-update` / `journalctl -u opcua-howick-update`
+Logs: `journalctl -u howick-agent-update` / `journalctl -u opcua-server-update`
 
 ---
 
@@ -161,7 +161,7 @@ mise run doppler:setup:pi5            # re-auth Pi 5
 
 Netdata: `http://<pi5-tailscale-ip>:19999` or `https://app.netdata.cloud`
 
-Tracks CPU, RAM, disk, network, `opcua-howick.service` state. Alerts on crash.
+Tracks CPU, RAM, disk, network, `opcua-server.service` state. Alerts on crash.
 
 ```bash
 mise run netdata:install:pi5   # first-time install

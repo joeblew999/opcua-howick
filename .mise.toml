@@ -50,9 +50,9 @@ ls -la jobs/
 """
 
 [tasks.dev]
-description = "Run opcua-howick locally — OPC UA :4840, HTTP API :4841, watches jobs/input/"
+description = "Run opcua-server locally — OPC UA :4840, HTTP API :4841, watches jobs/input/"
 depends     = ["dev:setup"]
-run         = "RUST_LOG=opcua_howick=debug cargo run --bin opcua-howick"
+run         = "RUST_LOG=opcua_howick=debug cargo run --bin opcua-server"
 
 [tasks."dev:agent"]
 description = "Run howick-agent via OPC UA subscription (primary mode) — requires mise run dev in another terminal"
@@ -71,7 +71,7 @@ run         = "RUST_LOG=howick_agent=debug cargo run --bin howick-agent -- --con
 
 [tasks."dev:watch"]
 description = "Auto-rebuild on source changes (requires cargo-watch: cargo install cargo-watch)"
-run         = "cargo watch -x 'build --bin opcua-howick --bin howick-agent'"
+run         = "cargo watch -x 'build --bin opcua-server --bin howick-agent'"
 
 
 [tasks."dev:mock"]
@@ -130,11 +130,11 @@ echo ""
 [tasks.build]
 description = "Build (native dev — incremental)"
 sources  = ["src/**/*.rs", "Cargo.toml", "Cargo.lock"]
-outputs  = ["target/debug/opcua-howick", "target/debug/howick-agent"]
+outputs  = ["target/debug/opcua-server", "target/debug/howick-agent"]
 run      = "cargo build"
 
 [tasks.run]
-description = "Run opcua-howick locally (reads ./opcua-howick.dev.toml) — alias for dev"
+description = "Run opcua-server locally (reads ./opcua-server.dev.toml) — alias for dev"
 run         = "cargo run"
 
 [tasks.test]
@@ -399,32 +399,32 @@ REMOTE
 # ZERO_HOST — Tailscale IP or hostname of Pi Zero 2W (e.g. pi@100.x.x.x)
 
 [tasks."deploy:pi5"]
-description = "Deploy opcua-howick to Pi 5 — installs service + copies opcua-howick.pi5.toml on first deploy"
+description = "Deploy opcua-server to Pi 5 — installs service + copies opcua-server.pi5.toml on first deploy"
 depends     = ["build:pi5"]
 run         = """
 VERSION=$(cargo pkgid --quiet | cut -d@ -f2)
-scp target/aarch64-unknown-linux-gnu/release/opcua-howick ${PI5_HOST:-pi@howick-pi5.local}:~/opcua-howick.new
-scp deploy/opcua-howick.service ${PI5_HOST:-pi@howick-pi5.local}:~/opcua-howick.service
+scp target/aarch64-unknown-linux-gnu/release/opcua-server ${PI5_HOST:-pi@howick-pi5.local}:~/opcua-server.new
+scp deploy/opcua-server.service ${PI5_HOST:-pi@howick-pi5.local}:~/opcua-server.service
 ssh ${PI5_HOST:-pi@howick-pi5.local} "
-  mv ~/opcua-howick.new ~/opcua-howick
-  chmod +x ~/opcua-howick
-  echo 'v${VERSION}' > ~/.opcua-howick-version
-  if [ ! -f /etc/systemd/system/opcua-howick.service ]; then
-    sudo mv ~/opcua-howick.service /etc/systemd/system/
+  mv ~/opcua-server.new ~/opcua-server
+  chmod +x ~/opcua-server
+  echo 'v${VERSION}' > ~/.opcua-server-version
+  if [ ! -f /etc/systemd/system/opcua-server.service ]; then
+    sudo mv ~/opcua-server.service /etc/systemd/system/
     sudo systemctl daemon-reload
-    sudo systemctl enable opcua-howick
+    sudo systemctl enable opcua-server
     echo 'Service installed and enabled'
   else
-    rm -f ~/opcua-howick.service
+    rm -f ~/opcua-server.service
   fi
-  sudo systemctl restart opcua-howick
+  sudo systemctl restart opcua-server
   sleep 2
-  sudo systemctl status opcua-howick --no-pager
+  sudo systemctl status opcua-server --no-pager
 "
 # Copy config on first deploy only — don't overwrite if already customised
-ssh ${PI5_HOST:-pi@howick-pi5.local} '[ -f ~/opcua-howick.pi5.toml ]' \
-  || { echo "First deploy — copying opcua-howick.pi5.toml"; \
-       scp opcua-howick.pi5.toml ${PI5_HOST:-pi@howick-pi5.local}:~/opcua-howick.pi5.toml; }
+ssh ${PI5_HOST:-pi@howick-pi5.local} '[ -f ~/opcua-server.pi5.toml ]' \
+  || { echo "First deploy — copying opcua-server.pi5.toml"; \
+       scp opcua-server.pi5.toml ${PI5_HOST:-pi@howick-pi5.local}:~/opcua-server.pi5.toml; }
 """
 
 
@@ -432,15 +432,15 @@ ssh ${PI5_HOST:-pi@howick-pi5.local} '[ -f ~/opcua-howick.pi5.toml ]' \
 description = "Copy both binaries + configs to Windows Design PC (\\\\howick-pc or set WINDOWS_HOST)"
 depends     = ["build:windows"]
 run         = """
-DEST=${WINDOWS_HOST:-//howick-pc/c$/opcua-howick}
+DEST=${WINDOWS_HOST:-//howick-pc/c$/opcua-server}
 mkdir -p "$DEST"
-cp target/x86_64-pc-windows-msvc/release/opcua-howick.exe "$DEST"/opcua-howick.exe
+cp target/x86_64-pc-windows-msvc/release/opcua-server.exe "$DEST"/opcua-server.exe
 cp target/x86_64-pc-windows-msvc/release/howick-agent.exe "$DEST"/howick-agent.exe
 # Copy configs on first deploy only
-[ -f "$DEST/opcua-howick.windows.toml" ] || cp opcua-howick.windows.toml "$DEST"/opcua-howick.windows.toml
+[ -f "$DEST/opcua-server.windows.toml" ] || cp opcua-server.windows.toml "$DEST"/opcua-server.windows.toml
 [ -f "$DEST/howick-agent.windows.toml" ] || cp howick-agent.windows.toml "$DEST"/howick-agent.windows.toml
 echo "Deployed to Windows PC ($DEST)"
-echo "  opcua-howick.exe --config opcua-howick.windows.toml"
+echo "  opcua-server.exe --config opcua-server.windows.toml"
 echo "  howick-agent.exe --config howick-agent.windows.toml"
 echo "Edit both configs before starting."
 """
@@ -459,7 +459,7 @@ run         = "ssh ${ZERO_HOST:-pi@howick-pi-zero.local}"
 
 [tasks."logs:pi5"]
 description = "Stream live logs from Pi 5"
-run         = "ssh ${PI5_HOST:-pi@howick-pi5.local} 'journalctl -u opcua-howick -f'"
+run         = "ssh ${PI5_HOST:-pi@howick-pi5.local} 'journalctl -u opcua-server -f'"
 
 [tasks."logs:pi-zero"]
 description = "Stream live logs from Pi Zero 2W"
@@ -468,7 +468,7 @@ run         = "ssh ${ZERO_HOST:-pi@howick-pi-zero.local} 'journalctl -u howick-a
 [tasks."status:pi5"]
 description = "Check Pi 5 service status + HTTP API"
 run         = """
-ssh ${PI5_HOST:-pi@howick-pi5.local} 'sudo systemctl status opcua-howick --no-pager'
+ssh ${PI5_HOST:-pi@howick-pi5.local} 'sudo systemctl status opcua-server --no-pager'
 curl -s http://${PI5_ADDR:-howick-pi5.local}:4841/status | jq .
 """
 
@@ -521,8 +521,8 @@ run         = """
 ssh ${PI5_HOST:-pi@howick-pi5.local} '
   curl -Ls https://cli.doppler.com/install.sh | sudo sh
   doppler login
-  doppler setup --project opcua-howick --config pi5
-  echo "Doppler configured. Run: doppler run -- ./opcua-howick"
+  doppler setup --project opcua-server --config pi5
+  echo "Doppler configured. Run: doppler run -- ./opcua-server"
 '
 """
 
@@ -532,14 +532,14 @@ run         = """
 ssh ${ZERO_HOST:-pi@howick-pi-zero.local} '
   curl -Ls https://cli.doppler.com/install.sh | sudo sh
   doppler login
-  doppler setup --project opcua-howick --config pi-zero
+  doppler setup --project opcua-server --config pi-zero
   echo "Doppler configured. Run: doppler run -- ./howick-agent"
 '
 """
 
 [tasks."doppler:secrets"]
 description = "List all secrets in Doppler for this project (local)"
-run         = "doppler secrets --project opcua-howick"
+run         = "doppler secrets --project opcua-server"
 
 # ── Netdata (install on Pi 5 only — Pi Zero 2W has too little RAM) ─────────────
 

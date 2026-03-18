@@ -104,12 +104,12 @@ Naming: `<binary>.<env>.toml` — binary name first, environment second.
 
 | File | Binary | Where used |
 |------|--------|------------|
-| `opcua-howick.dev.toml` | opcua-howick | Dev laptop (default) |
-| `opcua-howick.pi5.toml` | opcua-howick | Pi 5 production |
-| `opcua-howick.windows.toml` | opcua-howick | Windows Design PC |
+| `opcua-server.dev.toml` | opcua-server | Dev laptop (default) |
+| `opcua-server.pi5.toml` | opcua-server | Pi 5 production |
+| `opcua-server.windows.toml` | opcua-server | Windows Design PC |
 | `howick-agent.dev.toml` | howick-agent | Dev laptop, OPC UA mode (default) |
 | `howick-agent.dev-mock.toml` | howick-agent | Dev laptop, mock-plat-trunk HTTP mode |
-| `howick-agent.dev-http.toml` | howick-agent | Dev laptop, local opcua-howick HTTP mode |
+| `howick-agent.dev-http.toml` | howick-agent | Dev laptop, local opcua-server HTTP mode |
 | `howick-agent.pi-zero.toml` | howick-agent | Pi Zero 2W production |
 | `howick-agent.windows.toml` | howick-agent | Windows Design PC |
 

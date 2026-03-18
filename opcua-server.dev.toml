@@ -1,11 +1,11 @@
-# opcua-howick — local dev config
+# opcua-server — local dev config
 #
 # ── How the system works ───────────────────────────────────────────────────────
 #
 # Two binaries always run together:
 #
-#   opcua-howick   — Dashboard (:4841), OPC UA server (:4840), job queue, file watcher
-#   howick-agent   — Polls opcua-howick, writes CSV to machine_input_dir (USB gadget)
+#   opcua-server   — Dashboard (:4841), OPC UA server (:4840), job queue, file watcher
+#   howick-agent   — Polls opcua-server, writes CSV to machine_input_dir (USB gadget)
 #
 # ── Deployment options ────────────────────────────────────────────────────────
 #
@@ -16,13 +16,13 @@
 #    Run: mise run dev:all
 #
 #  Hardware — Pi 5 + Pi Zero 2W (production):
-#    Pi 5 runs opcua-howick (config: opcua-howick.pi5.toml)
+#    Pi 5 runs opcua-server (config: opcua-server.pi5.toml)
 #    Pi Zero runs howick-agent (config: howick-agent.pi-zero.toml)
 #    Dashboard: http://howick-pi5.local:4841/dashboard
 #    howick-agent polls Pi 5 via OPC UA subscription, writes to /mnt/usb_share
 #
 #  Windows Design PC:
-#    Both binaries run on the Design PC (config: opcua-howick.windows.toml)
+#    Both binaries run on the Design PC (config: opcua-server.windows.toml)
 #    Dashboard: http://localhost:4841/dashboard
 #    howick-agent writes to USB stick drive letter (e.g. D:\)
 #    Operator still walks USB stick to machine — but copying is automatic.
@@ -59,7 +59,7 @@ usb_gadget_mode = false
 
 [plat_trunk]
 # howick-agent polls this URL for pending jobs.
-# Laptop dev: http://localhost:4841  (point at local opcua-howick)
+# Laptop dev: http://localhost:4841  (point at local opcua-server)
 # Pi Zero:    opc.tcp://howick-pi5.local:4840/  (OPC UA subscription, no polling)
 url                       = "http://localhost:3000"
 api_key                   = ""

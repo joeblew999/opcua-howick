@@ -1,6 +1,6 @@
 [Unit]
-Description=OPC UA Edge Agent for Howick FRAMA Machine (Pi 5)
-Documentation=https://github.com/joeblew999/opcua-howick
+Description=OPC UA server for Howick FRAMA Machine (Pi 5)
+Documentation=https://github.com/joeblew999/opcua-server
 After=network-online.target
 Wants=network-online.target
 
@@ -8,12 +8,12 @@ Wants=network-online.target
 Type=simple
 User=pi
 WorkingDirectory=/home/pi
-ExecStart=/home/pi/opcua-howick --config /home/pi/opcua-howick.pi5.toml
+ExecStart=/home/pi/opcua-server --config /home/pi/opcua-server.pi5.toml
 Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=opcua-howick
+SyslogIdentifier=opcua-server
 
 # Environment
 Environment=RUST_LOG=opcua_howick=info

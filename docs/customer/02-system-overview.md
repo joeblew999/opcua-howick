@@ -18,7 +18,7 @@ the file copying is automatic — drag into the browser, the USB stick has it.
 │  Design PC (Windows)                                │
 │                                                     │
 │  SketchUp + FrameBuilderMRD  — generates CSV        │
-│  opcua-howick.exe            — dashboard + job queue│
+│  opcua-server.exe            — dashboard + job queue│
 │  howick-agent.exe            — picks up queued jobs │
 │                                writes to USB stick  │
 │  Browser                     — Job Dashboard        │
@@ -35,7 +35,7 @@ the file copying is automatic — drag into the browser, the USB stick has it.
 └─────────────────────────────────────────────────────┘
 ```
 
-Key config (see `opcua-howick.windows.toml`):
+Key config (see `opcua-server.windows.toml`):
 ```toml
 usb_gadget_mode   = false
 machine_input_dir = "D:\\"   # USB stick drive letter — TBC with Prin's operator
@@ -80,7 +80,7 @@ USB port and replaces the USB stick. Operator uses a browser on any device.
 └─────────────────────────────────────────────────────┘
 ```
 
-Key config (see `opcua-howick.pi5.toml` and `howick-agent.pi-zero.toml`):
+Key config (see `opcua-server.pi5.toml` and `howick-agent.pi-zero.toml`):
 ```toml
 # Pi 5
 usb_gadget_mode = false

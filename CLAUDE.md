@@ -22,7 +22,7 @@ Web references (use if the clone is unavailable):
 - https://github.com/FreeOpcUa/async-opcua/tree/master/samples — all sample code
 
 Related projects:
-- https://github.com/joeblew999/opcua-howick — this repo
+- https://github.com/joeblew999/opcua-server — this repo
 - https://github.com/joeblew999/howick-rs — Howick CSV parser (frameset format)
 
 **Never reinvent what is already in async-opcua.** If you are about to write something OPC UA related from scratch, stop and check the samples first.

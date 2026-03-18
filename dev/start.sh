@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Full dev stack — mirrors production hardware:
 #
-#   opcua-howick  reads opcua-howick.dev.toml        (same as opcua-howick.pi5.toml on Pi 5)
+#   opcua-howick  reads opcua-server.dev.toml        (same as opcua-server.pi5.toml on Pi 5)
 #   howick-agent  reads howick-agent.dev.toml  (same as howick-agent.pi-zero.toml on Pi Zero)
 #
 # Each binary has its own config file — no env var overrides needed.
@@ -18,7 +18,7 @@ lsof -ti:4840,4841 | xargs kill -9 2>/dev/null || true
 sleep 0.3
 mkdir -p jobs/input jobs/machine jobs/output
 
-RUST_LOG=opcua_howick=info cargo run --bin opcua-howick &
+RUST_LOG=opcua_howick=info cargo run --bin opcua-server &
 SERVER_PID=$!
 sleep 2
 

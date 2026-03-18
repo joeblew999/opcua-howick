@@ -64,7 +64,7 @@ async fn main() -> anyhow::Result<()> {
         .skip_while(|a| a != "--config")
         .nth(1)
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("opcua-howick.dev.toml"));
+        .unwrap_or_else(|| PathBuf::from("opcua-server.dev.toml"));
     let config = config::Config::load_or_default(&config_path);
 
     tracing::info!(
