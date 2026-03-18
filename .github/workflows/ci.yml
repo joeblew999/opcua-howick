@@ -85,6 +85,12 @@ jobs:
             cross: false
             bin: opcua-howick
 
+          - name: windows x86_64 — howick-agent
+            target: x86_64-pc-windows-msvc
+            os: windows-latest
+            cross: false
+            bin: howick-agent
+
     steps:
       - uses: actions/checkout@v4
 

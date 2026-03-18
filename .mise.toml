@@ -203,6 +203,10 @@ echo ""
 echo "Pi Zero deployed (howick-agent v${VERSION})"
 """
 
+[tasks."setup:dev"]
+description = "Install dev tools not in mise registry (run once)"
+run         = "cargo install cargo-release"
+
 [tasks.release]
 description = "Release a new version — bumps Cargo.toml, tags, pushes; CI builds all binaries + creates GitHub Release"
 run         = "cargo release ${1:-patch} --execute --no-confirm"
@@ -220,8 +224,8 @@ description = "Build for Windows x86_64 (runs alongside SketchUp + FrameBuilderM
 run         = "cargo build --release --target x86_64-pc-windows-msvc"
 
 [tasks."build:all"]
-description = "Build all factory targets (Pi 5, Pi Zero 2W, Linux, Windows)"
-depends     = ["build:pi5", "build:agent:pi-zero", "build:linux", "build:windows"]
+description = "Build all factory targets (Pi 5, Pi Zero 2W, Linux, macOS, Windows)"
+depends     = ["build:pi5", "build:agent:pi-zero", "build:linux", "build:mac-arm", "build:windows"]
 
 # ── Full lifecycle — first boot ───────────────────────────────────────────────
 # Pi Zero 2W: two steps because USB gadget setup reboots the Pi.
