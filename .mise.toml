@@ -5,6 +5,7 @@
 [tools]
 pandoc = "latest"
 typst  = "latest"
+jq     = "latest"
 # cargo-release: install once with `cargo install cargo-release`
 
 [env]
@@ -81,11 +82,11 @@ ls -lh jobs/input/ jobs/machine/ 2>/dev/null
 
 [tasks."dev:status"]
 description = "Check opcua-howick machine state via HTTP API"
-run         = "curl -s http://localhost:4841/status | python3 -m json.tool"
+run         = "curl -s http://localhost:4841/status | jq ."
 
 [tasks."dev:jobs"]
 description = "List jobs via HTTP API"
-run         = "curl -s http://localhost:4841/jobs | python3 -m json.tool"
+run         = "curl -s http://localhost:4841/jobs | jq ."
 
 [tasks."dev:browse"]
 description = "Show OPC UA endpoint to paste into UaExpert (free GUI browser)"
@@ -176,7 +177,7 @@ run         = "cross build --release --bin howick-agent --target aarch64-unknown
 description = "Build + deploy howick-agent to Pi Zero 2W — installs service + copies config.agent.pi-zero.toml → ~/config.toml on first deploy"
 run         = """
 cross build --release --bin howick-agent --target aarch64-unknown-linux-gnu
-VERSION=$(cargo metadata --no-deps --format-version 1 | python3 -c "import sys,json; print(json.load(sys.stdin)['packages'][0]['version'])")
+VERSION=$(cargo pkgid --quiet | cut -d@ -f2)
 scp target/aarch64-unknown-linux-gnu/release/howick-agent ${ZERO_HOST:-pi@howick-pi-zero.local}:~/howick-agent.new
 scp deploy/howick-agent.service ${ZERO_HOST:-pi@howick-pi-zero.local}:~/howick-agent.service
 ssh ${ZERO_HOST:-pi@howick-pi-zero.local} '
@@ -386,7 +387,7 @@ REMOTE
 description = "Build + deploy opcua-howick to Pi 5 — installs service + copies config.pi5.toml → ~/config.toml on first deploy"
 run         = """
 cross build --release --target aarch64-unknown-linux-gnu
-VERSION=$(cargo metadata --no-deps --format-version 1 | python3 -c "import sys,json; print(json.load(sys.stdin)['packages'][0]['version'])")
+VERSION=$(cargo pkgid --quiet | cut -d@ -f2)
 scp target/aarch64-unknown-linux-gnu/release/opcua-howick ${PI5_HOST:-pi@howick-pi5.local}:~/opcua-howick.new
 scp deploy/opcua-howick.service ${PI5_HOST:-pi@howick-pi5.local}:~/opcua-howick.service
 ssh ${PI5_HOST:-pi@howick-pi5.local} "
@@ -453,7 +454,7 @@ run         = "ssh ${ZERO_HOST:-pi@howick-pi-zero.local} 'journalctl -u howick-a
 description = "Check Pi 5 service status + HTTP API"
 run         = """
 ssh ${PI5_HOST:-pi@howick-pi5.local} 'sudo systemctl status opcua-howick --no-pager'
-curl -s http://${PI5_ADDR:-howick-pi5.local}:4841/status | python3 -m json.tool
+curl -s http://${PI5_ADDR:-howick-pi5.local}:4841/status | jq .
 """
 
 [tasks."status:pi-zero"]
@@ -655,16 +656,16 @@ if [ ! -f "$SRC" ]; then
   echo "ERROR: fixture not found: $SRC"
   exit 1
 fi
-CSV=$(cat "$SRC" | python3 -c "import sys; print(sys.stdin.read().replace('\\n','\\\\n').replace('\"','\\\\\"'), end='')")
+CSV=$(jq -Rs . < "$SRC")
 curl -s -X POST http://localhost:4841/jobs \
   -H 'Content-Type: application/json' \
-  -d "{\"frameset_name\":\"${JOB}\",\"csv\":\"${CSV}\"}" \
-  | python3 -m json.tool
+  --data-binary "{\"frameset_name\":\"${JOB}\",\"csv\":${CSV}}" \
+  | jq .
 """
 
 [tasks."test:status"]
 description = "Check local HTTP status"
-run         = "curl -s http://localhost:4841/status | python3 -m json.tool"
+run         = "curl -s http://localhost:4841/status | jq ."
 
 [tasks."test:health"]
 description = "Health check"
@@ -677,8 +678,8 @@ KG=${COIL_KG:-23.5}
 echo "Pushing coil weight: ${KG} kg → http://localhost:4841/api/sensor/coil"
 curl -s -X POST http://localhost:4841/api/sensor/coil \
   -H 'Content-Type: application/json' \
-  -d "{\"weight_kg\":${KG}}" | python3 -m json.tool
+  -d "{\"weight_kg\":${KG}}" | jq .
 echo ""
 echo "Checking /status for coil_remaining:"
-curl -s http://localhost:4841/status | python3 -m json.tool | grep -E 'coil|sensor'
+curl -s http://localhost:4841/status | jq . | grep -E 'coil|sensor'
 """
