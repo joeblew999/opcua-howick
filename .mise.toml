@@ -211,17 +211,33 @@ run         = "cargo install cargo-release"
 description = "Release a new version — bumps Cargo.toml, tags, pushes; CI builds all binaries + creates GitHub Release"
 run         = "cargo release ${1:-patch} --execute --no-confirm"
 
+[tasks."build:bin"]
+description = "Build one binary for one target — used by CI matrix: mise run build:bin -- <bin> <target> [cross=false]"
+run         = """
+BIN="${1:?usage: mise run build:bin -- <bin> <target> [cross]}"
+TARGET="${2:?usage: mise run build:bin -- <bin> <target> [cross]}"
+USE_CROSS="${3:-false}"
+if [ "$USE_CROSS" = "true" ]; then
+  cross build --release --bin "$BIN" --target "$TARGET"
+else
+  cargo build --release --bin "$BIN" --target "$TARGET"
+fi
+"""
+
 [tasks."build:linux"]
-description = "Build for Linux x86_64"
-run         = "cargo build --release --target x86_64-unknown-linux-gnu"
+description = "Build opcua-howick for Linux x86_64"
+run         = "mise run build:bin -- opcua-howick x86_64-unknown-linux-gnu"
 
 [tasks."build:mac-arm"]
-description = "Build for macOS Apple Silicon"
-run         = "cargo build --release --target aarch64-apple-darwin"
+description = "Build opcua-howick for macOS Apple Silicon"
+run         = "mise run build:bin -- opcua-howick aarch64-apple-darwin"
 
 [tasks."build:windows"]
-description = "Build for Windows x86_64 (runs alongside SketchUp + FrameBuilderMRD on Howick control PC)"
-run         = "cargo build --release --target x86_64-pc-windows-msvc"
+description = "Build both binaries for Windows x86_64"
+run         = """
+mise run build:bin -- opcua-howick x86_64-pc-windows-msvc
+mise run build:bin -- howick-agent x86_64-pc-windows-msvc
+"""
 
 [tasks."build:all"]
 description = "Build all factory targets (Pi 5, Pi Zero 2W, Linux, macOS, Windows)"

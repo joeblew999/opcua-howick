@@ -104,6 +104,10 @@ jobs:
           key: ${{ runner.os }}-${{ matrix.target }}-${{ matrix.bin }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: ${{ runner.os }}-${{ matrix.target }}-
 
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
+
       - name: Install cross
         if: matrix.cross
         uses: taiki-e/install-action@v2
@@ -111,14 +115,7 @@ jobs:
           tool: cross
 
       - name: Build
-        shell: bash
-        run: |
-          BIN="${{ matrix.bin }}"
-          if [ "${{ matrix.cross }}" = "true" ]; then
-            cross build --release --bin "$BIN" --target ${{ matrix.target }}
-          else
-            cargo build --release --bin "$BIN" --target ${{ matrix.target }}
-          fi
+        run: mise run build:bin -- ${{ matrix.bin }} ${{ matrix.target }} ${{ matrix.cross }}
 
       - name: Stage
         shell: bash
