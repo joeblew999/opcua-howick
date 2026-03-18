@@ -75,6 +75,7 @@ jobs:
             os: ubuntu-latest
             cross: true
             bin: howick-frama
+            profile: release-pi-zero
 
           - name: windows x86_64 — opcua-server
             target: x86_64-pc-windows-msvc
@@ -115,16 +116,17 @@ jobs:
           tool: cross
 
       - name: Build
-        run: mise run build:bin -- ${{ matrix.bin }} ${{ matrix.target }} ${{ matrix.cross }}
+        run: mise run build:bin -- ${{ matrix.bin }} ${{ matrix.target }} ${{ matrix.cross }} ${{ matrix.profile || 'release' }}
 
       - name: Stage
         shell: bash
         run: |
           BIN="${{ matrix.bin }}"
+          PROFILE="${{ matrix.profile || 'release' }}"
           mkdir -p dist
           EXT=""
           if [[ "${{ matrix.target }}" == *"windows"* ]]; then EXT=".exe"; fi
-          cp "target/${{ matrix.target }}/release/${BIN}${EXT}" \
+          cp "target/${{ matrix.target }}/${PROFILE}/${BIN}${EXT}" \
              "dist/${BIN}-${{ matrix.target }}${EXT}"
 
       - uses: actions/upload-artifact@v4

@@ -185,15 +185,15 @@ description = "Build howick-frama locally (no cross — for local testing only)"
 run         = "cargo build --release --bin howick-frama"
 
 [tasks."build:agent:pi-zero"]
-description = "Cross-compile howick-frama for Pi Zero 2W (aarch64)"
-run         = "mise run build:bin -- howick-frama aarch64-unknown-linux-gnu true"
+description = "Cross-compile howick-frama for Pi Zero 2W (aarch64) — size-optimised profile"
+run         = "mise run build:bin -- howick-frama aarch64-unknown-linux-gnu true release-pi-zero"
 
 [tasks."deploy:pi-zero"]
 description = "Deploy howick-frama to Pi Zero 2W — installs service + copies howick-frama.pi-zero.toml on first deploy"
 depends     = ["build:agent:pi-zero"]
 run         = """
 VERSION=$(cargo pkgid --quiet opcua-howick | cut -d@ -f2)
-scp target/aarch64-unknown-linux-gnu/release/howick-frama ${ZERO_HOST:-pi@howick-pi-zero.local}:~/howick-frama.new
+scp target/aarch64-unknown-linux-gnu/release-pi-zero/howick-frama ${ZERO_HOST:-pi@howick-pi-zero.local}:~/howick-frama.new
 scp deploy/howick-frama.service ${ZERO_HOST:-pi@howick-pi-zero.local}:~/howick-frama.service
 ssh ${ZERO_HOST:-pi@howick-pi-zero.local} '
   mv ~/howick-frama.new ~/howick-frama
@@ -225,18 +225,19 @@ run         = "cargo install cargo-release"
 
 [tasks.release]
 description = "Release a new version — bumps Cargo.toml, tags, pushes; CI builds all binaries + creates GitHub Release"
-run         = "cargo release ${1:-patch} --execute --no-confirm"
+run         = "cargo release ${1:-patch} --workspace --execute --no-confirm"
 
 [tasks."build:bin"]
-description = "Build one binary for one target — used by CI matrix: mise run build:bin -- <bin> <target> [cross=false]"
+description = "Build one binary for one target — used by CI matrix: mise run build:bin -- <bin> <target> [cross=false] [profile=release]"
 run         = """
-BIN="${1:?usage: mise run build:bin -- <bin> <target> [cross]}"
-TARGET="${2:?usage: mise run build:bin -- <bin> <target> [cross]}"
+BIN="${1:?usage: mise run build:bin -- <bin> <target> [cross] [profile]}"
+TARGET="${2:?usage: mise run build:bin -- <bin> <target> [cross] [profile]}"
 USE_CROSS="${3:-false}"
+PROFILE="${4:-release}"
 if [ "$USE_CROSS" = "true" ]; then
-  cross build --release --bin "$BIN" --target "$TARGET"
+  cross build --profile "$PROFILE" --bin "$BIN" --target "$TARGET"
 else
-  cargo build --release --bin "$BIN" --target "$TARGET"
+  cargo build --profile "$PROFILE" --bin "$BIN" --target "$TARGET"
 fi
 """
 

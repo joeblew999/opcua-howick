@@ -23,5 +23,23 @@ serde              = { version = "1", features = ["derive"] }
 toml               = "0.8"
 notify             = "6"
 reqwest            = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
-async-opcua        = { version = "0.18", features = ["server", "client"] }
 serde_json         = "1"
+# async-opcua is NOT shared here — each crate pins its own features:
+#   opcua-server: features = ["server", "client"]
+#   howick-frama: features = ["client"]  (no server code on Pi Zero)
+
+# ── Release profiles ──────────────────────────────────────────────────────────
+# dev: default (fast compile)
+# release: standard optimisations for Pi 5 / Mac / Windows
+[profile.release]
+opt-level = 3
+lto       = "thin"
+
+# Pi Zero 2W: minimise binary size — cargo build --profile release-pi-zero
+# ~30-40% smaller than release profile; worth the extra link time
+[profile.release-pi-zero]
+inherits      = "release"
+opt-level     = "z"   # optimise for size
+lto           = true  # full LTO — slow but smallest binary
+codegen-units = 1     # single codegen unit — required for full LTO
+strip         = true  # strip symbols from final binary
