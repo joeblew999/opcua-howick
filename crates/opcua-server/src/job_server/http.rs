@@ -20,8 +20,8 @@ use std::time::SystemTime;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 
-use crate::config::{Config, MachineConfig, SensorConfig};
-use crate::machine::SharedState;
+use opcua_howick::config::{Config, MachineConfig, SensorConfig};
+use opcua_howick::machine::SharedState;
 
 pub async fn run_http_server(
     listener: TcpListener,
@@ -135,7 +135,7 @@ async fn handle_connection(
                         .unwrap_or(0)
                 );
 
-                use crate::machine::Job;
+                use opcua_howick::machine::Job;
                 let mut s = state.write().await;
                 s.last_upload_at = Some(SystemTime::now());
                 s.job_queue.push(Job {
@@ -170,7 +170,7 @@ async fn handle_connection(
                     r#""agent_last_seen_secs_ago":{agent},"agent_last_error":"{agent_err}","#,
                     r#""sensor_last_read_secs_ago":{sensor}}}"#,
                 ),
-                version = crate::VERSION,
+                version = opcua_howick::VERSION,
                 status = s.status.as_str(),
                 current_job = s
                     .current_job
@@ -279,7 +279,7 @@ async fn handle_connection(
                     job.frameset_name
                 );
                 s.completed_jobs.push(job);
-                s.status = crate::machine::MachineStatus::Idle;
+                s.status = opcua_howick::machine::MachineStatus::Idle;
                 s.current_job = None;
             }
             drop(s);

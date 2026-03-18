@@ -4,8 +4,8 @@ use std::time::SystemTime;
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use tokio::sync::mpsc;
 
-use crate::config::MachineConfig;
-use crate::machine::{Job, MachineStatus, SharedState};
+use opcua_howick::config::MachineConfig;
+use opcua_howick::machine::{Job, MachineStatus, SharedState};
 
 /// Watch the job input directory for new CSV files.
 /// When a CSV arrives, copy it to the machine input directory and update state.

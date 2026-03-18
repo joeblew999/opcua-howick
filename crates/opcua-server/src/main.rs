@@ -12,11 +12,8 @@
 //!   - Job poller                 — polls plat-trunk API for R2-queued jobs
 //!   - File watcher               — picks up CSV files dropped locally
 
-use opcua_howick::{
-    config,
-    job_server::{http, opcua_server, watcher},
-    machine, updater, VERSION,
-};
+use opcua_howick::{config, machine, updater, VERSION};
+use opcua_server::job_server::{http, opcua_server as opcua_srv, watcher};
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -101,7 +98,7 @@ async fn main() -> anyhow::Result<()> {
         r = opcua_howick::http_poller::run_job_poller(config.clone(), state.clone()) => {
             if let Err(e) = r { tracing::error!("Job poller: {e}"); }
         }
-        r = opcua_server::run_server(&config, state.clone()) => {
+        r = opcua_srv::run_server(&config, state.clone()) => {
             if let Err(e) = r { tracing::error!("OPC UA server: {e}"); }
         }
         r = http::run_http_server(http_listener, &config, state.clone()) => {

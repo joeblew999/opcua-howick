@@ -131,7 +131,7 @@ async fn process_job(
 ) -> anyhow::Result<()> {
     // Write CSV to machine input directory (handles USB gadget refresh if configured)
     let filename = format!("{}.csv", job.frameset_name);
-    crate::edge_agent::usb_gadget::write_job(mc_config, &filename, &job.csv).await?;
+    crate::usb_gadget::write_job(mc_config, &filename, &job.csv).await?;
 
     let dest = mc_config.machine_input_dir.join(&filename);
     tracing::info!(

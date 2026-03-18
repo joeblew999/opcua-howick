@@ -1,4 +1,4 @@
-// Shared library — exposes all modules for both binaries and integration tests.
+// Core shared library — config, machine state, HTTP poller, updater.
 
 /// Full version string embedded at compile time: `"0.1.0 (abc1234)"`.
 ///
@@ -15,8 +15,7 @@ pub const VERSION: &str = concat!(
 );
 
 pub mod config;
-pub mod edge_agent;
 pub mod http_poller;
-pub mod job_server;
 pub mod machine;
 pub mod updater;
+pub mod usb_gadget;

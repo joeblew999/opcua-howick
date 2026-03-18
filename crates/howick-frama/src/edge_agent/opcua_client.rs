@@ -32,8 +32,8 @@ use opcua::{
     },
 };
 
-use crate::config::Config;
-use crate::machine::{Job, MachineStatus, SharedState};
+use opcua_howick::config::Config;
+use opcua_howick::machine::{Job, MachineStatus, SharedState};
 
 /// Run the OPC UA client agent.
 ///
@@ -182,7 +182,7 @@ pub async fn run_opcua_agent(config: Config, state: SharedState) -> anyhow::Resu
         // Write CSV to machine input directory (triggers USB gadget refresh if configured)
         let filename = format!("{frameset_name}.csv");
         if let Err(e) =
-            crate::edge_agent::usb_gadget::write_job(&config.machine, &filename, &csv).await
+            opcua_howick::usb_gadget::write_job(&config.machine, &filename, &csv).await
         {
             tracing::error!(job_id = %job_id, "USB write failed: {e}");
             continue;

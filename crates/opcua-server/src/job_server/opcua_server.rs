@@ -11,8 +11,8 @@ use opcua::types::{
     BuildInfo, DataTypeId, DataValue, DateTime, NodeId, StatusCode, UAString, Variant,
 };
 
-use crate::config::Config;
-use crate::machine::SharedState;
+use opcua_howick::config::Config;
+use opcua_howick::machine::SharedState;
 
 /// Node ID helpers for our namespace
 fn node(ns: u16, name: &str) -> NodeId {
@@ -177,7 +177,7 @@ fn build_server_builder(
             product_uri: "https://github.com/joeblew999/opcua-howick".into(),
             manufacturer_name: "Ubuntu Software Pty Ltd".into(),
             product_name: "opcua-server".into(),
-            software_version: crate::VERSION.into(),
+            software_version: opcua_howick::VERSION.into(),
             build_number: "1".into(),
             build_date: DateTime::now(),
         })

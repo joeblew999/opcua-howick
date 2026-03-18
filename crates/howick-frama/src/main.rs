@@ -36,11 +36,10 @@
 //! status_push_interval_secs = 5
 //! ```
 
-use opcua_howick::{
-    config,
-    edge_agent::{opcua_client, sensor},
-    http_poller, machine, updater, VERSION,
-};
+use opcua_howick::{config, http_poller, machine, updater, VERSION};
+
+mod edge_agent;
+use edge_agent::{opcua_client, sensor};
 
 use std::path::PathBuf;
 use tracing_subscriber::EnvFilter;
