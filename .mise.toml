@@ -26,7 +26,7 @@ RUST_LOG       = "opcua_howick=info"
 #                  Check ./jobs/machine/ for written CSVs
 
 [tasks."dev:all"]
-description = "Start full dev stack in one terminal — mock plat-trunk + opcua-howick (Ctrl-C stops both)"
+description = "Start full dev stack — opcua-howick (OPC UA server + HTTP) + howick-agent (OPC UA client) — Ctrl-C stops both"
 run         = "bash dev/start.sh"
 
 [tasks."dev:setup"]
@@ -43,12 +43,17 @@ depends     = ["dev:setup"]
 run         = "RUST_LOG=opcua_howick=debug cargo run --bin opcua-howick"
 
 [tasks."dev:agent"]
-description = "Run howick-agent — polls mock-plat-trunk on :3000 (Path 2 / plat-trunk simulation)"
+description = "Run howick-agent in HTTP polling mode — polls mock-plat-trunk on :3000 (requires mise run dev:mock in another terminal)"
 depends     = ["dev:setup"]
 run         = "RUST_LOG=howick_agent=debug cargo run --bin howick-agent"
 
+[tasks."dev:agent:opcua"]
+description = "Run howick-agent in OPC UA subscription mode — subscribes to opcua-howick on :4840 (requires mise run dev in another terminal)"
+depends     = ["dev:setup"]
+run         = "DELIVERY_MODE=queue PLAT_TRUNK_URL=opc.tcp://127.0.0.1:4840/ RUST_LOG=howick_agent=debug cargo run --bin howick-agent"
+
 [tasks."dev:agent:local"]
-description = "Run howick-agent — polls opcua-howick on :4841 (Path 1 / local queue, needs delivery_mode=queue in config.toml)"
+description = "Run howick-agent in HTTP polling mode against local opcua-howick queue — needs delivery_mode=queue in config.toml"
 depends     = ["dev:setup"]
 run         = """
 grep -q 'delivery_mode = "queue"' config.toml || {

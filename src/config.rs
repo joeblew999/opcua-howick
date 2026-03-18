@@ -170,7 +170,6 @@ impl SensorConfig {
     ///
     /// Subtracts the empty spool weight then divides by the linear density.
     /// Returns 0.0 if the calculation is negative (coil exhausted or not fitted).
-    #[allow(dead_code)]
     pub fn coil_metres(&self, raw_weight_kg: f64) -> f64 {
         let steel_kg = raw_weight_kg - self.empty_spool_kg;
         if steel_kg <= 0.0 {
