@@ -38,20 +38,33 @@ Related projects:
 | `opcua-server` | Pi 5 / NUC / Mac | OPC UA server + HTTP server + file watcher + job poller |
 | `howick-frama` | Pi Zero 2W | Minimal: subscribes to Pi 5 OPC UA server, writes CSV to USB gadget |
 
+### Cargo workspace layout
+
+Four crates under `crates/`:
+
+| Crate | Binary | Target | Role |
+|-------|--------|--------|------|
+| `crates/core` (`opcua-howick`) | — | both | Shared: config, machine state, updater, http_poller, usb_gadget |
+| `crates/opcua-server` | `opcua-server` | Pi 5 / NUC / Mac | OPC UA server + HTTP server + file watcher + job poller |
+| `crates/howick-frama` | `howick-frama` | Pi Zero 2W | OPC UA client-only + USB gadget write |
+| `crates/mock-plat-trunk` | `mock-plat-trunk` | dev | Mock plat-trunk HTTP server for testing |
+
 ### Module layout
 
 | Path | Used by | Purpose |
 |------|---------|---------|
-| `src/config.rs` | both | Configuration types and loader |
-| `src/machine.rs` | both | Shared machine state, job types |
-| `src/updater.rs` | both | Self-update logic |
-| `src/http_poller.rs` | both | HTTP polling of plat-trunk for pending jobs |
-| `src/job_server/opcua_server.rs` | Pi 5 only | OPC UA server — exposes address space |
-| `src/job_server/http.rs` | Pi 5 only | HTTP JSON API + dashboard |
-| `src/job_server/watcher.rs` | Pi 5 only | File watcher for dropped CSVs |
-| `src/edge_agent/opcua_client.rs` | Pi Zero only | OPC UA subscription client |
-| `src/edge_agent/sensor.rs` | Pi Zero only | Coil weight sensor push |
-| `src/edge_agent/usb_gadget.rs` | Pi Zero only | USB mass storage gadget write |
+| `crates/core/src/config.rs` | both | Configuration types and loader |
+| `crates/core/src/machine.rs` | both | Shared machine state, job types |
+| `crates/core/src/updater.rs` | both | Self-update logic |
+| `crates/core/src/http_poller.rs` | both | HTTP polling of plat-trunk for pending jobs |
+| `crates/core/src/usb_gadget.rs` | both | USB mass storage gadget write (shared — http_poller and opcua_client both use it) |
+| `crates/opcua-server/src/job_server/opcua_server.rs` | Pi 5 only | OPC UA server — exposes address space |
+| `crates/opcua-server/src/job_server/http.rs` | Pi 5 only | HTTP JSON API + dashboard |
+| `crates/opcua-server/src/job_server/watcher.rs` | Pi 5 only | File watcher for dropped CSVs |
+| `crates/howick-frama/src/edge_agent/opcua_client.rs` | Pi Zero only | OPC UA subscription client |
+| `crates/howick-frama/src/edge_agent/sensor.rs` | Pi Zero only | Coil weight sensor push |
+
+**Dependency isolation**: `howick-frama` declares `async-opcua = { features = ["client"] }` only — no server code compiled for the Pi Zero binary.
 
 ### OPC UA is the M2M backbone
 
