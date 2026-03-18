@@ -41,6 +41,7 @@ fn make_config(job_input_dir: std::path::PathBuf, machine_input_dir: std::path::
             host: "0.0.0.0".into(),
             port: 4840,
             application_name: "test".into(),
+            namespace_uri: "urn:howick-frama".into(),
         },
         machine: MachineConfig {
             machine_name: "Test FRAMA".into(),

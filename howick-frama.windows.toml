@@ -10,6 +10,7 @@
 host             = "0.0.0.0"
 port             = 4840
 application_name = "Howick Edge Agent - Pi Zero"
+namespace_uri    = "urn:howick-frama"
 
 [http]
 host = "0.0.0.0"

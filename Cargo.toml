@@ -20,7 +20,7 @@ path = "src/main.rs"
 # For: Raspberry Pi Zero 2W (512MB RAM, replaces USB stick permanently)
 # RAM: ~16MB   Binary: ~3MB
 [[bin]]
-name = "howick-agent"
+name = "howick-frama"
 path = "src/agent/main.rs"
 
 # Dev-only mock plat-trunk backend — simulates the cloud API locally

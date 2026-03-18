@@ -9,12 +9,12 @@ Type=simple
 User=pi
 WorkingDirectory=/home/pi
 ExecStartPre=/bin/sleep 5
-ExecStart=/home/pi/howick-agent --config /home/pi/howick-agent.pi-zero.toml
+ExecStart=/home/pi/howick-frama --config /home/pi/howick-frama.pi-zero.toml
 Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=howick-agent
+SyslogIdentifier=howick-frama
 
 # Environment
 Environment=RUST_LOG=howick_agent=info

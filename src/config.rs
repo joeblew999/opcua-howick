@@ -22,6 +22,13 @@ pub struct OpcUaConfig {
     pub host: String,
     pub port: u16,
     pub application_name: String,
+    /// OPC UA namespace URI for this machine type.
+    /// Server registers it; agents look it up by URI to get the namespace index.
+    /// Each machine type has its own URI — e.g. "urn:howick-frama", "urn:some-cnc".
+    /// This is what makes the server generic: swap the URI and the address space
+    /// belongs to a different machine without any code changes.
+    #[serde(default = "default_namespace_uri")]
+    pub namespace_uri: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -81,6 +88,10 @@ pub struct SensorConfig {
     pub poll_interval_secs: u64,
 }
 
+fn default_namespace_uri() -> String {
+    "urn:howick-frama".to_owned()
+}
+
 fn default_empty_spool_kg() -> f64 {
     18.0
 }
@@ -124,7 +135,8 @@ impl Default for Config {
             opcua: OpcUaConfig {
                 host: "0.0.0.0".to_string(),
                 port: 4840,
-                application_name: "Howick Edge Agent".to_string(),
+                application_name: "OPC UA Server".to_string(),
+                namespace_uri: default_namespace_uri(),
             },
             machine: MachineConfig {
                 machine_name: "Howick FRAMA".to_string(),

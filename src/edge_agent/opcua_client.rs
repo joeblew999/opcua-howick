@@ -35,8 +35,6 @@ use opcua::{
 use crate::config::Config;
 use crate::machine::{Job, MachineStatus, SharedState};
 
-const NS_URI: &str = "urn:howick-edge-agent";
-
 /// Run the OPC UA client agent.
 ///
 /// Connects to the OPC UA server at `config.plat_trunk.url`, subscribes to
@@ -54,8 +52,8 @@ pub async fn run_opcua_agent(config: Config, state: SharedState) -> anyhow::Resu
     // `trust_server_certs(true)` is fine on a private factory LAN.
     // `session_retry_limit(-1)` means retry forever (factory should always be up).
     let mut client = ClientBuilder::new()
-        .application_name("howick-agent")
-        .application_uri("urn:howick-agent")
+        .application_name("howick-frama")
+        .application_uri("urn:howick-frama-agent")
         .trust_server_certs(true)
         .create_sample_keypair(true)
         .session_retry_limit(-1)
@@ -84,7 +82,7 @@ pub async fn run_opcua_agent(config: Config, state: SharedState) -> anyhow::Resu
     tracing::info!("OPC UA connected to Pi 5 ✓");
 
     // Resolve our namespace index from the server's namespace array
-    let ns = get_namespace_index(&session, NS_URI).await.unwrap_or(2);
+    let ns = get_namespace_index(&session, &config.opcua.namespace_uri).await.unwrap_or(2);
     tracing::info!(ns, "Namespace index resolved");
 
     // Shared signal: DataChangeCallback (sync) → main task (async)

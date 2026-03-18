@@ -16,7 +16,7 @@ RUST_LOG       = "opcua_howick=info"
 # Full local dev loop — no hardware required.
 #
 # Quickstart (both binaries, one command):
-#   mise run dev:all      # builds, then starts opcua-howick + howick-agent (OPC UA)
+#   mise run dev:all      # builds, then starts opcua-howick + howick-frama (OPC UA)
 #   mise run dev:job      # in another terminal — drops test CSV into jobs/input/
 #   mise run dev:status   # check machine state via HTTP
 #
@@ -24,20 +24,20 @@ RUST_LOG       = "opcua_howick=info"
 #   terminal 1:  mise run dev              # opcua-howick — OPC UA :4840, HTTP :4841
 #
 #   terminal 2 option A — OPC UA (production-identical):
-#                mise run dev:agent        # howick-agent subscribes via OPC UA
+#                mise run dev:agent        # howick-frama subscribes via OPC UA
 #
 #   terminal 2 option B — HTTP polling against opcua-howick:
-#                mise run dev:agent:local  # howick-agent polls http://localhost:4841
+#                mise run dev:agent:local  # howick-frama polls http://localhost:4841
 #
 #   terminal 2 option C — HTTP polling against mock-plat-trunk:
 #                mise run dev:mock         # start mock-plat-trunk on :3000
-#                mise run dev:agent:mock   # howick-agent polls :3000
+#                mise run dev:agent:mock   # howick-frama polls :3000
 #
 # Auto-rebuild on save:
 #   mise run dev:watch    # requires cargo-watch (cargo install cargo-watch)
 
 [tasks."dev:all"]
-description = "Start full dev stack — build, then opcua-howick + howick-agent (OPC UA) — Ctrl-C stops both"
+description = "Start full dev stack — build, then opcua-howick + howick-frama (OPC UA) — Ctrl-C stops both"
 depends     = ["dev:setup", "build"]
 run         = "bash dev/start.sh"
 
@@ -55,23 +55,23 @@ depends     = ["dev:setup"]
 run         = "RUST_LOG=opcua_howick=debug cargo run --bin opcua-server"
 
 [tasks."dev:agent"]
-description = "Run howick-agent via OPC UA subscription (primary mode) — requires mise run dev in another terminal"
+description = "Run howick-frama via OPC UA subscription (primary mode) — requires mise run dev in another terminal"
 depends     = ["dev:setup"]
-run         = "RUST_LOG=howick_agent=debug cargo run --bin howick-agent -- --config howick-agent.dev.toml"
+run         = "RUST_LOG=howick_frama=debug cargo run --bin howick-frama -- --config howick-frama.dev.toml"
 
 [tasks."dev:agent:mock"]
-description = "Run howick-agent polling mock-plat-trunk on :3000 — requires mise run dev:mock in another terminal"
+description = "Run howick-frama polling mock-plat-trunk on :3000 — requires mise run dev:mock in another terminal"
 depends     = ["dev:setup"]
-run         = "RUST_LOG=howick_agent=debug cargo run --bin howick-agent -- --config howick-agent.dev-mock.toml"
+run         = "RUST_LOG=howick_frama=debug cargo run --bin howick-frama -- --config howick-frama.dev-mock.toml"
 
 [tasks."dev:agent:local"]
-description = "Run howick-agent polling local opcua-howick HTTP API on :4841 — requires mise run dev in another terminal"
+description = "Run howick-frama polling local opcua-howick HTTP API on :4841 — requires mise run dev in another terminal"
 depends     = ["dev:setup"]
-run         = "RUST_LOG=howick_agent=debug cargo run --bin howick-agent -- --config howick-agent.dev-http.toml"
+run         = "RUST_LOG=howick_frama=debug cargo run --bin howick-frama -- --config howick-frama.dev-http.toml"
 
 [tasks."dev:watch"]
 description = "Auto-rebuild on source changes (requires cargo-watch: cargo install cargo-watch)"
-run         = "cargo watch -x 'build --bin opcua-server --bin howick-agent'"
+run         = "cargo watch -x 'build --bin opcua-server --bin howick-frama'"
 
 
 [tasks."dev:mock"]
@@ -130,7 +130,7 @@ echo ""
 [tasks.build]
 description = "Build (native dev — incremental)"
 sources  = ["src/**/*.rs", "Cargo.toml", "Cargo.lock"]
-outputs  = ["target/debug/opcua-server", "target/debug/howick-agent"]
+outputs  = ["target/debug/opcua-server", "target/debug/howick-frama"]
 run      = "cargo build"
 
 [tasks.run]
@@ -176,47 +176,47 @@ depends     = ["check", "fmt-check", "test"]
 description = "Cross-compile opcua-howick for Raspberry Pi 5 (aarch64)"
 run         = "mise run build:bin -- opcua-howick aarch64-unknown-linux-gnu true"
 
-# Pi Zero 2W — uses howick-agent (minimal binary, no OPC UA, no HTTP)
+# Pi Zero 2W — uses howick-frama (minimal binary, no OPC UA, no HTTP)
 # ~3MB binary, ~16MB RAM — fits Pi Zero 2W (512MB)
 # USB gadget mode: appears as USB mass storage to Howick machine
 # See docs/customer/06-pi-zero-setup.md for full setup guide
 [tasks."build:pi-zero:local"]
-description = "Build howick-agent locally (no cross — for local testing only)"
-run         = "cargo build --release --bin howick-agent"
+description = "Build howick-frama locally (no cross — for local testing only)"
+run         = "cargo build --release --bin howick-frama"
 
 [tasks."build:agent:pi-zero"]
-description = "Cross-compile howick-agent for Pi Zero 2W (aarch64)"
-run         = "mise run build:bin -- howick-agent aarch64-unknown-linux-gnu true"
+description = "Cross-compile howick-frama for Pi Zero 2W (aarch64)"
+run         = "mise run build:bin -- howick-frama aarch64-unknown-linux-gnu true"
 
 [tasks."deploy:pi-zero"]
-description = "Deploy howick-agent to Pi Zero 2W — installs service + copies howick-agent.pi-zero.toml on first deploy"
+description = "Deploy howick-frama to Pi Zero 2W — installs service + copies howick-frama.pi-zero.toml on first deploy"
 depends     = ["build:agent:pi-zero"]
 run         = """
 VERSION=$(cargo pkgid --quiet | cut -d@ -f2)
-scp target/aarch64-unknown-linux-gnu/release/howick-agent ${ZERO_HOST:-pi@howick-pi-zero.local}:~/howick-agent.new
-scp deploy/howick-agent.service ${ZERO_HOST:-pi@howick-pi-zero.local}:~/howick-agent.service
+scp target/aarch64-unknown-linux-gnu/release/howick-frama ${ZERO_HOST:-pi@howick-pi-zero.local}:~/howick-frama.new
+scp deploy/howick-frama.service ${ZERO_HOST:-pi@howick-pi-zero.local}:~/howick-frama.service
 ssh ${ZERO_HOST:-pi@howick-pi-zero.local} '
-  mv ~/howick-agent.new ~/howick-agent
-  chmod +x ~/howick-agent
-  if [ ! -f /etc/systemd/system/howick-agent.service ]; then
-    sudo mv ~/howick-agent.service /etc/systemd/system/
+  mv ~/howick-frama.new ~/howick-frama
+  chmod +x ~/howick-frama
+  if [ ! -f /etc/systemd/system/howick-frama.service ]; then
+    sudo mv ~/howick-frama.service /etc/systemd/system/
     sudo systemctl daemon-reload
-    sudo systemctl enable howick-agent
+    sudo systemctl enable howick-frama
     echo "Service installed and enabled"
   else
-    rm -f ~/howick-agent.service
+    rm -f ~/howick-frama.service
   fi
-  sudo systemctl restart howick-agent
+  sudo systemctl restart howick-frama
   sleep 2
-  sudo systemctl status howick-agent --no-pager
+  sudo systemctl status howick-frama --no-pager
 '
-ssh ${ZERO_HOST:-pi@howick-pi-zero.local} "echo 'v${VERSION}' > ~/.howick-agent-version"
+ssh ${ZERO_HOST:-pi@howick-pi-zero.local} "echo 'v${VERSION}' > ~/.howick-frama-version"
 # Copy config on first deploy only — don't overwrite if already customised
-ssh ${ZERO_HOST:-pi@howick-pi-zero.local} '[ -f ~/howick-agent.pi-zero.toml ]' \
-  || { echo "First deploy — copying howick-agent.pi-zero.toml"; \
-       scp howick-agent.pi-zero.toml ${ZERO_HOST:-pi@howick-pi-zero.local}:~/howick-agent.pi-zero.toml; }
+ssh ${ZERO_HOST:-pi@howick-pi-zero.local} '[ -f ~/howick-frama.pi-zero.toml ]' \
+  || { echo "First deploy — copying howick-frama.pi-zero.toml"; \
+       scp howick-frama.pi-zero.toml ${ZERO_HOST:-pi@howick-pi-zero.local}:~/howick-frama.pi-zero.toml; }
 echo ""
-echo "Pi Zero deployed (howick-agent v${VERSION})"
+echo "Pi Zero deployed (howick-frama v${VERSION})"
 """
 
 [tasks."setup:dev"]
@@ -252,7 +252,7 @@ run         = "mise run build:bin -- opcua-howick aarch64-apple-darwin"
 description = "Build both binaries for Windows x86_64"
 run         = """
 mise run build:bin -- opcua-howick x86_64-pc-windows-msvc
-mise run build:bin -- howick-agent x86_64-pc-windows-msvc
+mise run build:bin -- howick-frama x86_64-pc-windows-msvc
 """
 
 [tasks."build:all"]
@@ -291,7 +291,7 @@ run         = """
 echo "Step 1/2: Doppler secrets..."
 mise run doppler:setup:pi-zero
 echo ""
-echo "Step 2/2: Deploy howick-agent binary..."
+echo "Step 2/2: Deploy howick-frama binary..."
 mise run deploy:pi-zero
 echo ""
 echo "Pi Zero 2W fully provisioned."
@@ -362,7 +362,7 @@ exit 0
 EOF
 chmod +x /etc/rc.local
 
-# 6. USB refresh script — called by howick-agent after each CSV write
+# 6. USB refresh script — called by howick-frama after each CSV write
 cat > /usr/local/bin/usb-refresh.sh << 'EOF'
 #!/bin/bash
 sync
@@ -435,13 +435,13 @@ run         = """
 DEST=${WINDOWS_HOST:-//howick-pc/c$/opcua-server}
 mkdir -p "$DEST"
 cp target/x86_64-pc-windows-msvc/release/opcua-server.exe "$DEST"/opcua-server.exe
-cp target/x86_64-pc-windows-msvc/release/howick-agent.exe "$DEST"/howick-agent.exe
+cp target/x86_64-pc-windows-msvc/release/howick-frama.exe "$DEST"/howick-frama.exe
 # Copy configs on first deploy only
 [ -f "$DEST/opcua-server.windows.toml" ] || cp opcua-server.windows.toml "$DEST"/opcua-server.windows.toml
-[ -f "$DEST/howick-agent.windows.toml" ] || cp howick-agent.windows.toml "$DEST"/howick-agent.windows.toml
+[ -f "$DEST/howick-frama.windows.toml" ] || cp howick-frama.windows.toml "$DEST"/howick-frama.windows.toml
 echo "Deployed to Windows PC ($DEST)"
 echo "  opcua-server.exe --config opcua-server.windows.toml"
-echo "  howick-agent.exe --config howick-agent.windows.toml"
+echo "  howick-frama.exe --config howick-frama.windows.toml"
 echo "Edit both configs before starting."
 """
 
@@ -463,7 +463,7 @@ run         = "ssh ${PI5_HOST:-pi@howick-pi5.local} 'journalctl -u opcua-server 
 
 [tasks."logs:pi-zero"]
 description = "Stream live logs from Pi Zero 2W"
-run         = "ssh ${ZERO_HOST:-pi@howick-pi-zero.local} 'journalctl -u howick-agent -f'"
+run         = "ssh ${ZERO_HOST:-pi@howick-pi-zero.local} 'journalctl -u howick-frama -f'"
 
 [tasks."status:pi5"]
 description = "Check Pi 5 service status + HTTP API"
@@ -474,7 +474,7 @@ curl -s http://${PI5_ADDR:-howick-pi5.local}:4841/status | jq .
 
 [tasks."status:pi-zero"]
 description = "Check Pi Zero 2W service status"
-run         = "ssh ${ZERO_HOST:-pi@howick-pi-zero.local} 'sudo systemctl status howick-agent --no-pager'"
+run         = "ssh ${ZERO_HOST:-pi@howick-pi-zero.local} 'sudo systemctl status howick-frama --no-pager'"
 
 # ── Tailscale ─────────────────────────────────────────────────────────────────
 # Install and check Tailscale on each Pi.
@@ -533,7 +533,7 @@ ssh ${ZERO_HOST:-pi@howick-pi-zero.local} '
   curl -Ls https://cli.doppler.com/install.sh | sudo sh
   doppler login
   doppler setup --project opcua-server --config pi-zero
-  echo "Doppler configured. Run: doppler run -- ./howick-agent"
+  echo "Doppler configured. Run: doppler run -- ./howick-frama"
 '
 """
 
@@ -544,7 +544,7 @@ run         = "doppler secrets --project opcua-server"
 # ── Netdata (install on Pi 5 only — Pi Zero 2W has too little RAM) ─────────────
 
 [tasks."netdata:install:pi5"]
-description = "Install Netdata on Pi 5 for system + howick-agent monitoring"
+description = "Install Netdata on Pi 5 for system + howick-frama monitoring"
 run         = """
 ssh ${PI5_HOST:-pi@howick-pi5.local} '
   wget -O /tmp/netdata-kickstart.sh https://get.netdata.cloud/kickstart.sh

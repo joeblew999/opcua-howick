@@ -1,4 +1,4 @@
-# opcua-howick
+# opcua-server
 
 Automates job delivery to Howick FRAMA roll-forming machines — eliminates the USB-stick walk.
 
@@ -15,7 +15,7 @@ operators upload jobs.
 **Running locally:** `http://localhost:4841/dashboard`
 **On hardware (Pi 5):** `http://howick-pi5.local:4841/dashboard`
 
-- Live pipeline: Design PC → opcua-howick → Pi Zero → Howick FRAMA
+- Live pipeline: Design PC → opcua-server → Pi Zero → Howick FRAMA
 - Job queue and completion history
 - Drag-and-drop CSV upload
 - Auto-refreshes every 2 seconds — leave it open in a browser tab
@@ -25,14 +25,14 @@ operators upload jobs.
 ## Demo from a laptop (no hardware needed)
 
 ```bash
-mise run dev:all    # starts opcua-howick + howick-agent on this machine
+mise run dev:all    # starts opcua-server + howick-frama on this machine
 ```
 
 Then open `http://localhost:4841/dashboard` and drag in a CSV.
 
 What happens:
 1. CSV lands in the dashboard upload — queued immediately
-2. howick-agent (running locally) picks it up from the queue
+2. howick-frama (running locally) picks it up from the queue
 3. CSV written to `./jobs/machine/` (simulates the USB gadget path)
 4. Dashboard shows the job move from Queued → Done
 
@@ -50,8 +50,8 @@ Two computers on the factory WiFi:
 
 | Device | Binary | Role |
 |--------|--------|------|
-| Pi 5 | `opcua-howick` | Dashboard, job queue, OPC UA server |
-| Pi Zero 2W | `howick-agent` | Polls Pi 5, writes CSV to virtual USB (replaces USB stick) |
+| Pi 5 | `opcua-server` | Dashboard, job queue, OPC UA server |
+| Pi Zero 2W | `howick-frama` | Polls Pi 5, writes CSV to virtual USB (replaces USB stick) |
 
 Deploy:
 ```bash
@@ -75,18 +75,18 @@ See `docs/customer/06-pi-zero-setup.md` for full provisioning guide.
 ## Two binaries
 
 ```
-opcua-howick   Pi 5 / Mac / NUC / Windows    OPC UA server + HTTP + job queue + file watcher
-howick-agent   Pi Zero 2W                    OPC UA client — subscribes to Pi 5, writes CSV to USB
+opcua-server   Pi 5 / Mac / NUC / Windows    OPC UA server + HTTP + job queue + file watcher
+howick-frama   Pi Zero 2W                    OPC UA client — subscribes to Pi 5, writes CSV to USB
 ```
 
-`howick-agent` uses OPC UA subscriptions — Pi 5 pushes instantly when a job is queued. No polling.
+`howick-frama` uses OPC UA subscriptions — Pi 5 pushes instantly when a job is queued. No polling.
 Falls back to HTTP polling when `plat_trunk.url` is an HTTP address (dev and cloud modes).
 
 ---
 
 ## OPC UA server (port 4840)
 
-Connect any OPC UA client to `opc.tcp://<pi5>:4840/` (namespace `urn:howick-edge-agent`):
+Connect any OPC UA client to `opc.tcp://<pi5>:4840/` (namespace `urn:howick-frama`):
 
 ```
 /Howick/Machine/   Status, CurrentJob, PiecesProduced, CoilRemaining, LastError
@@ -107,11 +107,11 @@ Naming: `<binary>.<env>.toml` — binary name first, environment second.
 | `opcua-server.dev.toml` | opcua-server | Dev laptop (default) |
 | `opcua-server.pi5.toml` | opcua-server | Pi 5 production |
 | `opcua-server.windows.toml` | opcua-server | Windows Design PC |
-| `howick-agent.dev.toml` | howick-agent | Dev laptop, OPC UA mode (default) |
-| `howick-agent.dev-mock.toml` | howick-agent | Dev laptop, mock-plat-trunk HTTP mode |
-| `howick-agent.dev-http.toml` | howick-agent | Dev laptop, local opcua-server HTTP mode |
-| `howick-agent.pi-zero.toml` | howick-agent | Pi Zero 2W production |
-| `howick-agent.windows.toml` | howick-agent | Windows Design PC |
+| `howick-frama.dev.toml` | howick-frama | Dev laptop, OPC UA mode (default) |
+| `howick-frama.dev-mock.toml` | howick-frama | Dev laptop, mock-plat-trunk HTTP mode |
+| `howick-frama.dev-http.toml` | howick-frama | Dev laptop, local opcua-server HTTP mode |
+| `howick-frama.pi-zero.toml` | howick-frama | Pi Zero 2W production |
+| `howick-frama.windows.toml` | howick-frama | Windows Design PC |
 
 ---
 

@@ -45,6 +45,7 @@ fn make_config(port: u16) -> Config {
             host: "127.0.0.1".into(),
             port,
             application_name: "howick-test".into(),
+            namespace_uri: "urn:howick-frama".into(),
         },
         machine: MachineConfig {
             machine_name: "Test FRAMA".into(),
@@ -131,7 +132,7 @@ async fn opcua_read_machine_status() {
     let session = connect_client(addr, test_id()).await;
 
     // Resolve our namespace index
-    let ns = get_namespace_index(&session, "urn:howick-edge-agent")
+    let ns = get_namespace_index(&session, "urn:howick-frama")
         .await
         .unwrap_or(2);
 
@@ -175,7 +176,7 @@ async fn opcua_read_machine_status() {
 async fn opcua_read_all_nodes() {
     let addr = start_opcua_server().await;
     let session = connect_client(addr, test_id()).await;
-    let ns = get_namespace_index(&session, "urn:howick-edge-agent")
+    let ns = get_namespace_index(&session, "urn:howick-frama")
         .await
         .unwrap_or(2);
 
@@ -232,7 +233,7 @@ async fn opcua_read_all_nodes() {
 async fn opcua_subscribe_pending_job_id() {
     let addr = start_opcua_server().await;
     let session = connect_client(addr, test_id()).await;
-    let ns = get_namespace_index(&session, "urn:howick-edge-agent")
+    let ns = get_namespace_index(&session, "urn:howick-frama")
         .await
         .unwrap_or(2);
 

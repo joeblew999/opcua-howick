@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy howick-agent (minimal binary) to Pi Zero 2W.
+# Deploy howick-frama (minimal binary) to Pi Zero 2W.
 # Wraps the mise deploy:pi-zero task — prefer using that directly:
 #
 #   ZERO_HOST=pi@100.x.x.x mise run deploy:pi-zero
@@ -15,9 +15,9 @@ set -euo pipefail
 
 ZERO_HOST="${1:-pi@howick-pi-zero.local}"
 TARGET="aarch64-unknown-linux-gnu"
-BINARY="howick-agent"
+BINARY="howick-frama"
 
-echo "=== howick-agent Pi Zero 2W deploy ==="
+echo "=== howick-frama Pi Zero 2W deploy ==="
 echo "Target: $ZERO_HOST"
 echo ""
 
@@ -35,32 +35,32 @@ if ! command -v cross &>/dev/null; then
   exit 1
 fi
 
-echo "Building howick-agent for Pi Zero 2W (aarch64)..."
+echo "Building howick-frama for Pi Zero 2W (aarch64)..."
 cross build --release --bin "$BINARY" --target "$TARGET"
 
 BINARY_PATH="target/$TARGET/release/$BINARY"
 echo "Deploying to $ZERO_HOST..."
 scp "$BINARY_PATH" "$ZERO_HOST:~/$BINARY.new"
-scp deploy/howick-agent.service "$ZERO_HOST:~/howick-agent.service"
-scp howick-agent.pi-zero.toml "$ZERO_HOST:~/howick-agent.pi-zero.toml"
+scp deploy/howick-frama.service "$ZERO_HOST:~/howick-frama.service"
+scp howick-frama.pi-zero.toml "$ZERO_HOST:~/howick-frama.pi-zero.toml"
 
 ssh "$ZERO_HOST" << 'REMOTE'
   set -e
-  mv ~/howick-agent.new ~/howick-agent
-  chmod +x ~/howick-agent
-  if [ ! -f /etc/systemd/system/howick-agent.service ]; then
-    sudo mv ~/howick-agent.service /etc/systemd/system/
+  mv ~/howick-frama.new ~/howick-frama
+  chmod +x ~/howick-frama
+  if [ ! -f /etc/systemd/system/howick-frama.service ]; then
+    sudo mv ~/howick-frama.service /etc/systemd/system/
     sudo systemctl daemon-reload
-    sudo systemctl enable howick-agent
+    sudo systemctl enable howick-frama
     echo "Service installed and enabled"
   fi
-  if [ ! -f ~/howick-agent.pi-zero.toml ]; then
-    echo "howick-agent.pi-zero.toml missing — edit it before restarting"
+  if [ ! -f ~/howick-frama.pi-zero.toml ]; then
+    echo "howick-frama.pi-zero.toml missing — edit it before restarting"
     echo "Set: machine_input_dir = /mnt/usb_share"
   fi
-  sudo systemctl restart howick-agent
+  sudo systemctl restart howick-frama
   sleep 2
-  sudo systemctl status howick-agent --no-pager
+  sudo systemctl status howick-frama --no-pager
 REMOTE
 
 echo ""

@@ -35,6 +35,7 @@
 host             = "0.0.0.0"
 port             = 4840
 application_name = "Howick Edge Agent - Si Racha Factory"
+namespace_uri    = "urn:howick-frama"
 
 [http]
 host = "0.0.0.0"

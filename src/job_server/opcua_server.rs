@@ -14,8 +14,6 @@ use opcua::types::{
 use crate::config::Config;
 use crate::machine::SharedState;
 
-const NS_URI: &str = "urn:howick-edge-agent";
-
 /// Node ID helpers for our namespace
 fn node(ns: u16, name: &str) -> NodeId {
     NodeId::new(ns, name)
@@ -33,6 +31,7 @@ pub async fn run_server(config: &Config, state: SharedState) -> anyhow::Result<(
 
     let (server, handle) = build_server_builder(
         &config.opcua.application_name,
+        &config.opcua.namespace_uri,
         &config.opcua.host,
         config.opcua.port,
         None,
@@ -45,7 +44,7 @@ pub async fn run_server(config: &Config, state: SharedState) -> anyhow::Result<(
         .node_managers()
         .get_of_type::<SimpleNodeManager>()
         .unwrap();
-    let ns = handle.get_namespace_index(NS_URI).unwrap();
+    let ns = handle.get_namespace_index(&config.opcua.namespace_uri).unwrap();
     let subscriptions = handle.subscriptions().clone();
 
     build_address_space(
@@ -106,6 +105,7 @@ pub async fn run_server_with(
 
     let (server, handle) = build_server_builder(
         &config.opcua.application_name,
+        &config.opcua.namespace_uri,
         "127.0.0.1",
         addr.port(),
         Some(format!("opc.tcp://127.0.0.1:{}/", addr.port())),
@@ -118,7 +118,7 @@ pub async fn run_server_with(
         .node_managers()
         .get_of_type::<SimpleNodeManager>()
         .unwrap();
-    let ns = handle.get_namespace_index(NS_URI).unwrap();
+    let ns = handle.get_namespace_index(&config.opcua.namespace_uri).unwrap();
     let subscriptions = handle.subscriptions().clone();
 
     build_address_space(
@@ -151,22 +151,24 @@ pub async fn run_server_with(
 /// - Tests: `target/tmp/pki-server-{port}` (gitignored, wiped by `cargo clean`)
 fn build_server_builder(
     app_name: &str,
+    namespace_uri: &str,
     host: &str,
     port: u16,
     discovery_url: Option<String>,
     pki_dir: std::path::PathBuf,
 ) -> ServerBuilder {
-    // application_uri must differ from NS_URI — otherwise the namespace table
-    // would register "urn:howick-edge-agent" at index 1 (server URI) AND
-    // index 2 (our node manager), and clients would resolve to index 1 where
-    // no nodes are registered.
+    // application_uri must differ from namespace_uri — otherwise the namespace table
+    // would register the same URI at index 1 (server URI) AND index 2 (our node manager),
+    // and clients would resolve to index 1 where no nodes are registered.
     // Always set discovery_urls explicitly so clients connect to 127.0.0.1,
     // not the bind address (0.0.0.0). On macOS, localhost resolves to [::1]
     // (IPv6) but the server binds IPv4-only → connection refused.
     let endpoint_url = discovery_url.unwrap_or_else(|| format!("opc.tcp://127.0.0.1:{port}/"));
+    // application_uri is the server's own identity — distinct from the machine namespace URI
+    let application_uri = format!("{namespace_uri}-server");
 
     ServerBuilder::new_anonymous(app_name)
-        .application_uri("urn:howick-edge-server")
+        .application_uri(application_uri)
         .product_uri("https://github.com/joeblew999/opcua-howick")
         .host(host.to_owned())
         .port(port)
@@ -174,14 +176,14 @@ fn build_server_builder(
         .build_info(BuildInfo {
             product_uri: "https://github.com/joeblew999/opcua-howick".into(),
             manufacturer_name: "Ubuntu Software Pty Ltd".into(),
-            product_name: "opcua-howick".into(),
+            product_name: "opcua-server".into(),
             software_version: crate::VERSION.into(),
             build_number: "1".into(),
             build_date: DateTime::now(),
         })
         .with_node_manager(simple_node_manager(
             NamespaceMetadata {
-                namespace_uri: NS_URI.to_owned(),
+                namespace_uri: namespace_uri.to_owned(),
                 ..Default::default()
             },
             "howick",

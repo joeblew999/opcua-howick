@@ -22,7 +22,7 @@ Web references (use if the clone is unavailable):
 - https://github.com/FreeOpcUa/async-opcua/tree/master/samples — all sample code
 
 Related projects:
-- https://github.com/joeblew999/opcua-server — this repo
+- https://github.com/joeblew999/opcua-howick — this repo
 - https://github.com/joeblew999/howick-rs — Howick CSV parser (frameset format)
 
 **Never reinvent what is already in async-opcua.** If you are about to write something OPC UA related from scratch, stop and check the samples first.
@@ -35,8 +35,8 @@ Related projects:
 
 | Binary | Target | Role |
 |--------|--------|------|
-| `opcua-howick` | Pi 5 / NUC / Mac | OPC UA server + HTTP server + file watcher + job poller |
-| `howick-agent` | Pi Zero 2W | Minimal: subscribes to Pi 5 OPC UA server, writes CSV to USB gadget |
+| `opcua-server` | Pi 5 / NUC / Mac | OPC UA server + HTTP server + file watcher + job poller |
+| `howick-frama` | Pi Zero 2W | Minimal: subscribes to Pi 5 OPC UA server, writes CSV to USB gadget |
 
 ### Module layout
 
@@ -57,8 +57,8 @@ Related projects:
 
 OPC UA is the **primary transport** between Pi Zero and Pi 5. This is real industrial-grade OPC UA — the same protocol used to connect SCADA systems to Siemens PLCs and Fanuc CNCs.
 
-- Pi 5 runs `opcua-howick` — exposes machine state + job queue as OPC UA nodes
-- Pi Zero runs `howick-agent` — **subscribes** to `Jobs/PendingJobId`, server pushes instantly on change
+- Pi 5 runs `opcua-server` — exposes machine state + job queue as OPC UA nodes
+- Pi Zero runs `howick-frama` — **subscribes** to `Jobs/PendingJobId`, server pushes instantly on change
 - No polling. No custom protocol. Standard OPC UA subscriptions.
 
 HTTP API (`job_server/http.rs`) is for the browser dashboard only — Tauri app or direct browser.
@@ -82,9 +82,9 @@ HTTP API (`job_server/http.rs`) is for the browser dashboard only — Tauri app 
     CompleteJob      Method  — call with job_id to mark delivered
 ```
 
-Namespace URI: `urn:howick-edge-agent`
+Namespace URI: `urn:howick-frama` (config-driven via `opcua.namespace_uri` — each machine type gets its own URI)
 
-### OPC UA subscription pattern (howick-agent, Pi Zero)
+### OPC UA subscription pattern (howick-frama, Pi Zero)
 
 ```rust
 // DataChangeCallback fires synchronously on session event loop thread
