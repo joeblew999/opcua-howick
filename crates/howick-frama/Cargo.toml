@@ -1,0 +1,20 @@
+[package]
+name        = "howick-frama"
+description = "Minimal OPC UA client agent — Pi Zero 2W, subscribes to opcua-server, writes CSV to USB"
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+[[bin]]
+name = "howick-frama"
+path = "src/main.rs"
+
+[dependencies]
+opcua-howick = { path = "../core" }
+async-opcua  = { version = "0.18", features = ["client"] }
+tokio.workspace              = true
+tracing.workspace            = true
+tracing-subscriber.workspace = true
+anyhow.workspace             = true
+reqwest.workspace            = true

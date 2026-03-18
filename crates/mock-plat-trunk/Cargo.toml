@@ -1,0 +1,17 @@
+[package]
+name        = "mock-plat-trunk"
+description = "Dev-only mock plat-trunk backend for testing howick-frama"
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+[[bin]]
+name = "mock-plat-trunk"
+path = "src/main.rs"
+
+[dependencies]
+tokio.workspace              = true
+tracing.workspace            = true
+tracing-subscriber.workspace = true
+anyhow.workspace             = true

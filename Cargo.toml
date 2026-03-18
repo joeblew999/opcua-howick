@@ -1,48 +1,19 @@
-[package]
-name = "opcua-howick"
-version = "0.1.0"
-edition = "2021"
-description = "OPC UA edge agent for Howick FRAMA machines — bridges plat-trunk CAD with factory floor hardware"
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/joeblew999/opcua-howick"
-readme = "README.md"
+[workspace]
+members = [
+    "crates/core",
+    "crates/opcua-server",
+    "crates/howick-frama",
+    "crates/mock-plat-trunk",
+]
+resolver = "2"
 
-# ── Binaries ──────────────────────────────────────────────────────────────────
+[workspace.package]
+version      = "0.1.0"
+edition      = "2021"
+license      = "MIT OR Apache-2.0"
+repository   = "https://github.com/joeblew999/opcua-howick"
 
-# OPC UA server + HTTP dashboard + job queue + file watcher
-# For: Raspberry Pi 5, NUC, Mac Mini, Windows PC
-# RAM: ~64MB   Binary: ~15MB
-[[bin]]
-name = "opcua-server"
-path = "src/main.rs"
-
-# Howick FRAMA edge agent: OPC UA client — subscribes to opcua-server, writes CSV to USB gadget
-# For: Raspberry Pi Zero 2W (512MB RAM, replaces USB stick permanently)
-# RAM: ~16MB   Binary: ~3MB
-[[bin]]
-name = "howick-frama"
-path = "src/agent/main.rs"
-
-# Dev-only mock plat-trunk backend — simulates the cloud API locally
-# Run alongside howick-frama to test the full Pi Zero pipeline without hardware
-[[bin]]
-name = "mock-plat-trunk"
-path = "src/bin/mock-plat-trunk.rs"
-
-# ── Features ──────────────────────────────────────────────────────────────────
-
-[features]
-default = ["full"]
-# full: OPC UA server + HTTP server (opcua-howick binary)
-full = ["dep:async-opcua"]
-
-# ── Dependencies ──────────────────────────────────────────────────────────────
-
-[dependencies]
-# OPC UA — only compiled when feature=full
-async-opcua = { version = "0.18", features = ["server", "client"], optional = true }
-
-# Always present — used by both binaries
+[workspace.dependencies]
 tokio              = { version = "1", features = ["full"] }
 tracing            = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
@@ -52,6 +23,5 @@ serde              = { version = "1", features = ["derive"] }
 toml               = "0.8"
 notify             = "6"
 reqwest            = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
-
-[dev-dependencies]
-serde_json = "1"
+async-opcua        = { version = "0.18", features = ["server", "client"] }
+serde_json         = "1"

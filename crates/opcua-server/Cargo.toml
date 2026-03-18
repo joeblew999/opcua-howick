@@ -1,0 +1,30 @@
+[package]
+name        = "opcua-server"
+description = "OPC UA server + HTTP dashboard + job queue — for Pi 5, NUC, Mac, Windows"
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+[lib]
+name = "opcua_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "opcua-server"
+path = "src/main.rs"
+
+[dependencies]
+opcua-howick = { path = "../core" }
+async-opcua  = { version = "0.18", features = ["server", "client"] }
+tokio.workspace              = true
+tracing.workspace            = true
+tracing-subscriber.workspace = true
+anyhow.workspace             = true
+notify.workspace             = true
+reqwest.workspace             = true
+
+[dev-dependencies]
+opcua-howick = { path = "../core" }
+serde_json.workspace = true
+reqwest.workspace    = true

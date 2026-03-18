@@ -763,6 +763,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "howick-frama"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-opcua",
+ "opcua-howick",
+ "reqwest",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "http"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1199,6 +1212,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "mock-plat-trunk"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "notify"
 version = "6.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1284,7 +1307,6 @@ name = "opcua-howick"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-opcua",
  "notify",
  "reqwest",
  "serde",
@@ -1292,6 +1314,21 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "toml",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "opcua-server"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-opcua",
+ "notify",
+ "opcua-howick",
+ "reqwest",
+ "serde_json",
+ "tokio",
  "tracing",
  "tracing-subscriber",
 ]

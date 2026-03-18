@@ -1,0 +1,22 @@
+[package]
+name        = "opcua-howick"
+description = "Shared core — config, machine state, updater, HTTP poller"
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+build = "build.rs"
+
+[dependencies]
+tokio.workspace              = true
+tracing.workspace            = true
+tracing-subscriber.workspace = true
+thiserror.workspace          = true
+anyhow.workspace             = true
+serde.workspace              = true
+toml.workspace               = true
+notify.workspace             = true
+reqwest.workspace            = true
+
+[dev-dependencies]
+serde_json.workspace = true
