@@ -34,7 +34,11 @@ jobs:
         with:
           install: false
 
-      - run: mise run ci
+      # Run gate tasks sequentially — parallel mise depends causes rustup
+      # component download races that fail with "No such file or directory"
+      - run: mise run check
+      - run: mise run fmt-check
+      - run: mise run test
 
   # ── Binary builds ─────────────────────────────────────────────────────────
   build:
