@@ -1,2 +1,63 @@
+# Speckle watcher — SketchUp → CSV bridge
+# Source docker-compose: https://github.com/specklesystems/speckle-server/blob/main/docker-compose-speckle.yml
+
 [tools]
 python = "3.12"
+
+[env]
+PYTHONPATH = "src"
+_.file = ".env"
+
+# ── Docker (local Speckle server) ────────────────────────────────────────────
+
+[tasks.pull]
+description = "Pull all Speckle Docker images (one-time, ~3GB) — amd64 only, emulated on ARM Mac"
+run = """
+echo "Pulling Speckle images (amd64)..."
+docker pull --platform linux/amd64 speckle/speckle-server:2.31.0 &
+docker pull --platform linux/amd64 speckle/speckle-preview-service:2.31.0 &
+docker pull --platform linux/amd64 speckle/speckle-frontend-2:2.31.0 &
+docker pull --platform linux/amd64 speckle/speckle-docker-compose-ingress:2.31.0 &
+docker pull --platform linux/amd64 speckle/speckle-webhook-service:2.31.0 &
+docker pull --platform linux/amd64 speckle/speckle-fileimport-service:2.29.0 &
+docker pull --platform linux/amd64 speckle/speckle-ifc-import-service:2.31.0 &
+docker pull minio/minio:latest &
+docker pull postgres:16-alpine &
+docker pull redis:7-alpine &
+wait
+echo "All images pulled."
+"""
+
+[tasks.up]
+description = "Start local Speckle server — http://127.0.0.1:8090"
+run = "docker compose up -d"
+
+[tasks.down]
+description = "Stop local Speckle server"
+run = "docker compose down"
+
+[tasks.reset]
+description = "Stop Speckle and wipe all data (Postgres + MinIO)"
+run = "docker compose down -v"
+
+[tasks.status]
+description = "Check Speckle container status"
+run = "docker compose ps"
+
+[tasks.logs]
+description = "Stream Speckle server logs"
+run = "docker compose logs -f speckle-server"
+
+# ── Python tools ─────────────────────────────────────────────────────────────
+
+[tasks.setup]
+description = "Install Python dependencies"
+run = "pip install specklepy"
+
+[tasks.inspect]
+description = "Inspect SketchUp model geometry from Speckle"
+run = "python3 -m speckle_watcher.inspect_skp ${@}"
+
+[tasks.convert]
+description = "Convert Speckle model to Howick CSV — args: <project_id> <model_id> [output_dir]"
+run = "python3 -m speckle_watcher.converter ${@}"

@@ -50,9 +50,15 @@ Token URL (local): http://127.0.0.1:8090/settings/user/developer
 
 ## Running Speckle locally (no cloud dependency)
 
+Our `docker-compose.yml` is adapted from the official Speckle server compose file:
+https://github.com/specklesystems/speckle-server/blob/main/docker-compose-speckle.yml
+
+We use pre-built images from Docker Hub (pinned to 2.31.0) instead of building
+from source. Images are amd64 only — runs via emulation on ARM Mac (OrbStack).
+
 ```bash
 cd tools/speckle-watcher
-docker compose up -d
+docker compose up -d    # first run pulls ~3GB of images
 ```
 
 This starts a full Speckle server locally on port 8090:
