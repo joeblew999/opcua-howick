@@ -2,16 +2,16 @@
 # No cloud dependency. Run: docker compose up -d
 #
 # After startup:
-#   - Web UI: http://localhost:80
-#   - API: http://localhost:80/graphql
-#   - MinIO: http://localhost:9000 (minioadmin/minioadmin)
+#   - Web UI: http://127.0.0.1:8090
+#   - API: http://127.0.0.1:8090/graphql
+#   - MinIO: http://127.0.0.1:9000 (minioadmin/minioadmin)
 #
 # First run: create an account via the web UI, then create a token.
-# Update .env with SPECKLE_SERVER=http://localhost and your new token.
+# Update .env with SPECKLE_SERVER=http://127.0.0.1:8090 and your new token.
 
 services:
   speckle-ingress:
-    image: speckle/speckle-docker-compose-ingress:latest
+    image: speckle/speckle-docker-compose-ingress:2.31.0
     platform: linux/amd64
     restart: always
     ports:
@@ -24,7 +24,7 @@ services:
       - speckle-frontend-2
 
   speckle-frontend-2:
-    image: speckle/speckle-frontend-2:latest
+    image: speckle/speckle-frontend-2:2.31.0
     platform: linux/amd64
     restart: always
     environment:
@@ -41,7 +41,7 @@ services:
       - speckle-server
 
   speckle-server:
-    image: speckle/speckle-server:latest
+    image: speckle/speckle-server:2.31.0
     platform: linux/amd64
     restart: always
     environment:
@@ -78,7 +78,7 @@ services:
       - minio
 
   preview-service:
-    image: speckle/speckle-preview-service:latest
+    image: speckle/speckle-preview-service:2.31.0
     platform: linux/amd64
     restart: always
     mem_limit: '3000m'
@@ -91,7 +91,7 @@ services:
       - speckle-server
 
   webhook-service:
-    image: speckle/speckle-webhook-service:latest
+    image: speckle/speckle-webhook-service:2.31.0
     platform: linux/amd64
     restart: always
     environment:
@@ -102,7 +102,7 @@ services:
       - speckle-server
 
   fileimport-service:
-    image: speckle/speckle-fileimport-service:latest
+    image: speckle/speckle-fileimport-service:2.29.0
     platform: linux/amd64
     restart: always
     environment:
@@ -114,7 +114,7 @@ services:
       - speckle-server
 
   ifc-import-service:
-    image: speckle/speckle-ifc-import-service:latest
+    image: speckle/speckle-ifc-import-service:2.31.0
     platform: linux/amd64
     restart: always
     environment:
