@@ -67,8 +67,7 @@ class Frameset:
             # Group operations by type, maintaining order
             for op in comp.operations:
                 parts.append(op.name)
-                parts.append(f"{op.position:.2f}" if op.position != int(op.position)
-                             else f"{op.position:.1f}")
+                parts.append(f"{op.position:.2f}")
             lines.append(",".join(parts))
 
         return "\n".join(lines) + "\n"
