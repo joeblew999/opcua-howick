@@ -105,13 +105,13 @@ Later        Phase 4 — Additional machines
 
 ## Open questions
 
-| Question | Who answers |
-|----------|-------------|
-| What folder does the Howick FRAMA look for files on the USB? | Prin's operator |
-| Is the Design PC on the factory WiFi, or on a separate network? | Prin |
-| How many Howick FRAMA machines are in the factory? | Prin |
-| Are there other roll-forming machines to add later (Phase 4)? | Prin |
-| Empty coil spool weight in kg (for Phase 2 calibration)? | Prin's operator |
+| Question | Who answers | Status |
+|----------|-------------|--------|
+| ~~What folder does the Howick FRAMA look for files on the USB?~~ | ~~Prin's operator~~ | ✅ Resolved — operator browses from Howick software, no fixed path |
+| Is the Design PC on the factory WiFi, or on a separate network? | Prin | Open |
+| How many Howick FRAMA machines are in the factory? | Prin | Open |
+| Are there other roll-forming machines to add later (Phase 4)? | Prin | Open |
+| Empty coil spool weight in kg (for Phase 2 calibration)? | Prin's operator | Open |
 
 ---
 

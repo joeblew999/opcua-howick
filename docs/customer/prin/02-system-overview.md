@@ -38,7 +38,7 @@ the file copying is automatic — drag into the browser, the USB stick has it.
 Key config (see `opcua-server.windows.toml`):
 ```toml
 usb_gadget_mode   = false
-machine_input_dir = "D:\\"   # USB stick drive letter — TBC with Prin's operator
+machine_input_dir = "D:\\"   # USB stick drive letter — operator browses from Howick software
 ```
 
 ---
@@ -87,7 +87,7 @@ usb_gadget_mode = false
 
 # Pi Zero
 usb_gadget_mode   = true
-machine_input_dir = "/mnt/usb_share"   # TBC with Prin's operator
+machine_input_dir = "/mnt/usb_share"   # Pi Zero USB gadget root — operator browses from Howick software
 
 [plat_trunk]
 url = "opc.tcp://howick-pi5.local:4840/"   # OPC UA subscription — Pi Zero subscribes to Pi 5
@@ -242,10 +242,13 @@ Reference jobs from Prin's machine used to develop and test this system:
 
 ---
 
-## Key unknown
+## Key unknown — RESOLVED
 
-**What folder on the USB does the Howick FRAMA look for CSV files?**
-One question for Prin's operator. Sets `machine_input_dir` in `howick-frama.pi-zero.toml`.
+~~What folder on the USB does the Howick FRAMA look for CSV files?~~
+
+**Resolved:** The FRAMA has a built-in Windows PC (v3.2.0.0) with Howick software.
+The operator browses the USB drive from within the software and selects the job
+folder — there is no fixed path. The Pi Zero USB gadget writes CSV to the root.
 
 ---
 

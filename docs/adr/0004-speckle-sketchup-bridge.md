@@ -111,20 +111,20 @@ client.authenticate_with_token(token)
 last_version = None
 
 while True:
-    # Poll for latest version on the model stream
-    stream = client.stream.get(stream_id)
-    latest = stream.commits.items[0].id
+    # Poll for latest version on the model
+    versions = client.version.get_versions(model_id=model_id, project_id=project_id)
+    latest = versions.items[0].id
 
     if latest != last_version:
         # New version detected — run Framing Extractor
-        transport = ServerTransport(stream_id, client)
-        model = operations.receive(latest, transport)
+        ref_obj = versions.items[0].referenced_object
+        transport = ServerTransport(stream_id=project_id, client=client)
+        model = operations.receive(obj_id=ref_obj, remote_transport=transport)
 
-        walls = detect_walls(model)
-        for wall in walls:
-            framing = generate_framing(wall)
-            howick_csv = framing.to_howick_csv()
-            submit_to_opcua_howick(howick_csv)
+        # Read FrameBuilderMRD layers, extract members, generate CSV
+        frameset = extract_frameset(model)
+        howick_csv = frameset.to_csv()
+        submit_to_opcua_howick(howick_csv)
 
         last_version = latest
 
