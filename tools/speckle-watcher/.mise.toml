@@ -1,5 +1,12 @@
 # Speckle watcher — SketchUp → CSV bridge
 # Source docker-compose: https://github.com/specklesystems/speckle-server/blob/main/docker-compose-speckle.yml
+#
+# Quick start:
+#   mise run speckle:setup           # install Python deps
+#   mise run speckle:server:pull     # pull Docker images (one-time)
+#   mise run speckle:server:up       # start local Speckle
+#   mise run speckle:model:inspect   # inspect SketchUp geometry
+#   mise run speckle:model:convert f3318660fc c6539853c0 output/
 
 [tools]
 python = "3.12"
@@ -8,10 +15,16 @@ python = "3.12"
 PYTHONPATH = "src"
 _.file = ".env"
 
-# ── Docker (local Speckle server) ────────────────────────────────────────────
+# ── Setup ────────────────────────────────────────────────────────────────────
 
-[tasks."speckle:pull"]
-description = "Pull all Speckle Docker images (one-time, ~3GB) — amd64 only, emulated on ARM Mac"
+[tasks."speckle:setup"]
+description = "Install Python dependencies (specklepy)"
+run = "pip install specklepy"
+
+# ── Local server (Docker) ────────────────────────────────────────────────────
+
+[tasks."speckle:server:pull"]
+description = "Pull Docker images (one-time, ~3GB, amd64 — emulated on ARM Mac)"
 run = """
 echo "Pulling Speckle images (amd64)..."
 docker pull --platform linux/amd64 speckle/speckle-server:2.31.0 &
@@ -25,39 +38,35 @@ docker pull minio/minio:latest &
 docker pull postgres:16-alpine &
 docker pull redis:7-alpine &
 wait
-echo "All images pulled."
+echo "Done. All images pulled."
 """
 
-[tasks."speckle:up"]
-description = "Start local Speckle server — http://127.0.0.1:8090"
-run = "docker compose up -d"
+[tasks."speckle:server:up"]
+description = "Start local Speckle → http://127.0.0.1:8090"
+run = "docker compose up -d && echo 'Speckle: http://127.0.0.1:8090'"
 
-[tasks."speckle:down"]
-description = "Stop local Speckle server"
+[tasks."speckle:server:down"]
+description = "Stop local Speckle"
 run = "docker compose down"
 
-[tasks."speckle:reset"]
-description = "Stop Speckle and wipe all data (Postgres + MinIO)"
+[tasks."speckle:server:reset"]
+description = "Stop and wipe all data (Postgres + MinIO)"
 run = "docker compose down -v"
 
-[tasks."speckle:status"]
-description = "Check Speckle container status"
+[tasks."speckle:server:status"]
+description = "Container status"
 run = "docker compose ps"
 
-[tasks."speckle:logs"]
-description = "Stream Speckle server logs"
+[tasks."speckle:server:logs"]
+description = "Stream server logs"
 run = "docker compose logs -f speckle-server"
 
-# ── Python tools ─────────────────────────────────────────────────────────────
+# ── Model tools ──────────────────────────────────────────────────────────────
 
-[tasks."speckle:setup"]
-description = "Install Python dependencies"
-run = "pip install specklepy"
-
-[tasks."speckle:inspect"]
-description = "Inspect SketchUp model geometry from Speckle"
+[tasks."speckle:model:inspect"]
+description = "Inspect SketchUp geometry from Speckle (layers, meshes, groups)"
 run = "python3 -m speckle_watcher.inspect_skp ${@}"
 
-[tasks."speckle:convert"]
-description = "Convert Speckle model to Howick CSV — args: <project_id> <model_id> [output_dir]"
+[tasks."speckle:model:convert"]
+description = "Generate Howick CSV from Speckle model — <project_id> <model_id> [output_dir]"
 run = "python3 -m speckle_watcher.converter ${@}"
