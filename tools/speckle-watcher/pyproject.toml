@@ -9,4 +9,4 @@ dependencies = [
 
 [project.scripts]
 inspect-skp = "speckle_watcher.inspect_skp:main"
-watcher = "speckle_watcher.watcher:main"
+converter = "speckle_watcher.converter:main"
