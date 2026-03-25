@@ -43,9 +43,31 @@ cp .env.example .env
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SPECKLE_TOKEN` | (required) | Personal access token |
-| `SPECKLE_SERVER` | `https://app.speckle.systems` | Speckle server URL |
+| `SPECKLE_SERVER` | `https://app.speckle.systems` | Speckle server URL (cloud or local) |
 
-Token URL: https://app.speckle.systems/settings/user/developer
+Token URL (cloud): https://app.speckle.systems/settings/user/developer
+Token URL (local): http://127.0.0.1:8090/settings/user/developer
+
+## Running Speckle locally (no cloud dependency)
+
+```bash
+cd tools/speckle-watcher
+docker compose up -d
+```
+
+This starts a full Speckle server locally on port 8090:
+- **Web UI:** http://127.0.0.1:8090
+- **API:** http://127.0.0.1:8090/graphql
+- Postgres, Redis, MinIO, file import services — all included
+
+First run:
+1. Open http://127.0.0.1:8090 and create a local account
+2. Go to settings → developer → create token
+3. Update `.env` with `SPECKLE_SERVER=http://127.0.0.1:8090` and the new token
+4. Upload `.skp` and run the converter as normal
+
+To stop: `docker compose down`
+To wipe data: `docker compose down -v`
 
 ## Speckle project (already set up)
 
