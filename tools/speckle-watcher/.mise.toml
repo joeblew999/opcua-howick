@@ -10,7 +10,7 @@ _.file = ".env"
 
 # ── Docker (local Speckle server) ────────────────────────────────────────────
 
-[tasks.pull]
+[tasks."speckle:pull"]
 description = "Pull all Speckle Docker images (one-time, ~3GB) — amd64 only, emulated on ARM Mac"
 run = """
 echo "Pulling Speckle images (amd64)..."
@@ -28,36 +28,36 @@ wait
 echo "All images pulled."
 """
 
-[tasks.up]
+[tasks."speckle:up"]
 description = "Start local Speckle server — http://127.0.0.1:8090"
 run = "docker compose up -d"
 
-[tasks.down]
+[tasks."speckle:down"]
 description = "Stop local Speckle server"
 run = "docker compose down"
 
-[tasks.reset]
+[tasks."speckle:reset"]
 description = "Stop Speckle and wipe all data (Postgres + MinIO)"
 run = "docker compose down -v"
 
-[tasks.status]
+[tasks."speckle:status"]
 description = "Check Speckle container status"
 run = "docker compose ps"
 
-[tasks.logs]
+[tasks."speckle:logs"]
 description = "Stream Speckle server logs"
 run = "docker compose logs -f speckle-server"
 
 # ── Python tools ─────────────────────────────────────────────────────────────
 
-[tasks.setup]
+[tasks."speckle:setup"]
 description = "Install Python dependencies"
 run = "pip install specklepy"
 
-[tasks.inspect]
+[tasks."speckle:inspect"]
 description = "Inspect SketchUp model geometry from Speckle"
 run = "python3 -m speckle_watcher.inspect_skp ${@}"
 
-[tasks.convert]
+[tasks."speckle:convert"]
 description = "Convert Speckle model to Howick CSV — args: <project_id> <model_id> [output_dir]"
 run = "python3 -m speckle_watcher.converter ${@}"
