@@ -49,6 +49,7 @@
 | [adr/0001-deployment-topologies.md](adr/0001-deployment-topologies.md) | Cloud / LAN / Hybrid deployment |
 | [adr/0002-two-design-workflows.md](adr/0002-two-design-workflows.md) | SketchUp + plat-trunk supported permanently |
 | [adr/0003-multi-agent-node-managers.md](adr/0003-multi-agent-node-managers.md) | Per-machine-type namespace URIs and node managers |
+| [adr/0004-speckle-sketchup-bridge.md](adr/0004-speckle-sketchup-bridge.md) | Use Speckle to bridge SketchUp → plat-trunk → machine files |
 
 ---
 
