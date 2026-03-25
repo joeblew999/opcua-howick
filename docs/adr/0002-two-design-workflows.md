@@ -109,6 +109,6 @@ knowledge of SketchUp and should not. The CSV format is the boundary.
 
 ## Related
 
-- `docs/customer/system-overview.md` — full topology, workflow, and architecture detail
+- [Prin system overview](../customer/prin/02-system-overview.md) — full topology, workflow, and architecture detail
 - ADR-0001 — deployment topologies (Cloud / LAN / Hybrid)
 - plat-trunk repo — Framing Extractor, STEP CAD, job queue API

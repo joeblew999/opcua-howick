@@ -303,6 +303,7 @@ and the Python SDK makes the Framing Extractor straightforward.
 
 - [ADR 0002 — Two design workflows](0002-two-design-workflows.md) — SketchUp + plat-trunk both supported
 - [ADR 0003 — Multi-agent node managers](0003-multi-agent-node-managers.md) — per-machine namespace URIs
+- [ADR 0005 — Speckle geometry findings](0005-speckle-geometry-findings.md) — confirms framing already in SketchUp model (FrameBuilderMRD layers)
 - [Prin workflow](../customer/prin/03-current-workflow.md) — current manual process
 - [Howick FRAMA machine profile](../machines/howick-frama.md) — CSV format spec
 - [FrameCad machine profile](../machines/framecad.md) — RFY/XML formats, file ecosystem
