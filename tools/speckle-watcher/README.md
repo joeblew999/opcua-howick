@@ -16,6 +16,8 @@ architecture and rationale.
 
 - Python 3.12+ (managed via mise — see `.mise.toml`)
 - A [Speckle account](https://app.speckle.systems) (free tier is fine)
+  **Note:** Gmail/free email providers may not work for signup — use a
+  business domain email (e.g. ubuntusoftware.com).
 - A personal access token from your Speckle profile settings
 
 ## Setup
@@ -33,14 +35,14 @@ pip3 install specklepy
 ### Step 1: Upload to Speckle
 
 1. Go to https://app.speckle.systems
-2. Create a new project (e.g. "opcua-howick test")
+2. Create a new project in the **gerard-test** workspace
 3. Drag and drop `dev/fixtures/Gerard_25032026/25062026.skp` into the project
 4. Copy the **stream ID** from the URL (the long string after `/streams/`)
 
 ### Step 2: Get your token
 
-1. Go to https://app.speckle.systems/profile
-2. Create a personal access token
+1. Go to https://app.speckle.systems/settings/user/developer
+2. Create a personal access token (all scopes)
 3. Copy it
 
 ### Step 3: Run the inspector
