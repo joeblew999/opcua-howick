@@ -20,12 +20,12 @@
 | SketchUp + FrameBuilderMRD CSV format | ✅ Done | tested against Prin's real job files (T1, W1) |
 | OPC UA server — machine state | ✅ Done | port 4840 |
 | Option B — Pi 5 server + Pi Zero USB gadget | 🔧 In progress | needs Pi hardware on site |
-| Confirm USB folder path on Howick FRAMA | ⏳ One question | ask Prin's operator |
+| Confirm USB folder path on Howick FRAMA | ✅ Resolved | operator browses USB from Howick software — no fixed path |
 | First live test at Si Racha factory | ⏳ Awaiting | after Option A or B is set up |
 
-**What Prin needs to confirm:** what folder on the USB stick does the
-Howick FRAMA machine look for job files? One answer from the operator unlocks
-full end-to-end testing.
+**USB folder path resolved:** the Howick FRAMA has a built-in Windows PC with
+Howick software — the operator browses the USB drive and picks the job folder.
+No fixed path. The Pi Zero USB gadget writes the CSV to the root of the drive.
 
 ---
 
