@@ -54,11 +54,24 @@ Our `docker-compose.yml` is adapted from the official Speckle server compose fil
 https://github.com/specklesystems/speckle-server/blob/main/docker-compose-speckle.yml
 
 We use pre-built images from Docker Hub (pinned to 2.31.0) instead of building
-from source. Images are amd64 only — runs via emulation on ARM Mac (OrbStack).
+from source.
+
+**WARNING: ARM Mac (Apple Silicon) users** — Speckle only publishes amd64
+Docker images. OrbStack/Docker Desktop can emulate them but:
+- The initial pull is **very slow** (~30+ minutes)
+- Pull images first with `mise run speckle:server:pull` and let it finish
+- Runtime is slower than native but works fine for dev
+
+On x86 Linux (NUC, VPS, Pi 5 with x86) it runs natively and fast.
 
 ```bash
 cd tools/speckle-watcher
-docker compose up -d    # first run pulls ~3GB of images
+
+# Step 1: Pull images FIRST (one-time, slow on ARM Mac)
+mise run speckle:server:pull
+
+# Step 2: Start server (fast after images are pulled)
+mise run speckle:server:up
 ```
 
 This starts a full Speckle server locally on port 8090:
