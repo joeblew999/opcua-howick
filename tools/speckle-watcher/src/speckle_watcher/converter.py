@@ -121,84 +121,94 @@ def detect_member_axis(bbox):
     return max(dims, key=dims.get)
 
 
-def extract_operation_positions(points, bbox, axis):
+def extract_operations(points, bbox, axis):
     """
-    Extract unique positions along the member axis that likely correspond
-    to punch operations. These are Z (or X/Y) values where extra vertices
-    exist beyond the basic C-section profile.
+    Extract punch operations from mesh vertices.
 
-    A plain C-section cross-section has a small number of vertices at each
-    longitudinal position. Punch features (dimples, lip cuts, swages, etc.)
-    add extra vertices at their positions.
+    FrameBuilderMRD models punch features (dimples, swages, service holes, etc.)
+    as geometry on the mesh. Each feature creates a cluster of extra vertices at
+    its position along the member axis.
+
+    Strategy:
+    1. Bin vertices along the member axis (0.5mm resolution)
+    2. Find the baseline vertex count per position (plain C-section)
+    3. Positions with MORE vertices than baseline are punch features
+    4. Classify by vertex count in cluster:
+       - SERVICE_HOLE: many vertices (circular hole, 10+ extra)
+       - DIMPLE/LIP_CUT/SWAGE: few vertices (2-8 extra)
+    5. Classify by position:
+       - SWAGE: near ends (~27.5mm from start/end)
+       - LIP_CUT: near dimples (~23mm from start/end)
+       - DIMPLE: everywhere else
     """
-    if axis == "z":
-        positions = [round(p[2], 2) for p in points]
-        start = bbox["min_z"]
-    elif axis == "x":
-        positions = [round(p[0], 2) for p in points]
-        start = bbox["min_x"]
-    else:
-        positions = [round(p[1], 2) for p in points]
-        start = bbox["min_y"]
-
-    # Count vertices at each position along the member
     from collections import Counter
-    pos_counts = Counter(positions)
 
-    # The "background" vertex count is the mode (most common count)
-    # — this is the plain C-section profile repeating
-    counts = list(pos_counts.values())
-    if not counts:
+    if axis == "z":
+        positions = [p[2] for p in points]
+        start = bbox["min_z"]
+        length = bbox["dz"]
+    elif axis == "x":
+        positions = [p[0] for p in points]
+        start = bbox["min_x"]
+        length = bbox["dx"]
+    else:
+        positions = [p[1] for p in points]
+        start = bbox["min_y"]
+        length = bbox["dy"]
+
+    if length < 5.0:
         return []
 
-    # Find positions with extra vertices (potential punch features)
-    # Sort unique positions
-    unique_positions = sorted(set(positions))
+    # Bin to 0.5mm resolution
+    binned = [round((p - start) * 2) / 2 for p in positions]
+    bin_counts = Counter(binned)
 
-    # Convert to offsets from member start
-    offsets = [round(p - start, 2) for p in unique_positions]
+    # Baseline: the most common count (plain profile cross-section)
+    if not bin_counts:
+        return []
 
-    return offsets
+    count_freq = Counter(bin_counts.values())
+    baseline = count_freq.most_common(1)[0][0]
 
+    # Find feature positions: bins with more than baseline vertices
+    feature_bins = sorted([pos for pos, count in bin_counts.items()
+                           if count > baseline and 0.5 < pos < length - 0.5])
 
-def classify_operations(offsets, length):
-    """
-    Classify operation positions into DIMPLE, LIP_CUT, SWAGE, etc.
+    # Cluster nearby feature bins (within 2mm) into single operations
+    clusters = []
+    current_cluster = []
+    for pos in feature_bins:
+        if current_cluster and pos - current_cluster[-1] > 2.0:
+            clusters.append(current_cluster)
+            current_cluster = []
+        current_cluster.append(pos)
+    if current_cluster:
+        clusters.append(current_cluster)
 
-    Heuristics based on known patterns from Howick CSV:
-    - SWAGE: typically near ends (< 30mm from start/end)
-    - DIMPLE: throughout the member
-    - LIP_CUT: near dimple positions, slightly offset
-    - SERVICE_HOLE: typically at ~400mm intervals or specific positions
-    - END_TRUSS: at 0.0 and at length
-
-    For now, we output all positions as generic operations and refine later.
-    """
+    # Classify each cluster
     ops = []
+    for cluster in clusters:
+        center = round(sum(cluster) / len(cluster), 2)
+        total_extra_verts = sum(bin_counts[b] - baseline for b in cluster)
 
-    for offset in offsets:
-        # Skip the very start and end (profile edges, not operations)
-        if offset < 1.0 or offset > length - 1.0:
-            continue
-
-        # Classify based on position heuristics
-        near_start = offset < 30.0
-        near_end = offset > length - 30.0
-
-        if near_start or near_end:
-            # SWAGE positions are typically at 27.5mm from ends
-            if 26.0 <= offset <= 29.0 or length - 29.0 <= offset <= length - 26.0:
-                ops.append(Operation("SWAGE", offset))
-            elif 18.0 <= offset <= 22.0 or length - 22.0 <= offset <= length - 18.0:
-                ops.append(Operation("DIMPLE", offset))
-            elif 22.0 <= offset <= 24.0 or length - 24.0 <= offset <= length - 22.0:
-                ops.append(Operation("LIP_CUT", offset))
-            else:
-                ops.append(Operation("DIMPLE", offset))
+        # SERVICE_HOLE: large cluster (many extra vertices = circle of points)
+        if total_extra_verts > 10 or len(cluster) > 6:
+            ops.append(Operation("SERVICE_HOLE", center))
+        # SWAGE: near ends (~27.5mm)
+        elif 25.0 <= center <= 30.0 or length - 30.0 <= center <= length - 25.0:
+            ops.append(Operation("SWAGE", center))
+        # LIP_CUT: at ~23mm from ends
+        elif 21.0 <= center <= 25.0 or length - 25.0 <= center <= length - 21.0:
+            ops.append(Operation("LIP_CUT", center))
+        # DIMPLE: near ends (~18-20mm)
+        elif 16.0 <= center <= 21.0 or length - 21.0 <= center <= length - 16.0:
+            ops.append(Operation("DIMPLE", center))
+        # Interior: classify by cluster size
+        elif total_extra_verts > 6:
+            ops.append(Operation("SERVICE_HOLE", center))
         else:
-            # Interior positions — classify by clustering
-            # For now, mark as DIMPLE (most common operation)
-            ops.append(Operation("DIMPLE", offset))
+            # Default for small interior features
+            ops.append(Operation("DIMPLE", center))
 
     return ops
 
@@ -216,6 +226,27 @@ LAYER_ROLE = {
     "lateralbrace": "LB",
 }
 
+# Layers that are not machine components (skip these)
+SKIP_LAYERS = {
+    "wall_external_cladding_1",
+    "wall_internal_cladding_1",
+}
+
+# Minimum vertex count for a real member (vs. a punch marker)
+MIN_MEMBER_VERTS = 20
+
+
+def collect_meshes(elem, min_verts=MIN_MEMBER_VERTS):
+    """Recursively collect all meshes with enough vertices to be real members."""
+    results = []
+    verts = getattr(elem, "vertices", None)
+    if verts and len(verts) // 3 >= min_verts:
+        results.append(elem)
+    if hasattr(elem, "elements"):
+        for sub in elem.elements:
+            results.extend(collect_meshes(sub, min_verts))
+    return results
+
 
 def process_layer(layer_name, elements, frameset_name):
     """Process all members in a layer, returning Component objects."""
@@ -223,7 +254,12 @@ def process_layer(layer_name, elements, frameset_name):
     prefix = LAYER_ROLE.get(layer_name, "X")
     count = 0
 
+    # Recursively collect real meshes (skip tiny punch markers)
+    real_meshes = []
     for elem in elements:
+        real_meshes.extend(collect_meshes(elem))
+
+    for elem in real_meshes:
         points = extract_mesh_data(elem)
         if not points:
             continue
@@ -245,9 +281,8 @@ def process_layer(layer_name, elements, frameset_name):
         # Determine label orientation based on position
         label = "LABEL_NRM" if count % 2 == 1 else "LABEL_INV"
 
-        # Extract operation positions from vertex clustering
-        offsets = extract_operation_positions(points, bbox, axis)
-        ops = classify_operations(offsets, length)
+        # Extract operations from vertex clustering patterns
+        ops = extract_operations(points, bbox, axis)
 
         comp = Component(
             id=f"{frameset_name}-{prefix}{count}",
@@ -309,12 +344,15 @@ def convert_speckle_to_csv(project_id: str, model_id: str, output_dir: Path = No
     frameset_name = "wall1"  # derive from model name
     all_components = []
 
-    framing_layers = ["Stud", "Nog", "BottomPlate", "TopPlate", "window", "generic_frame", "lateralbrace"]
-
     for sub in wall_layer.elements:
         layer_name = getattr(sub, "name", "")
-        if layer_name not in framing_layers:
-            print(f"  Skipping layer: {layer_name}")
+
+        if layer_name in SKIP_LAYERS:
+            print(f"  Skipping cladding: {layer_name}")
+            continue
+
+        if layer_name not in LAYER_ROLE:
+            print(f"  Skipping unknown layer: {layer_name}")
             continue
 
         elems = sub.elements if hasattr(sub, "elements") else []
