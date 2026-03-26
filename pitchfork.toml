@@ -1,0 +1,43 @@
+#:schema https://pitchfork.jdx.dev/schema.json
+# pitchfork.toml — daemon orchestration for opcua-howick dev stack
+#
+# Log levels: controlled by RUST_LOG in mise.toml (not here).
+#   Dev:  RUST_LOG=debug (from .mise.toml)
+#   Prod: RUST_LOG=info  (from config/mise.pi5.toml)
+#   Debug toggle: mise run logs:debug / logs:normal
+
+[daemons.opcua-server]
+run = "fnox exec -- cargo run --bin opcua-server"
+ready_http = "http://localhost:4841/health"
+expected_port = [4840, 4841]
+auto_bump_port = true
+retry = true
+auto = ["start", "stop"]
+watch = ["crates/core/src/**/*.rs", "crates/opcua-server/src/**/*.rs", "config/opcua-server.dev.toml"]
+mise = true
+hooks.on_ready = "echo '✓ opcua-server ready — opc.tcp://localhost:4840/ + http://localhost:4841/dashboard'"
+hooks.on_fail = "echo '✗ opcua-server failed — check: mise run logs:errors'"
+hooks.on_stop = "echo '○ opcua-server stopped'"
+hooks.on_exit = "lsof -ti:4840,4841 | xargs kill 2>/dev/null || true"
+
+[daemons.howick-frama]
+run = "fnox exec -- cargo run --bin howick-frama -- --config config/howick-frama.dev.toml"
+depends = ["opcua-server"]
+ready_delay = 3
+retry = true
+auto = ["start", "stop"]
+watch = ["crates/core/src/**/*.rs", "crates/howick-frama/src/**/*.rs", "config/howick-frama.dev.toml"]
+mise = true
+hooks.on_ready = "echo '✓ howick-frama ready — subscribed via OPC UA'"
+hooks.on_fail = "echo '✗ howick-frama failed — check: mise run logs:errors'"
+hooks.on_stop = "echo '○ howick-frama stopped'"
+
+[daemons.mock-plat-trunk]
+run = "cargo run --bin mock-plat-trunk"
+env = { PORT = "3001" }
+ready_http = "http://localhost:3001/health"
+expected_port = [3001]
+auto_bump_port = true
+retry = true
+mise = true
+hooks.on_stop = "echo '○ mock-plat-trunk stopped'"

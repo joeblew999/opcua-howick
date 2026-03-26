@@ -1,0 +1,22 @@
+#:schema https://pitchfork.jdx.dev/schema.json
+# pitchfork.toml — Windows Design PC production
+#
+# Both binaries on one machine (Option A topology).
+# Start: pitchfork start -l
+# Status: pitchfork list
+
+[daemons.opcua-server]
+run = "fnox exec --profile windows -- opcua-server.exe --config opcua-server.windows.toml"
+ready_http = "http://localhost:4841/health"
+expected_port = [4840, 4841]
+retry = true
+hooks.on_ready = "echo 'opcua-server ready — http://localhost:4841/dashboard'"
+hooks.on_fail = "echo 'opcua-server FAILED — check: pitchfork logs opcua-server'"
+
+[daemons.howick-frama]
+run = "fnox exec --profile windows -- howick-frama.exe --config howick-frama.windows.toml"
+depends = ["opcua-server"]
+ready_delay = 3
+retry = true
+hooks.on_ready = "echo 'howick-frama ready — polling opcua-server'"
+hooks.on_fail = "echo 'howick-frama FAILED — check: pitchfork logs howick-frama'"

@@ -1,0 +1,206 @@
+# Device management — deploy, provision, SSH, remote logs/status.
+# All tasks take a <device> arg: pi5, pi-zero, or windows.
+# SSH/SCP tasks are Unix-only (they target Linux devices from Mac/Linux).
+# Windows deploy uses cargo-make Duckscript (see Makefile.toml).
+
+# ── Provision ────────────────────────────────────────────────────────────────
+
+["device:provision"]
+description = "Provision a new device from scratch"
+usage = 'arg "<device>" help="Device: pi5 or pi-zero"'
+confirm = "Provision a new ${usage_device}?"
+run = [{ task = "device:setup", args = ["${usage_device}"] }]
+
+["device:setup"]
+description = "First boot — Tailscale + mise + deploy"
+hide = true
+usage = 'arg "<device>" help="pi5 or pi-zero"'
+run = """
+if [ "${usage_device}" = "pi-zero" ]; then
+  HOST=${ZERO_HOST:-{{vars.zero_host}}}
+  echo "── Tailscale ──"
+  ssh $HOST 'curl -fsSL https://tailscale.com/install.sh | sh && sudo tailscale up && echo "IP:" && tailscale ip -4'
+  echo "── USB gadget (will reboot) ──"
+  mise run device:usb-gadget
+  echo ""
+  echo "Pi rebooted. Wait ~30s then run:"
+  echo "  ZERO_HOST=pi@<tailscale-ip> mise run device:setup:post-reboot"
+else
+  HOST=${PI5_HOST:-{{vars.pi5_host}}}
+  echo "── Tailscale ──"
+  ssh $HOST 'curl -fsSL https://tailscale.com/install.sh | sh && sudo tailscale up && echo "IP:" && tailscale ip -4'
+  echo "── Base setup ──"
+  ssh $HOST 'sudo bash -c "mkdir -p /home/pi/jobs/{input,output} && chown -R pi:pi /home/pi/jobs"'
+  echo "── Install mise ──"
+  mise run device:install-mise -- pi5
+  echo "── Deploy ──"
+  mise run device:deploy -- pi5
+  echo "✓ Pi 5 provisioned."
+fi
+"""
+
+["device:setup:post-reboot"]
+description = "Pi Zero post-reboot — install mise + deploy"
+run = [
+  { task = "device:install-mise", args = ["pi-zero"] },
+  { task = "device:deploy", args = ["pi-zero"] },
+  "echo '✓ Pi Zero provisioned.'",
+]
+
+["device:usb-gadget"]
+description = "USB gadget setup on Pi Zero (reboots)"
+hide = true
+run = """
+ssh ${ZERO_HOST:-{{vars.zero_host}}} 'sudo bash -s' << 'REMOTE'
+set -euo pipefail
+if [ ! -f /piusb.bin ]; then
+  echo "Creating /piusb.bin..."
+  dd if=/dev/zero of=/piusb.bin bs=1M count=512 status=progress
+  mkdosfs /piusb.bin -F 32 -n "HOWICK"
+fi
+mkdir -p /mnt/usb_share
+CONFIGTXT=/boot/firmware/config.txt
+grep -q "dtoverlay=dwc2" "$CONFIGTXT" || echo "dtoverlay=dwc2" >> "$CONFIGTXT"
+CMDLINE=/boot/firmware/cmdline.txt
+grep -q "modules-load=dwc2,g_mass_storage" "$CMDLINE" || sed -i 's/rootwait/rootwait modules-load=dwc2,g_mass_storage/' "$CMDLINE"
+cat > /etc/rc.local << 'EOF'
+#!/bin/bash
+mount -o loop,sync,noatime /piusb.bin /mnt/usb_share
+modprobe g_mass_storage file=/piusb.bin stall=0 ro=0
+exit 0
+EOF
+chmod +x /etc/rc.local
+cat > /usr/local/bin/usb-refresh.sh << 'EOF'
+#!/bin/bash
+sync
+echo 1 > /sys/bus/platform/drivers/dwc2/dwc2/gadget/suspended 2>/dev/null || true
+sleep 0.5
+echo 0 > /sys/bus/platform/drivers/dwc2/dwc2/gadget/suspended 2>/dev/null || true
+EOF
+chmod +x /usr/local/bin/usb-refresh.sh
+echo "USB gadget done. Rebooting..."
+sleep 5 && reboot
+REMOTE
+"""
+
+["device:install-mise"]
+description = "Install mise on a device (one-time)"
+hide = true
+usage = 'arg "<device>" help="pi5 or pi-zero"'
+run = """
+if [ "${usage_device}" = "pi-zero" ]; then HOST=${ZERO_HOST:-{{vars.zero_host}}}; else HOST=${PI5_HOST:-{{vars.pi5_host}}}; fi
+ssh $HOST 'command -v mise &>/dev/null && echo "mise already installed" || { curl -fsSL https://mise.jdx.dev/install.sh | sh && echo "eval \\\"\\$(~/.local/bin/mise activate bash)\\\"" >> ~/.bashrc && echo "mise installed"; }'
+"""
+
+# ── Deploy (Windows branch delegates to cargo-make Duckscript) ───────────────
+
+["device:deploy"]
+description = "Deploy binary + configs to a device"
+usage = 'arg "<device>" help="Device: pi5, pi-zero, or windows"'
+confirm = "Deploy to ${usage_device}?"
+run = """
+if [ "${usage_device}" = "windows" ]; then
+  mise run build:windows
+  makers deploy-windows
+  exit 0
+fi
+
+VERSION=$(cargo pkgid --quiet opcua-howick | cut -d@ -f2)
+
+if [ "${usage_device}" = "pi5" ]; then
+  mise run build:pi5
+  HOST=${PI5_HOST:-{{vars.pi5_host}}}
+  BIN=target/aarch64-unknown-linux-gnu/release/opcua-server
+  SVC=opcua-server
+  scp $BIN $HOST:~/${SVC}.new
+  scp config/opcua-server.pi5.toml $HOST:~/opcua-server.pi5.toml
+
+elif [ "${usage_device}" = "pi-zero" ]; then
+  mise run build:pi-zero
+  HOST=${ZERO_HOST:-{{vars.zero_host}}}
+  BIN=target/aarch64-unknown-linux-gnu/release-pi-zero/howick-frama
+  SVC=howick-frama
+  scp $BIN $HOST:~/${SVC}.new
+  scp config/howick-frama.pi-zero.toml $HOST:~/howick-frama.pi-zero.toml
+
+else
+  echo "ERROR: unknown device '${usage_device}' — use pi5, pi-zero, or windows"; exit 1
+fi
+
+# Common for Pi devices
+scp config/pitchfork.${usage_device}.toml $HOST:~/pitchfork.toml
+scp config/mise.${usage_device}.toml $HOST:~/mise.toml
+scp config/fnox.${usage_device}.toml $HOST:~/fnox.toml
+ssh $HOST 'mkdir -p ~/.mise/tasks'
+scp .mise/tasks/daemon.toml $HOST:~/.mise/tasks/daemon.toml
+
+ssh $HOST "
+  mise run stop 2>/dev/null || pitchfork stop --all 2>/dev/null || true
+  if systemctl is-active --quiet ${SVC} 2>/dev/null; then
+    echo 'Migrating from systemd...'
+    sudo systemctl stop ${SVC} && sudo systemctl disable ${SVC}
+    sudo rm -f /etc/systemd/system/${SVC}.service && sudo systemctl daemon-reload
+  fi
+  mv ~/${SVC}.new ~/${SVC} && chmod +x ~/${SVC}
+  echo 'v${VERSION}' > ~/.${SVC}-version
+  mise install 2>/dev/null || true
+  pitchfork boot enable 2>/dev/null || true
+  mise run start
+  echo '── Checking logs for errors ──'
+  mise run logs:errors
+"
+echo "${usage_device} deployed (${SVC} v${VERSION})"
+"""
+
+# ── Ship (delegates to cargo-make Duckscript) ────────────────────────────────
+
+["device:ship"]
+description = "Full pipeline: test -> build -> deploy"
+usage = 'arg "<device>" help="Device: pi5, pi-zero, or all"'
+run = "makers ship ${usage_device}"
+
+# ── Remote management (Unix-only — SSH into Linux devices) ───────────────────
+
+["device:ssh"]
+description = "SSH into a device"
+usage = 'arg "<device>" help="pi5 or pi-zero"'
+run = """
+if [ "${usage_device}" = "pi-zero" ]; then HOST=${ZERO_HOST:-{{vars.zero_host}}}; else HOST=${PI5_HOST:-{{vars.pi5_host}}}; fi
+ssh $HOST
+"""
+
+["device:logs"]
+description = "Stream live logs from a device"
+raw = true
+usage = 'arg "<device>" help="pi5 or pi-zero"'
+run = """
+if [ "${usage_device}" = "pi-zero" ]; then HOST=${ZERO_HOST:-{{vars.zero_host}}}; else HOST=${PI5_HOST:-{{vars.pi5_host}}}; fi
+ssh $HOST 'mise run logs'
+"""
+
+["device:status"]
+description = "Check device status"
+usage = 'arg "<device>" help="pi5 or pi-zero"'
+run = """
+if [ "${usage_device}" = "pi-zero" ]; then HOST=${ZERO_HOST:-{{vars.zero_host}}}; else HOST=${PI5_HOST:-{{vars.pi5_host}}}; fi
+ssh $HOST 'mise run status'
+"""
+
+["device:tailscale"]
+description = "Check Tailscale status on a device"
+usage = 'arg "<device>" help="pi5 or pi-zero"'
+run = """
+if [ "${usage_device}" = "pi-zero" ]; then HOST=${ZERO_HOST:-{{vars.zero_host}}}; else HOST=${PI5_HOST:-{{vars.pi5_host}}}; fi
+ssh $HOST 'tailscale status'
+"""
+
+["device:netdata"]
+description = "Install Netdata on Pi 5"
+hide = true
+run = """
+ssh ${PI5_HOST:-{{vars.pi5_host}}} '
+  wget -O /tmp/netdata-kickstart.sh https://get.netdata.cloud/kickstart.sh
+  sh /tmp/netdata-kickstart.sh --non-interactive
+  echo "Netdata installed. Dashboard: http://$(hostname -I | cut -d\" \" -f1):19999"
+'
+"""

@@ -1,0 +1,145 @@
+# Dev-only tasks — workflows, helpers, code quality.
+# Daemon management is in daemon.toml (shared with production).
+
+# ── Help ─────────────────────────────────────────────────────────────────────
+
+[help]
+description = "Show what to run and when"
+raw = true
+run = """
+cat << 'EOF'
+══════════════════════════════════════════════════════════════════
+  opcua-howick — what to run when
+══════════════════════════════════════════════════════════════════
+
+  WORKFLOWS
+  ─────────────────────────────
+  mise run onboard              ← first time
+  mise run daily                ← build, test, start
+  mise run device:ship -- pi5   ← test → deploy
+  mise run device:provision -- pi5
+
+  DAEMONS (same commands on every device)
+  ─────────────────────────────
+  mise run start / stop / restart
+  mise run start:all / stop:all   (dev + speckle)
+  mise run status / tui
+
+  LOGGING (always check after start or failure)
+  ─────────────────────────────
+  mise run logs                 ← stream daemon logs live
+  mise run logs:recent          ← last 5 minutes
+  mise run logs:errors          ← grep for errors
+  mise run logs:task -- build   ← review build output after the fact
+  mise run logs:task -- test    ← review test output after the fact
+  mise run logs:debug           ← restart with debug logging
+  mise run logs:where           ← show log locations + sizes
+  http://localhost:19876        ← web UI (also http://<device>:19876)
+
+  SPECKLE
+  ─────────────────────────────
+  mise run speckle:start / stop / status / setup / test
+  mise run speckle:logs:recent / speckle:logs:errors
+
+  BUILD & TEST
+  ─────────────────────────────
+  mise run build / test / check / fmt / ci / release
+  mise run lint / lint:fix
+  mise run docs:pdf             (or: docs:pdf -- proposal)
+
+  DEV HELPERS
+  ─────────────────────────────
+  mise run dev:job / dev:sensor / dev:browse / test:submit
+
+  DEVICES
+  ─────────────────────────────
+  mise run device:ssh -- pi5
+  mise run device:status -- pi5
+  mise run device:logs -- pi5   (streams from pitchfork on device)
+  mise run device:deploy -- pi5
+
+  SECRETS
+  ─────────────────────────────
+  mise run secrets:list / secrets:check / secrets:scan
+
+══════════════════════════════════════════════════════════════════
+EOF
+"""
+
+# ── Workflows ────────────────────────────────────────────────────────────────
+
+[onboard]
+description = "First time — install tools, hooks, build, test"
+run = [
+  { task = "tools:install" },
+  "hk install --mise",
+  "fnox doctor",
+  { task = "build" },
+  { task = "test" },
+  "echo 'Add to ~/.zshrc: eval \"$(pitchfork activate zsh)\" && eval \"$(fnox activate zsh)\"'",
+  "echo '✓ Ready! Next: mise run daily'",
+]
+
+[daily]
+description = "Build, test, start dev stack, check logs"
+run = [
+  { task = "build" },
+  { task = "test" },
+  { task = "start" },
+  { task = "logs:errors" },
+  "echo 'Dashboard: http://localhost:4841/dashboard'",
+  "echo 'Logs:      http://localhost:19876'",
+]
+
+[lint]
+description = "Run all linters (hk check)"
+run = "hk check"
+
+["lint:fix"]
+description = "Auto-fix all linter issues"
+run = "hk fix"
+
+# ── Dev setup ────────────────────────────────────────────────────────────────
+
+["dev:setup"]
+hide = true
+description = "Create local jobs directories"
+run = "mkdir -p jobs/input jobs/machine jobs/output"
+run_windows = "mkdir jobs\\input jobs\\machine jobs\\output 2>nul & exit /b 0"
+
+# ── Dev helpers ──────────────────────────────────────────────────────────────
+
+["dev:job"]
+description = "Drop fixture CSV into jobs/input/"
+depends = ["dev:setup"]
+usage = 'arg "[job]" help="T1 or W1" default="T1"'
+run = """
+SRC="dev/fixtures/${usage_job}.csv"
+DEST="jobs/input/${usage_job}.csv"
+[ -f "$SRC" ] || { echo "ERROR: not found: $SRC"; exit 1; }
+cp "$SRC" "$DEST"
+echo "Dropped: $DEST  ($(wc -l < "$SRC") lines)"
+"""
+run_windows = """
+if not exist "dev\\fixtures\\${usage_job}.csv" (echo ERROR: not found: dev\\fixtures\\${usage_job}.csv & exit /b 1)
+copy "dev\\fixtures\\${usage_job}.csv" "jobs\\input\\${usage_job}.csv"
+echo Dropped: jobs\\input\\${usage_job}.csv
+"""
+
+["dev:browse"]
+description = "Show OPC UA endpoint info"
+run = """
+echo 'OPC UA:  opc.tcp://localhost:4840/'
+echo 'HTTP:   http://localhost:4841/dashboard'
+echo 'Nodes:  Machine/{Status,CurrentJob,PiecesProduced,CoilRemaining,LastError}'
+echo '        Jobs/{QueueDepth,CompletedCount}'
+"""
+
+["dev:sensor"]
+description = "Simulate coil weight push"
+usage = 'arg "[weight]" help="kg" default="23.5"'
+run = """
+curl -s -X POST http://localhost:4841/api/sensor/coil \
+  -H 'Content-Type: application/json' \
+  -d "{\"weight_kg\":${usage_weight}}" | jq .
+"""

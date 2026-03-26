@@ -1,0 +1,21 @@
+#:schema https://pitchfork.jdx.dev/schema.json
+# pitchfork.toml — Pi Zero 2W production daemon
+#
+# Deploy: scp this file + howick-frama binary to Pi Zero
+# Start:  pitchfork start -l
+# Boot:   pitchfork boot enable (auto-start on power-on)
+# Status: pitchfork list
+# Logs:   pitchfork logs howick-frama
+
+[daemons.howick-frama]
+run = "fnox exec --profile pi-zero -- ./howick-frama --config howick-frama.pi-zero.toml"
+retry = true
+boot_start = true
+ready_delay = 5
+hooks.on_ready = "echo 'howick-frama ready — subscribed to OPC UA server'"
+hooks.on_fail = "echo 'howick-frama FAILED — check: pitchfork logs howick-frama'"
+hooks.on_stop = "echo 'howick-frama stopped'"
+
+[daemons.log-cleanup]
+run = "pitchfork logs --clear"
+cron = { schedule = "0 0 3 * * *", retrigger = "finish" }

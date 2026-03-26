@@ -1,0 +1,64 @@
+# fnox.toml — secret management for opcua-howick
+#
+# Two layers:
+#   age (local)      — encrypted in git via SSH keys, for dev/offline
+#   infisical (cloud) — central secret store, for production + CI + MCP hub
+#
+# Usage:
+#   fnox set PLAT_TRUNK_API_KEY "sk-..."   # encrypt locally (age)
+#   fnox get PLAT_TRUNK_API_KEY            # retrieve
+#   fnox exec -- cargo run                 # run with secrets as env vars
+#   fnox list                              # show all secrets
+#   fnox sync                              # pull from infisical → age
+#
+# Profiles (per-device):
+#   fnox exec --profile pi5 -- ./opcua-server
+#   fnox exec --profile pi-zero -- ./howick-frama
+
+# ── Providers ────────────────────────────────────────────────────────────────
+
+[providers.age]
+type = "age"
+recipients = ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGGh4jQhA0egnxCaqV75q8kyTiaqotyxtzjUIK81fYUs"]
+key_file = "~/.ssh/id_ed25519"
+
+[providers.infisical]
+type = "infisical"
+# Auth via env: INFISICAL_UNIVERSAL_AUTH_CLIENT_ID + INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET
+# Set these two bootstrap creds in your shell profile or pitchfork.local.toml
+# project_id = "your-infisical-project-id"
+# environment = "dev"
+
+# ── Secrets ──────────────────────────────────────────────────────────────────
+# Dev defaults (plain). Production secrets come from infisical.
+
+[secrets]
+# plat-trunk API key — set with: fnox set PLAT_TRUNK_API_KEY "your-key"
+# PLAT_TRUNK_API_KEY = { provider = "age", value = "..." }
+
+# Speckle (local dev defaults — production from infisical)
+SPECKLE_ADMIN_EMAIL = { default = "admin@howick.local" }
+SPECKLE_ADMIN_PASSWORD = { default = "howick2024" }
+SESSION_SECRET = { default = "opcua-howick-local-dev-secret" }
+S3_ACCESS_KEY = { default = "minioadmin" }
+S3_SECRET_KEY = { default = "minioadmin" }
+
+# ── Profiles ─────────────────────────────────────────────────────────────────
+
+[profiles.pi5]
+# Production Pi 5 — secrets from infisical
+# [profiles.pi5.secrets]
+# PLAT_TRUNK_API_KEY = { provider = "infisical", key = "PLAT_TRUNK_API_KEY" }
+
+[profiles.pi-zero]
+# Production Pi Zero — secrets from infisical
+# [profiles.pi-zero.secrets]
+# PLAT_TRUNK_API_KEY = { provider = "infisical", key = "PLAT_TRUNK_API_KEY" }
+
+[profiles.ci]
+# CI/CD — secrets from infisical
+# [profiles.ci.secrets]
+# PLAT_TRUNK_API_KEY = { provider = "infisical", key = "PLAT_TRUNK_API_KEY" }
+
+[profiles.windows]
+# Windows Design PC

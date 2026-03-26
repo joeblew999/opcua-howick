@@ -1,4 +1,4 @@
-# opcua-server
+# opcua-howick
 
 Automates job delivery to Howick FRAMA roll-forming machines — eliminates the USB-stick walk.
 
@@ -22,10 +22,10 @@ operators upload jobs.
 
 ---
 
-## Demo from a laptop (no hardware needed)
+## Quick start (no hardware needed)
 
 ```bash
-mise run dev:all    # starts opcua-server + howick-frama on this machine
+mise run daily          # build, test, start all daemons
 ```
 
 Then open `http://localhost:4841/dashboard` and drag in a CSV.
@@ -36,10 +36,9 @@ What happens:
 3. CSV written to `./jobs/machine/` (simulates the USB gadget path)
 4. Dashboard shows the job move from Queued → Done
 
-To submit a fixture job from the command line:
 ```bash
-mise run dev:job       # drops T1.csv (roof truss) into the queue
-mise run dev:status    # check machine state as JSON
+mise run dev:job        # drops T1.csv (roof truss) into the queue
+mise run help           # show all available commands
 ```
 
 ---
@@ -51,21 +50,19 @@ Two computers on the factory WiFi:
 | Device | Binary | Role |
 |--------|--------|------|
 | Pi 5 | `opcua-server` | Dashboard, job queue, OPC UA server |
-| Pi Zero 2W | `howick-frama` | Polls Pi 5, writes CSV to virtual USB (replaces USB stick) |
+| Pi Zero 2W | `howick-frama` | Subscribes to Pi 5 via OPC UA, writes CSV to virtual USB |
 
 Deploy:
 ```bash
-PI5_HOST=pi@howick-pi5.local   mise run deploy:pi5
-ZERO_HOST=pi@howick-pi-zero.local  mise run deploy:pi-zero
+mise run device:deploy -- pi5
+mise run device:deploy -- pi-zero
+mise run device:deploy -- windows
 ```
 
-First-time provisioning (includes USB gadget setup):
+First-time provisioning:
 ```bash
-ZERO_HOST=pi@howick-pi-zero.local  mise run setup:first-boot:pi-zero
-# Pi reboots — wait 30s, then update ZERO_HOST to Tailscale IP
-ZERO_HOST=pi@100.x.x.x  mise run setup:post-reboot:pi-zero
-
-PI5_HOST=pi@howick-pi5.local  mise run setup:first-boot:pi5
+mise run device:provision -- pi5
+mise run device:provision -- pi-zero
 ```
 
 See `docs/customer/06-pi-zero-setup.md` for full provisioning guide.
@@ -98,30 +95,49 @@ Free browser: **UaExpert** (Windows/Mac/Linux) from unified-automation.com.
 
 ---
 
+## Dev tools
+
+This project uses the [jdx](https://github.com/jdx) ecosystem — same tools from dev laptop to production hardware:
+
+| Tool | Role | Config |
+|------|------|--------|
+| [mise](https://mise.jdx.dev) | Task runner + tool manager | `.mise.toml` + `.mise/tasks/*.toml` |
+| [pitchfork](https://pitchfork.jdx.dev) | Daemon/process manager | `pitchfork.toml` |
+| [hk](https://hk.jdx.dev) | Git hook manager | `hk.pkl` |
+| [fnox](https://github.com/jdx/fnox) | Secret management | `fnox.toml` |
+| [cargo-make](https://github.com/sagiegurari/cargo-make) | Cross-platform scripting (Duckscript) | `Makefile.toml` |
+
+```bash
+mise run help             # show all commands
+mise run start            # start daemons
+mise run stop             # stop daemons
+mise run logs             # stream live logs
+mise run status           # daemon health
+```
+
+---
+
 ## Config files
 
-Naming: `<binary>.<env>.toml` — binary name first, environment second.
+App configs live in `config/`, named `<binary>.<env>.toml`:
 
 | File | Binary | Where used |
 |------|--------|------------|
-| `opcua-server.dev.toml` | opcua-server | Dev laptop (default) |
-| `opcua-server.pi5.toml` | opcua-server | Pi 5 production |
-| `opcua-server.windows.toml` | opcua-server | Windows Design PC |
-| `howick-frama.dev.toml` | howick-frama | Dev laptop, OPC UA mode (default) |
-| `howick-frama.dev-mock.toml` | howick-frama | Dev laptop, mock-plat-trunk HTTP mode |
-| `howick-frama.dev-http.toml` | howick-frama | Dev laptop, local opcua-server HTTP mode |
-| `howick-frama.pi-zero.toml` | howick-frama | Pi Zero 2W production |
-| `howick-frama.windows.toml` | howick-frama | Windows Design PC |
+| `config/opcua-server.dev.toml` | opcua-server | Dev laptop (loaded by pitchfork) |
+| `config/opcua-server.pi5.toml` | opcua-server | Pi 5 production |
+| `config/opcua-server.windows.toml` | opcua-server | Windows Design PC |
+| `config/howick-frama.dev.toml` | howick-frama | Dev laptop, OPC UA mode |
+| `config/howick-frama.pi-zero.toml` | howick-frama | Pi Zero 2W production |
+| `config/howick-frama.windows.toml` | howick-frama | Windows Design PC |
 
 ---
 
 ## Run tests
 
 ```bash
-cargo test                    # all (5 HTTP pipeline + 3 OPC UA integration)
-cargo test --test opcua       # OPC UA only
-cargo test --test pipeline    # HTTP pipeline only
-RUST_LOG=debug cargo test     # verbose
+mise run test             # all Rust tests
+mise run ci               # full CI gate (check + fmt + test)
+mise run check            # clippy + check only
 ```
 
 ---
@@ -130,6 +146,8 @@ RUST_LOG=debug cargo test     # verbose
 
 See `docs/customer/` — seven documents covering proposal, system overview, hardware quote,
 setup guide, roadmap, Pi Zero provisioning, and ops runbook.
+
+Export to PDF: `mise run docs:pdf` (or `mise run docs:pdf -- proposal`)
 
 ---
 

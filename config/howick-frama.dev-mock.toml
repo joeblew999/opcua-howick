@@ -1,7 +1,7 @@
 # howick-frama.dev-mock.toml — howick-frama polling mock-plat-trunk
 #
 # Use when testing the HTTP polling path against the local mock server.
-# Requires: mise run dev:mock  (mock-plat-trunk on :3000)
+# Requires: mise run dev:mock  (mock-plat-trunk on :3001)
 # Run with: mise run dev:agent:mock
 
 [opcua]
@@ -22,7 +22,7 @@ machine_output_dir = "./jobs/output"
 usb_gadget_mode   = false
 
 [plat_trunk]
-url                       = "http://localhost:3000"   # mock-plat-trunk
+url                       = "http://localhost:3001"   # mock-plat-trunk (PORT=3001 in pitchfork.toml)
 api_key                   = ""
 status_push_interval_secs = 5
 

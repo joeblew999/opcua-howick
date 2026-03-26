@@ -1,0 +1,207 @@
+# Daemon + logging + secrets tasks — shared between dev and production.
+# This SAME file is deployed to every device.
+#
+# LOGGING CONTRACT:
+#   Daemons → pitchfork logs (persistent, queryable, web UI at :19876)
+#   Tasks   → pitchfork run (persistent, retrievable via logs:task)
+#
+#   Log levels controlled by RUST_LOG in mise.toml:
+#     Dev:  debug (see everything)         — .mise.toml
+#     Prod: info (quiet, small footprint)  — config/mise.pi5.toml
+#
+#   After starting:  logs:errors runs automatically (engrained in start/restart)
+#   Review tasks:    mise run logs:task -- build
+#   Debug toggle:    mise run logs:debug / logs:normal
+#   Web UI:          http://localhost:19876 (or http://<device>:19876)
+#
+# Two pitchfork instances (tool isolation):
+#   Root:    pitchfork.toml       → opcua-server, howick-frama, mock-plat-trunk
+#   Speckle: tools/speckle-server/pitchfork.toml → postgres, redis, minio, api, frontend
+#
+# On production devices only root daemons exist. Speckle tasks are harmless no-ops.
+
+# ── Root daemon lifecycle ────────────────────────────────────────────────────
+
+[start]
+description = "Start all daemons + check for errors"
+run = [
+  "pitchfork start -l",
+  { task = "logs:errors" },
+]
+
+[stop]
+description = "Stop all daemons"
+run = "pitchfork stop --all"
+
+[restart]
+description = "Restart all daemons + check for errors"
+run = [
+  "pitchfork stop --all 2>/dev/null || true",
+  "pitchfork start -l",
+  { task = "logs:errors" },
+]
+run_windows = [
+  "pitchfork stop --all",
+  "pitchfork start -l",
+  { task = "logs:errors" },
+]
+
+# ── Root daemon monitoring ───────────────────────────────────────────────────
+
+[logs]
+description = "Stream daemon logs"
+raw = true
+run = "pitchfork logs -t"
+
+[status]
+description = "Daemon status"
+alias = "ps"
+run = "pitchfork list"
+
+[tui]
+description = "Interactive pitchfork dashboard"
+raw = true
+interactive = true
+run = "pitchfork tui"
+
+# ── Speckle daemons (same pattern, different pitchfork instance) ─────────────
+# `mise x --` activates speckle tools (node, postgres, redis, minio).
+# All tasks gracefully no-op if tools/speckle-server/ doesn't exist.
+
+["speckle:start"]
+description = "Start Speckle daemons + check for errors"
+run = """
+cd ${OPCUA_ROOT:-$PWD}/tools/speckle-server 2>/dev/null || { echo "No speckle-server (production device)"; exit 0; }
+mise x -- pitchfork start -l
+mise run admin:ensure 2>/dev/null || true
+echo "Speckle running — http://127.0.0.1:8080"
+"""
+depends_post = ["speckle:logs:errors"]
+
+["speckle:stop"]
+description = "Stop Speckle daemons"
+run = "cd ${OPCUA_ROOT:-$PWD}/tools/speckle-server 2>/dev/null && mise x -- pitchfork stop --all || true"
+
+["speckle:restart"]
+description = "Restart Speckle daemons"
+run = [
+  { task = "speckle:stop" },
+  { task = "speckle:start" },
+]
+
+["speckle:logs"]
+description = "Stream Speckle daemon logs"
+raw = true
+run = "cd ${OPCUA_ROOT:-$PWD}/tools/speckle-server 2>/dev/null && mise x -- pitchfork logs -t || echo 'No speckle-server'"
+
+["speckle:status"]
+description = "Speckle daemon status + health checks"
+run = """
+cd ${OPCUA_ROOT:-$PWD}/tools/speckle-server 2>/dev/null || { echo "No speckle-server (production device)"; exit 0; }
+mise x -- pitchfork list
+echo ""
+echo "Health:"
+pg_isready -U speckle >/dev/null 2>&1 && echo "  Postgres  ✓" || echo "  Postgres  ✗"
+redis-cli ping >/dev/null 2>&1 && echo "  Redis     ✓" || echo "  Redis     ✗"
+curl -sf http://127.0.0.1:9000/minio/health/live >/dev/null 2>&1 && echo "  MinIO     ✓" || echo "  MinIO     ✗"
+curl -sf http://127.0.0.1:3000/graphql >/dev/null 2>&1 && echo "  API       ✓" || echo "  API       ✗"
+curl -sf -o /dev/null http://127.0.0.1:8080 2>/dev/null && echo "  Frontend  ✓" || echo "  Frontend  ✗"
+"""
+
+["speckle:tui"]
+description = "Speckle pitchfork dashboard"
+raw = true
+interactive = true
+run = "cd ${OPCUA_ROOT:-$PWD}/tools/speckle-server 2>/dev/null && mise x -- pitchfork tui || echo 'No speckle-server'"
+
+# ── Log management ───────────────────────────────────────────────────────────
+
+["logs:recent"]
+description = "Last 5 minutes of daemon logs"
+run = "pitchfork logs --since 5min --no-pager"
+
+["logs:errors"]
+description = "Grep daemon logs for errors"
+run = "pitchfork logs --raw --no-pager | grep -iE 'error|panic|fatal' || echo 'No errors found'"
+run_windows = 'pitchfork logs --raw --no-pager | findstr /i "error panic fatal" || echo No errors found'
+
+["logs:task"]
+description = "Show captured task output (build, test, check)"
+usage = 'arg "[name]" help="Task name: build, test, or check" default="build"'
+run = "pitchfork logs task-${usage_name} --raw --no-pager 2>/dev/null || echo 'No logs for task-${usage_name} — run the task first'"
+
+["logs:where"]
+description = "Show log locations and sizes"
+run = """
+echo "Pitchfork log directory:"
+echo "  ~/.local/state/pitchfork/logs/"
+echo ""
+du -sh ~/.local/state/pitchfork/logs/*/ 2>/dev/null || echo "  (no logs yet)"
+"""
+
+["logs:clear"]
+description = "Clear all daemon logs"
+confirm = "Delete all daemon logs?"
+run = "pitchfork logs --clear"
+
+["logs:debug"]
+description = "Restart daemons with debug logging (revert with logs:normal)"
+run = """
+pitchfork stop --all 2>/dev/null || true
+RUST_LOG=debug pitchfork start -l
+echo "Debug logging ON. Revert: mise run logs:normal"
+"""
+run_windows = [
+  "pitchfork stop --all",
+  "set RUST_LOG=debug && pitchfork start -l",
+  "echo Debug logging ON. Revert: mise run logs:normal",
+]
+
+["logs:normal"]
+description = "Restart daemons with default log level"
+run = [
+  { task = "restart" },
+  "echo 'Logging reverted to default level'",
+]
+
+["speckle:logs:recent"]
+description = "Last 5 minutes of Speckle logs"
+run = "cd ${OPCUA_ROOT:-$PWD}/tools/speckle-server 2>/dev/null && mise x -- pitchfork logs --since 5min --no-pager || true"
+
+["speckle:logs:errors"]
+description = "Grep Speckle logs for errors"
+run = "cd ${OPCUA_ROOT:-$PWD}/tools/speckle-server 2>/dev/null && mise x -- pitchfork logs --raw --no-pager | grep -iE 'error|panic|fatal' || echo 'No errors'"
+
+# ── All daemons ──────────────────────────────────────────────────────────────
+
+["start:all"]
+description = "Start everything — dev stack + speckle"
+run = [{ task = "start" }, { task = "speckle:start" }]
+
+["stop:all"]
+description = "Stop everything — dev stack + speckle"
+run = [{ task = "stop" }, { task = "speckle:stop" }]
+
+["status:all"]
+description = "Status of all daemons"
+run = [
+  "echo '── Dev stack ──'",
+  { task = "status" },
+  "echo ''",
+  "echo '── Speckle ──'",
+  { task = "speckle:status" },
+]
+
+# ── Secrets (works on every device) ──────────────────────────────────────────
+
+["secrets:list"]
+description = "List all secrets"
+run = "fnox list"
+
+["secrets:check"]
+description = "Validate secret configuration"
+run = "fnox check"
+
+["secrets:scan"]
+description = "Scan repo for leaked secrets"
+run = "fnox scan"

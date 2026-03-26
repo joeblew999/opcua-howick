@@ -1,0 +1,47 @@
+amends "package://github.com/jdx/hk/releases/download/v1.39.0/hk@1.39.0#/Config.pkl"
+import "package://github.com/jdx/hk/releases/download/v1.39.0/hk@1.39.0#/Builtins.pkl"
+
+// ── Linters & formatters ────────────────────────────────────────────────────
+
+local linters = new Mapping<String, Step> {
+    ["cargo_fmt"] = Builtins.cargo_fmt
+    ["cargo_clippy"] = Builtins.cargo_clippy
+    ["trailing_whitespace"] = Builtins.trailing_whitespace
+    ["check_merge_conflict"] = Builtins.check_merge_conflict
+    ["detect_private_key"] = Builtins.detect_private_key
+    // fnox secret scan — catch leaked secrets before commit
+    ["secret_scan"] {
+        check = "fnox scan"
+    }
+}
+
+local push_checks = new Mapping<String, Step> {
+    ["cargo_check"] = Builtins.cargo_check
+    ["test"] {
+        check = "cargo test"
+    }
+}
+
+// ── Hooks ────────────────────────────────────────────────────────────────────
+
+hooks {
+    // Pre-commit: format + lint + secret scan (auto-fix where possible)
+    ["pre-commit"] {
+        fix = true
+        stash = "git"
+        steps = linters
+    }
+    // Pre-push: compile check + tests (blocks broken pushes)
+    ["pre-push"] {
+        steps = push_checks
+    }
+    // Manual: `hk fix` — apply all auto-fixes
+    ["fix"] {
+        fix = true
+        steps = linters
+    }
+    // Manual: `hk check` — lint without fixing
+    ["check"] {
+        steps = linters
+    }
+}

@@ -11,8 +11,8 @@
 //!
 //! Usage (two terminals):
 //!
-//!   terminal 1:  mise run dev:mock    # this binary — listens on :3000
-//!   terminal 2:  mise run dev:agent   # howick-frama polls :3000
+//!   terminal 1:  mise run dev:mock    # this binary — listens on :3001 (PORT env)
+//!   terminal 2:  mise run dev:agent   # howick-frama polls :3001
 //!
 //! Then watch ./jobs/machine/ for the written CSVs.
 
@@ -54,7 +54,8 @@ struct Queue {
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt().compact().init();
 
-    let addr: SocketAddr = "0.0.0.0:3000".parse()?;
+    let port = std::env::var("PORT").unwrap_or_else(|_| "3000".into());
+    let addr: SocketAddr = format!("0.0.0.0:{port}").parse()?;
     let listener = TcpListener::bind(addr).await?;
 
     let queue = Arc::new(Mutex::new(Queue {
@@ -63,7 +64,7 @@ async fn main() -> anyhow::Result<()> {
         empty_logged: false,
     }));
 
-    println!("Mock plat-trunk listening on http://localhost:3000");
+    println!("Mock plat-trunk listening on http://localhost:{port}");
     println!("  Job queue ({} jobs):", JOBS.len());
     for (i, j) in JOBS.iter().enumerate() {
         println!("    {}. {} — {}  ({})", i + 1, j.id, j.frameset, j.fixture);

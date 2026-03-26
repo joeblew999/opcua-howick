@@ -1,0 +1,13 @@
+# mise.toml — Windows Design PC production
+# Daemon tasks loaded from .mise/tasks/daemon.toml (same file as dev).
+# Operator runs: mise run start / stop / logs / status / tui
+
+[tools]
+pitchfork = "latest"
+fnox = "latest"
+
+[env]
+RUST_LOG = "opcua_howick=info,howick_frama=info"
+
+[task_config]
+includes = [".mise/tasks/daemon.toml"]

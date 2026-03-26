@@ -4,3 +4,9 @@ docs/dist/
 /pki/
 pki-server-*/
 .claude/
+.mcp.json
+tools/speckle-server/src/
+tools/speckle-server/data/
+tools/speckle-server/.env
+pitchfork.local.toml
+fnox.local.toml

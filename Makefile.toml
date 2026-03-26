@@ -1,0 +1,199 @@
+# Makefile.toml — cross-platform tasks via Duckscript (no bash, no PowerShell)
+#
+# Called FROM mise tasks, never directly. Entry point: mise run <task>
+# Only tasks needing cross-platform scripting live here.
+
+[env]
+CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = false
+
+# ── build-bin ────────────────────────────────────────────────────────────────
+# Args: bin target [--cross] [profile]
+
+[tasks.build-bin]
+description = "Build one binary for one target"
+workspace = false
+script_runner = "@duckscript"
+script = '''
+args_handle = split ${CARGO_MAKE_TASK_ARGS} ";"
+bin = array_get ${args_handle} 0
+target = array_get ${args_handle} 1
+cross_flag = array_get ${args_handle} 2
+profile = array_get ${args_handle} 3
+release ${args_handle}
+
+if is_empty ${profile}
+    profile = set "release"
+end
+
+use_cross = set false
+if equals ${cross_flag} "--cross"
+    use_cross = set true
+end
+
+if ${use_cross}
+    echo "Cross-compiling ${bin} for ${target} (profile: ${profile})"
+    exec --fail-on-error cross build --profile ${profile} --bin ${bin} --target ${target}
+else
+    echo "Building ${bin} for ${target} (profile: ${profile})"
+    exec --fail-on-error cargo build --profile ${profile} --bin ${bin} --target ${target}
+end
+'''
+
+# ── deploy-windows ───────────────────────────────────────────────────────────
+# No args — copies binaries + configs to WINDOWS_HOST (default: //howick-pc/c$/opcua-server)
+
+[tasks.deploy-windows]
+description = "Deploy binaries + configs to Windows target"
+workspace = false
+script_runner = "@duckscript"
+script = '''
+dest = get_env WINDOWS_HOST
+if is_empty ${dest}
+    dest = set "//howick-pc/c$/opcua-server"
+end
+
+echo "Deploying to ${dest}..."
+
+mkdir ${dest}
+tasks_dir = join_path ${dest} ".mise" "tasks"
+mkdir ${tasks_dir}
+
+server_src = join_path "target" "x86_64-pc-windows-msvc" "release" "opcua-server.exe"
+frama_src = join_path "target" "x86_64-pc-windows-msvc" "release" "howick-frama.exe"
+cp ${server_src} ${dest}
+cp ${frama_src} ${dest}
+
+# Only copy app configs if not already present (don't overwrite user config)
+server_cfg = join_path ${dest} "opcua-server.windows.toml"
+exists = is_path_exists ${server_cfg}
+if not ${exists}
+    cp config/opcua-server.windows.toml ${dest}
+end
+
+frama_cfg = join_path ${dest} "howick-frama.windows.toml"
+exists = is_path_exists ${frama_cfg}
+if not ${exists}
+    cp config/howick-frama.windows.toml ${dest}
+end
+
+# Always overwrite shared configs
+cp config/pitchfork.windows.toml ${dest}/pitchfork.toml
+cp config/mise.windows.toml ${dest}/mise.toml
+cp .mise/tasks/daemon.toml ${tasks_dir}/daemon.toml
+
+echo "Deployed to ${dest} — run: mise install && mise run start"
+'''
+
+# ── ship ─────────────────────────────────────────────────────────────────────
+# Args: device (pi5, pi-zero, or all)
+
+[tasks.ship]
+description = "Full pipeline: test -> build -> deploy"
+workspace = false
+script_runner = "@duckscript"
+script = '''
+args_handle = split ${CARGO_MAKE_TASK_ARGS} ";"
+device = array_get ${args_handle} 0
+release ${args_handle}
+
+echo "── Tests ──"
+exec --fail-on-error mise run test
+
+if equals ${device} "all"
+    echo "── Deploy Pi 5 ──"
+    exec --fail-on-error mise run device:deploy -- pi5
+    echo "── Deploy Pi Zero ──"
+    exec --fail-on-error mise run device:deploy -- pi-zero
+else
+    echo "── Deploy ${device} ──"
+    exec --fail-on-error mise run device:deploy -- ${device}
+end
+
+echo "Shipped."
+'''
+
+# ── docs-pdf ─────────────────────────────────────────────────────────────────
+# Args: name (proposal, system-overview, ..., all)
+
+[tasks.docs-pdf]
+description = "Export a doc to PDF"
+workspace = false
+script_runner = "@duckscript"
+script = '''
+args_handle = split ${CARGO_MAKE_TASK_ARGS} ";"
+name = array_get ${args_handle} 0
+release ${args_handle}
+
+if is_empty ${name}
+    name = set "all"
+end
+
+mkdir docs/dist
+
+fn export_pdf
+    num = set ${1}
+    slug = set ${2}
+    title = set ${3}
+    src = set "docs/customer/${num}-${slug}.md"
+    out = set "docs/dist/${num}-${slug}.pdf"
+    echo "PDF: ${out}"
+    exec --fail-on-error pandoc ${src} --pdf-engine=typst --template=docs/templates/howick.typ --metadata title="${title}" -o ${out}
+end
+
+if equals ${name} "proposal"
+    export_pdf 01 proposal "Factory Automation Proposal"
+elseif equals ${name} "system-overview"
+    export_pdf 02 system-overview "System Overview"
+elseif equals ${name} "hardware-quote"
+    export_pdf 03 hardware-quote "Hardware Quote"
+elseif equals ${name} "setup-guide"
+    export_pdf 04 setup-guide "Setup Guide"
+elseif equals ${name} "roadmap"
+    export_pdf 05 roadmap "Project Roadmap"
+elseif equals ${name} "pi-zero-setup"
+    export_pdf 06 pi-zero-setup "Pi Zero 2W Setup Guide"
+elseif equals ${name} "ops-runbook"
+    export_pdf 07 ops-runbook "Operations Runbook"
+elseif equals ${name} "all"
+    export_pdf 01 proposal "Factory Automation Proposal"
+    export_pdf 02 system-overview "System Overview"
+    export_pdf 03 hardware-quote "Hardware Quote"
+    export_pdf 04 setup-guide "Setup Guide"
+    export_pdf 05 roadmap "Project Roadmap"
+    export_pdf 06 pi-zero-setup "Pi Zero 2W Setup Guide"
+    export_pdf 07 ops-runbook "Operations Runbook"
+else
+    echo "ERROR: unknown doc '${name}'"
+    exit 1
+end
+'''
+
+# ── test-submit ──────────────────────────────────────────────────────────────
+# Args: job (default: T1)
+
+[tasks.test-submit]
+description = "Submit fixture CSV to HTTP API"
+workspace = false
+script_runner = "@duckscript"
+script = '''
+args_handle = split ${CARGO_MAKE_TASK_ARGS} ";"
+job = array_get ${args_handle} 0
+release ${args_handle}
+
+if is_empty ${job}
+    job = set "T1"
+end
+
+src = set "dev/fixtures/${job}.csv"
+exists = is_file ${src}
+if not ${exists}
+    echo "ERROR: not found: ${src}"
+    exit 1
+end
+
+output = exec jq -Rs . ${src}
+trimmed = trim ${output.stdout}
+
+echo "Submitting ${src}..."
+exec --fail-on-error curl -s -X POST http://localhost:4841/jobs -H "Content-Type: application/json" --data-binary "{\"frameset_name\":\"${job}\",\"csv\":${trimmed}}"
+'''

@@ -92,7 +92,7 @@ async fn main() -> anyhow::Result<()> {
         .skip_while(|a| a != "--config")
         .nth(1)
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("howick-frama.dev.toml"));
+        .unwrap_or_else(|| PathBuf::from("config/howick-frama.dev.toml"));
     let config = config::Config::load_or_default(&config_path);
 
     // On Linux (Pi Zero) warn if USB gadget mode is not configured — it's required.

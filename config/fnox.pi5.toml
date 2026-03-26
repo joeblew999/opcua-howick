@@ -1,0 +1,15 @@
+# fnox.toml — Pi 5 production secrets
+# Secrets injected via: fnox exec --profile pi5 -- ./opcua-server
+#
+# Bootstrap: set INFISICAL_UNIVERSAL_AUTH_CLIENT_ID and
+#            INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET in environment
+#            (one-time, during first-boot provisioning)
+
+[providers.infisical]
+type = "infisical"
+# project_id = "your-infisical-project-id"
+# environment = "production"
+
+[secrets]
+# Production secrets — pulled from Infisical at runtime
+# PLAT_TRUNK_API_KEY = { provider = "infisical", key = "PLAT_TRUNK_API_KEY" }

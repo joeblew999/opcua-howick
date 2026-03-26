@@ -1,0 +1,15 @@
+# pitchfork.local.toml — machine-specific overrides (gitignored)
+# Copy to pitchfork.local.toml and edit for your machine.
+# These override values in pitchfork.toml.
+
+# Example: change opcua-server port if 4841 is taken
+# [daemons.opcua-server]
+# env = { RUST_LOG = "opcua_howick=trace" }
+
+# Example: disable auto-start (manual control only)
+# [daemons.opcua-server]
+# auto = []
+
+# Example: different mock server port
+# [daemons.mock-plat-trunk]
+# env = { PORT = "3001" }

@@ -1,0 +1,107 @@
+# Build, test, CI, release, cross-compile, and docs tasks.
+# Task output is captured by pitchfork for later review: mise run logs:task -- build
+
+# ── Build & test ─────────────────────────────────────────────────────────────
+
+[build]
+description = "Build (native dev — incremental)"
+sources = ["crates/**/*.rs", "Cargo.toml", "Cargo.lock"]
+outputs = ["target/debug/opcua-server", "target/debug/howick-frama"]
+run = "pitchfork run task-build -- cargo build"
+
+[test]
+description = "Run all Rust tests"
+timeout = "5m"
+run = "pitchfork run task-test -- cargo test"
+
+[check]
+description = "Check + clippy"
+run = "pitchfork run task-check -- sh -c 'cargo check && cargo clippy -- -D warnings'"
+run_windows = ["cargo check", "cargo clippy -- -D warnings"]
+
+[fmt]
+description = "Format code"
+run = "cargo fmt"
+
+["fmt:check"]
+description = "Check formatting (CI)"
+hide = true
+run = "cargo fmt --check"
+
+[ci]
+description = "Full CI gate — check + fmt + test"
+depends = ["check", "fmt:check", "test"]
+
+# ── Release ──────────────────────────────────────────────────────────────────
+
+[release]
+description = "Release — bumps Cargo.toml, tags, pushes"
+confirm = "Tag and push a release?"
+usage = 'arg "[level]" help="patch, minor, or major" default="patch"'
+run = "cargo release ${usage_level} --workspace --execute --no-confirm"
+
+["tools:install"]
+description = "Install dev tools not in mise registry"
+hide = true
+run = "cargo install cargo-release"
+
+# ── Cross-compile (delegates to cargo-make for cross-platform support) ───────
+
+["build:bin"]
+description = "Build one binary for one target"
+hide = true
+usage = """
+arg "<bin>" help="Binary name (opcua-server or howick-frama)"
+arg "<target>" help="Rust target triple"
+flag "--cross" help="Use cross instead of cargo"
+arg "[profile]" help="Build profile" default="release"
+"""
+run = "makers build-bin ${usage_bin} ${usage_target} ${usage_cross} ${usage_profile}"
+
+["build:pi5"]
+description = "Cross-compile opcua-server for Pi 5"
+sources = ["crates/**/*.rs", "Cargo.toml", "Cargo.lock"]
+outputs = ["target/aarch64-unknown-linux-gnu/release/opcua-server"]
+run = "mise run build:bin -- opcua-server aarch64-unknown-linux-gnu --cross"
+
+["build:pi-zero"]
+description = "Cross-compile howick-frama for Pi Zero"
+sources = ["crates/**/*.rs", "Cargo.toml", "Cargo.lock"]
+outputs = ["target/aarch64-unknown-linux-gnu/release-pi-zero/howick-frama"]
+run = "mise run build:bin -- howick-frama aarch64-unknown-linux-gnu --cross release-pi-zero"
+
+["build:linux"]
+description = "Build opcua-server for Linux x86_64"
+hide = true
+run = "mise run build:bin -- opcua-server x86_64-unknown-linux-gnu"
+
+["build:mac"]
+description = "Build opcua-server for macOS ARM"
+hide = true
+run = "mise run build:bin -- opcua-server aarch64-apple-darwin"
+
+["build:windows"]
+description = "Build both binaries for Windows"
+hide = true
+run = [
+  "mise run build:bin -- opcua-server x86_64-pc-windows-msvc",
+  "mise run build:bin -- howick-frama x86_64-pc-windows-msvc",
+]
+
+["build:all"]
+description = "Build all targets"
+depends = ["build:pi5", "build:pi-zero", "build:linux", "build:mac", "build:windows"]
+
+# ── Test helpers (delegates to cargo-make) ───────────────────────────────────
+
+["test:submit"]
+description = "Submit fixture CSV to HTTP API"
+usage = 'arg "[job]" help="T1 or W1" default="T1"'
+run = "makers test-submit ${usage_job}"
+
+# ── Docs (delegates to cargo-make) ──────────────────────────────────────────
+
+["docs:pdf"]
+description = "Export a doc to PDF"
+usage = 'arg "[name]" help="proposal, system-overview, hardware-quote, setup-guide, roadmap, pi-zero-setup, ops-runbook, or all" default="all"'
+run = "makers docs-pdf ${usage_name}"

@@ -1,0 +1,22 @@
+#:schema https://pitchfork.jdx.dev/schema.json
+# pitchfork.toml — Pi 5 production daemon
+#
+# Deploy: scp this file + opcua-server binary to Pi 5
+# Start:  pitchfork start -l
+# Boot:   pitchfork boot enable (auto-start on power-on)
+# Status: pitchfork list
+# Logs:   pitchfork logs opcua-server
+
+[daemons.opcua-server]
+run = "fnox exec --profile pi5 -- ./opcua-server --config opcua-server.pi5.toml"
+ready_http = "http://localhost:4841/health"
+expected_port = [4840, 4841]
+retry = true
+boot_start = true
+hooks.on_ready = "echo 'opcua-server ready — opc.tcp://localhost:4840/ + http://localhost:4841/dashboard'"
+hooks.on_fail = "echo 'opcua-server FAILED — check: pitchfork logs opcua-server'"
+hooks.on_stop = "echo 'opcua-server stopped'"
+
+[daemons.log-cleanup]
+run = "pitchfork logs --clear"
+cron = { schedule = "0 0 3 * * *", retrigger = "finish" }
