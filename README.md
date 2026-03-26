@@ -1,5 +1,7 @@
 # opcua-howick
 
+<https://github.com/joeblew999/opcua-howick>
+
 Automates job delivery to Howick FRAMA roll-forming machines — eliminates the USB-stick walk.
 
 The operator drags a CSV file into a browser. It reaches the machine over WiFi automatically.
